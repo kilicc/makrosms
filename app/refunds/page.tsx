@@ -117,8 +117,10 @@ export default function RefundsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 1.5, sm: 1.5, md: 2 },
-            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
+            padding: { xs: 2, sm: 2.5, md: 3 },
+            paddingLeft: { xs: 2, sm: 2.5, md: 3 },
+            paddingRight: { xs: 2, sm: 2.5, md: 3 },
+            paddingTop: { xs: 3, sm: 3.5, md: 4 },
             marginLeft: { xs: 0, md: '240px' },
             width: { xs: '100%', md: 'calc(100% - 240px)' },
             minHeight: '100vh',
@@ -128,7 +130,7 @@ export default function RefundsPage() {
             mx: { md: 'auto' },
           }}
         >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 1 }}>
               <Box>
                 <Typography 
                   variant="h4" 
