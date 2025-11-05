@@ -61,8 +61,10 @@ export default function SMSReportsPage() {
     if (tabValue === 0) {
       loadHistory();
     } else if (tabValue === 1) {
+      loadBulkReports();
+    } else if (tabValue === 2 && isAdmin) {
       loadStats();
-    } else if (tabValue === 2) {
+    } else if (tabValue === 3 && isAdmin) {
       loadPaymentRequests();
     }
   }, [isAdmin, tabValue]);
@@ -451,8 +453,113 @@ export default function SMSReportsPage() {
               </Box>
             )}
 
+            {/* Bulk SMS Tab */}
+            {tabValue === 1 && (
+              <Box>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2,
+                    fontSize: '16px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Toplu SMS Raporları
+                </Typography>
+                {loadingBulkReports ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : bulkSmsReports.length === 0 ? (
+                  <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Henüz toplu SMS raporu bulunmuyor
+                    </Typography>
+                  </Paper>
+                ) : (
+                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj Şablonu</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarılı</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarısız</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {bulkSmsReports.map((report, index) => {
+                          const getStatusColor = (status: string) => {
+                            switch (status) {
+                              case 'sent':
+                                return 'success';
+                              case 'failed':
+                                return 'error';
+                              case 'partial':
+                                return 'warning';
+                              default:
+                                return 'default';
+                            }
+                          };
+
+                          const getStatusLabel = (status: string) => {
+                            switch (status) {
+                              case 'sent':
+                                return 'Başarılı';
+                              case 'failed':
+                                return 'Başarısız';
+                              case 'partial':
+                                return 'Kısmen Başarılı';
+                              default:
+                                return status;
+                            }
+                          };
+
+                          return (
+                            <TableRow key={index}>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Typography variant="body2" sx={{ fontSize: '12px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {report.fullMessage || report.message}
+                                </Typography>
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {report.recipients} kişi
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75, color: '#4caf50', fontWeight: 600 }}>
+                                {report.successCount}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75, color: '#f44336', fontWeight: 600 }}>
+                                {report.failedCount}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Chip
+                                  label={getStatusLabel(report.status)}
+                                  color={getStatusColor(report.status)}
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 500,
+                                    height: 20,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <ClientDate date={report.sentAt} />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Box>
+            )}
+
             {/* Statistics Tab - Admin Only */}
-            {tabValue === 1 && isAdmin && (
+            {tabValue === 2 && isAdmin && (
               <Box>
                 <Typography 
                   variant="h6" 
