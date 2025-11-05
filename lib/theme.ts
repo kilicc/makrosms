@@ -99,26 +99,26 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 6.4, // 8px × 0.8
-          padding: '6.4px 12.8px', // 8px 16px × 0.8
+          borderRadius: 5.12, // 8px × 0.8 × 0.8 = 5.12px
+          padding: '5.12px 10.24px', // 8px 16px × 0.8 × 0.8
           fontWeight: 500,
-          fontSize: '0.7rem', // 14px × 0.8
-          minHeight: '28.8px', // 36px × 0.8
+          fontSize: '0.56rem', // 14px × 0.8 × 0.8 = 11.2px × 0.8 = 8.96px ≈ 0.56rem
+          minHeight: '23.04px', // 36px × 0.8 × 0.8 = 23.04px
         },
         sizeSmall: {
-          padding: '4.8px 9.6px', // 6px 12px × 0.8
-          fontSize: '0.65rem', // 13px × 0.8 ≈ 10.4px
-          minHeight: '25.6px', // 32px × 0.8
+          padding: '3.84px 7.68px', // 6px 12px × 0.8 × 0.8
+          fontSize: '0.52rem', // 13px × 0.8 × 0.8 = 10.4px × 0.8 = 8.32px ≈ 0.52rem
+          minHeight: '20.48px', // 32px × 0.8 × 0.8 = 20.48px
         },
         sizeMedium: {
-          padding: '6.4px 12.8px', // 8px 16px × 0.8
-          fontSize: '0.7rem', // 14px × 0.8
-          minHeight: '28.8px', // 36px × 0.8
+          padding: '5.12px 10.24px', // 8px 16px × 0.8 × 0.8
+          fontSize: '0.56rem', // 14px × 0.8 × 0.8
+          minHeight: '23.04px', // 36px × 0.8 × 0.8
         },
         sizeLarge: {
-          padding: '8px 16px', // 10px 20px × 0.8
-          fontSize: '0.75rem', // 15px × 0.8 = 12px
-          minHeight: '33.6px', // 42px × 0.8
+          padding: '6.4px 12.8px', // 10px 20px × 0.8 × 0.8
+          fontSize: '0.6rem', // 15px × 0.8 × 0.8 = 12px × 0.8 = 9.6px ≈ 0.6rem
+          minHeight: '26.88px', // 42px × 0.8 × 0.8 = 26.88px
         },
       },
     },
