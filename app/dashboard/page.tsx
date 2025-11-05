@@ -1,10 +1,10 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Avatar, Card, CardContent, alpha, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Avatar, Card, CardContent, alpha, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
 import { useEffect, useState } from 'react';
 import ClientDate from '@/components/ClientDate';
 import { gradients } from '@/lib/theme';
-import { AttachMoney, Send, Person, Warning } from '@mui/icons-material';
+import { AttachMoney, Send, Person, Warning, Visibility } from '@mui/icons-material';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
@@ -729,6 +729,130 @@ export default function DashboardPage() {
               )}
             </Box>
           </Card>
+
+          {/* Detail Dialog */}
+          <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} maxWidth="md" fullWidth>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600 }}>
+              Toplu SMS Detayları
+            </DialogTitle>
+            <DialogContent>
+              {selectedReport && (
+                <Box sx={{ mt: 1 }}>
+                  <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: alpha('#1976d2', 0.05) }}>
+                    <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
+                      Mesaj İçeriği
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+                      {selectedReport.message}
+                    </Typography>
+                  </Paper>
+
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Paper sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#4caf50', 0.05) }}>
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                          Toplam Alıcı
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#4caf50' }}>
+                          {selectedReport.recipients} kişi
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Paper sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#2196f3', 0.05) }}>
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                          Başarılı
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#2196f3' }}>
+                          {selectedReport.successCount} kişi
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    {selectedReport.failedCount > 0 && (
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Paper sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#f44336', 0.05) }}>
+                          <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                            Başarısız
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#f44336' }}>
+                            {selectedReport.failedCount} kişi
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    )}
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Paper sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha('#ff9800', 0.05) }}>
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                          Gönderim Tarihi
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500 }}>
+                          <ClientDate date={selectedReport.sentAt} />
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+
+                  <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
+                    Alıcı Listesi ({selectedReport.messages.length})
+                  </Typography>
+                  <TableContainer component={Paper} sx={{ maxHeight: 300, borderRadius: 2 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kişi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedReport.messages.map((msg) => (
+                          <TableRow key={msg.id}>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              {msg.contactName || '-'}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              {msg.phoneNumber}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <Chip
+                                label={
+                                  msg.status === 'sent' || msg.status === 'delivered'
+                                    ? 'Başarılı'
+                                    : msg.status === 'failed'
+                                    ? 'Başarısız'
+                                    : msg.status
+                                }
+                                color={
+                                  msg.status === 'sent' || msg.status === 'delivered'
+                                    ? 'success'
+                                    : msg.status === 'failed'
+                                    ? 'error'
+                                    : 'default'
+                                }
+                                size="small"
+                                sx={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 500,
+                                  height: 20,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <ClientDate date={msg.sentAt} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDetailDialogOpen(false)}>Kapat</Button>
+            </DialogActions>
+          </Dialog>
       </Box>
     </Box>
     </ProtectedRoute>

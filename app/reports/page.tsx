@@ -54,11 +54,19 @@ export default function SMSReportsPage() {
     if (isAdmin) {
       loadUsers();
     }
-    loadHistory();
-  }, [isAdmin]);
+    if (tabValue === 0) {
+      loadHistory();
+    } else if (tabValue === 1) {
+      loadStats();
+    } else if (tabValue === 2) {
+      loadPaymentRequests();
+    }
+  }, [isAdmin, tabValue]);
 
   useEffect(() => {
-    loadHistory();
+    if (tabValue === 0) {
+      loadHistory();
+    }
   }, [filters.userId]);
 
   const loadUsers = async () => {
@@ -99,6 +107,38 @@ export default function SMSReportsPage() {
       setMessages([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      setLoadingStats(true);
+      const response = await api.get('/admin/stats');
+      if (response.data.success) {
+        setStats(response.data.data);
+      }
+    } catch (error) {
+      console.error('Stats load error:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const loadPaymentRequests = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      setLoadingPaymentRequests(true);
+      const response = await api.get('/admin/payment-requests');
+      if (response.data.success) {
+        setPaymentRequests(response.data.data.requests || []);
+      }
+    } catch (error) {
+      console.error('Payment requests load error:', error);
+    } finally {
+      setLoadingPaymentRequests(false);
     }
   };
 
