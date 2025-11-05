@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
-import { Assessment, FilterList, BarChart, People, Payment, MoneyOff } from '@mui/icons-material';
+import { Assessment, FilterList, BarChart, People, Payment, MoneyOff, Send } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import ClientDate from '@/components/ClientDate';
 
@@ -47,6 +47,10 @@ export default function SMSReportsPage() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
   const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
+  
+  // Bulk SMS Reports states
+  const [bulkSmsReports, setBulkSmsReports] = useState<any[]>([]);
+  const [loadingBulkReports, setLoadingBulkReports] = useState(false);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
 
@@ -233,6 +237,7 @@ export default function SMSReportsPage() {
               sx={{ mb: 2 }}
             >
               <Tab label="SMS Raporları" icon={<Assessment />} />
+              <Tab label="Toplu SMS" icon={<Send />} />
               {isAdmin && (
                 <>
                   <Tab label="İstatistikler" icon={<BarChart />} />
@@ -561,7 +566,7 @@ export default function SMSReportsPage() {
             )}
 
             {/* Payment Reports Tab - Admin Only */}
-            {tabValue === 2 && isAdmin && (
+            {tabValue === 3 && isAdmin && (
               <Box>
                 <Typography 
                   variant="h6" 

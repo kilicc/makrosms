@@ -600,14 +600,9 @@ export default function DashboardPage() {
                           <TableRow 
                             key={index}
                             sx={{
-                              cursor: 'pointer',
                               '&:hover': {
                                 backgroundColor: alpha('#1976d2', 0.05),
                               },
-                            }}
-                            onClick={() => {
-                              setSelectedReport(report);
-                              setDetailDialogOpen(true);
                             }}
                           >
                             <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
@@ -635,6 +630,35 @@ export default function DashboardPage() {
                             </TableCell>
                             <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                               <ClientDate date={report.sentAt} />
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<Visibility />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedReport(report);
+                                  setDetailDialogOpen(true);
+                                }}
+                                sx={{
+                                  background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                                  borderRadius: 1.5,
+                                  padding: '4px 12px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  textTransform: 'none',
+                                  minWidth: 'auto',
+                                  '&:hover': {
+                                    boxShadow: '0 4px 16px rgba(25, 118, 210, 0.4)',
+                                    transform: 'translateY(-1px)',
+                                  },
+                                  transition: 'all 0.3s',
+                                }}
+                              >
+                                Detay
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
