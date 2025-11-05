@@ -52,6 +52,8 @@ export default function DashboardPage() {
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [bulkSmsReports, setBulkSmsReports] = useState<BulkSmsReport[]>([]);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<BulkSmsReport | null>(null);
 
   useEffect(() => {
     if (user) {

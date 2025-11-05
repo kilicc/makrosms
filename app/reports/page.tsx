@@ -443,6 +443,225 @@ export default function SMSReportsPage() {
                 </TableContainer>
               )}
             </Paper>
+              </Box>
+            )}
+
+            {/* Statistics Tab - Admin Only */}
+            {tabValue === 1 && isAdmin && (
+              <Box>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2,
+                    fontSize: '16px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Sistem İstatistikleri
+                </Typography>
+                {loadingStats ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : stats ? (
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Toplam Kullanıcı
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: 'primary.main' }}>
+                            {stats.totalUsers || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Toplam Rehber
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#2196f3' }}>
+                            {stats.totalContacts || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Toplam SMS
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
+                            {stats.totalSMS || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Bu Ay SMS
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#ff9800' }}>
+                            {stats.smsThisMonth || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Toplam Ödeme
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#9c27b0' }}>
+                            {stats.totalPayments || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Toplam Gelir
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
+                            {Number(stats.totalRevenue || 0).toLocaleString('tr-TR')} TRY
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
+                            Bekleyen Ödeme
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#f44336' }}>
+                            {stats.pendingPaymentRequests || 0}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+                ) : (
+                  <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      İstatistikler yüklenemedi
+                    </Typography>
+                  </Paper>
+                )}
+              </Box>
+            )}
+
+            {/* Payment Reports Tab - Admin Only */}
+            {tabValue === 2 && isAdmin && (
+              <Box>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    mb: 2,
+                    fontSize: '16px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Ödeme Raporları
+                </Typography>
+                {loadingPaymentRequests ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : paymentRequests.length === 0 ? (
+                  <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Henüz ödeme talebi bulunmuyor
+                    </Typography>
+                  </Paper>
+                ) : (
+                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paymentRequests.slice(0, 20).map((request) => {
+                          const getStatusColor = (status: string) => {
+                            switch (status) {
+                              case 'approved':
+                                return 'success';
+                              case 'rejected':
+                                return 'error';
+                              case 'pending':
+                                return 'warning';
+                              default:
+                                return 'default';
+                            }
+                          };
+
+                          const getStatusLabel = (status: string) => {
+                            switch (status) {
+                              case 'approved':
+                                return 'Onaylandı';
+                              case 'rejected':
+                                return 'Reddedildi';
+                              case 'pending':
+                                return 'Beklemede';
+                              default:
+                                return status;
+                            }
+                          };
+
+                          return (
+                            <TableRow key={request.id}>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {request.user?.username || '-'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {Number(request.amount)} {request.currency || 'TRY'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {request.paymentMethod || '-'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Chip
+                                  label={getStatusLabel(request.status)}
+                                  color={getStatusColor(request.status)}
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 500,
+                                    height: 20,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <ClientDate date={request.createdAt} />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Box>
+            )}
       </Box>
       </Box>
     </ProtectedRoute>
