@@ -275,6 +275,60 @@ export default function CryptoPaymentPage() {
     }
   };
 
+  // Admin payment request handlers
+  const handleApproveRequest = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      setLoading(true);
+      setError('');
+      const response = await api.post(`/admin/payment-requests/${selectedRequest.id}/approve`, {
+        adminNotes: adminNotes || undefined,
+      });
+      
+      if (response.data.success) {
+        setSuccess('Ödeme talebi başarıyla onaylandı');
+        setApproveDialogOpen(false);
+        setSelectedRequest(null);
+        setAdminNotes('');
+        loadPaymentRequests();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Ödeme talebi onaylanırken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectRequest = async () => {
+    if (!selectedRequest || !rejectionReason) {
+      setError('Red sebebi gerekli');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      const response = await api.post(`/admin/payment-requests/${selectedRequest.id}/reject`, {
+        rejectionReason,
+        adminNotes: adminNotes || undefined,
+      });
+      
+      if (response.data.success) {
+        setSuccess('Ödeme talebi başarıyla reddedildi');
+        setRejectDialogOpen(false);
+        setSelectedRequest(null);
+        setRejectionReason('');
+        setAdminNotes('');
+        loadPaymentRequests();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Ödeme talebi reddedilirken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <Box
