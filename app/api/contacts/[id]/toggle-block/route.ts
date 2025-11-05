@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
 // PATCH /api/contacts/:id/toggle-block - Kişi engelleme/engeli kaldırma
@@ -19,37 +19,59 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Check if contact exists and belongs to user
-    const contact = await prisma.contact.findFirst({
-      where: {
-        id,
-        userId: auth.user.userId,
-      },
-    });
+    // Check if contact exists and belongs to user using Supabase
+    const { data: contact, error: checkError } = await supabaseServer
+      .from('contacts')
+      .select('is_blocked')
+      .eq('id', id)
+      .eq('user_id', auth.user.userId)
+      .single();
 
-    if (!contact) {
+    if (checkError || !contact) {
       return NextResponse.json(
         { success: false, message: 'Kişi bulunamadı' },
         { status: 404 }
       );
     }
 
-    // Toggle block status
-    const updatedContact = await prisma.contact.update({
-      where: { id },
-      data: {
-        isBlocked: !contact.isBlocked,
-      },
-      include: {
-        group: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-          },
-        },
-      },
-    });
+    // Toggle block status using Supabase
+    const newBlockStatus = !contact.is_blocked;
+    const { data: updatedContactData, error: updateError } = await supabaseServer
+      .from('contacts')
+      .update({ is_blocked: newBlockStatus })
+      .eq('id', id)
+      .select('*, contact_groups(id, name, color)')
+      .single();
+
+    if (updateError || !updatedContactData) {
+      return NextResponse.json(
+        { success: false, message: updateError?.message || 'Kişi güncellenemedi' },
+        { status: 500 }
+      );
+    }
+
+    // Format contact data
+    const updatedContact = {
+      id: updatedContactData.id,
+      userId: updatedContactData.user_id,
+      groupId: updatedContactData.group_id,
+      name: updatedContactData.name,
+      phone: updatedContactData.phone,
+      email: updatedContactData.email,
+      notes: updatedContactData.notes,
+      tags: updatedContactData.tags || [],
+      isActive: updatedContactData.is_active ?? true,
+      isBlocked: updatedContactData.is_blocked ?? false,
+      lastContacted: updatedContactData.last_contacted,
+      contactCount: updatedContactData.contact_count || 0,
+      createdAt: updatedContactData.created_at,
+      updatedAt: updatedContactData.updated_at,
+      group: updatedContactData.contact_groups ? {
+        id: updatedContactData.contact_groups.id,
+        name: updatedContactData.contact_groups.name,
+        color: updatedContactData.contact_groups.color,
+      } : null,
+    };
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
 // POST /api/contacts/import - Toplu kişi import
@@ -30,19 +30,16 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
-    // Get existing contacts for this user
-    const existingContacts = await prisma.contact.findMany({
-      where: {
-        userId: auth.user.userId,
-      },
-      select: {
-        phone: true,
-      },
-    });
+    // Get existing contacts for this user using Supabase
+    const { data: existingContacts } = await supabaseServer
+      .from('contacts')
+      .select('phone')
+      .eq('user_id', auth.user.userId);
 
-    const existingPhones = new Set(existingContacts.map((c) => c.phone));
+    const existingPhones = new Set((existingContacts || []).map((c: any) => c.phone));
 
-    // Create contacts
+    // Create contacts using Supabase
+    const contactsToInsert: any[] = [];
     for (const contactData of contacts) {
       try {
         const { name, phone, email } = contactData;
@@ -60,15 +57,12 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Create contact
-        await prisma.contact.create({
-          data: {
-            userId: auth.user.userId,
-            name,
-            phone,
-            email: email || null,
-            groupId: groupId || null,
-          },
+        contactsToInsert.push({
+          user_id: auth.user.userId,
+          name,
+          phone,
+          email: email || null,
+          group_id: groupId || null,
         });
 
         existingPhones.add(phone);
@@ -79,16 +73,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Bulk insert contacts using Supabase
+    if (contactsToInsert.length > 0) {
+      const { error: insertError } = await supabaseServer
+        .from('contacts')
+        .insert(contactsToInsert);
+
+      if (insertError) {
+        return NextResponse.json(
+          { success: false, message: insertError.message || 'Kişiler import edilemedi' },
+          { status: 500 }
+        );
+      }
+    }
+
     // Update group contact count if groupId exists
     if (groupId && results.success > 0) {
-      await prisma.contactGroup.update({
-        where: { id: groupId },
-        data: {
-          contactCount: {
-            increment: results.success,
-          },
-        },
-      });
+      // Get current count
+      const { data: groupData } = await supabaseServer
+        .from('contact_groups')
+        .select('contact_count')
+        .eq('id', groupId)
+        .single();
+
+      if (groupData) {
+        await supabaseServer
+          .from('contact_groups')
+          .update({ contact_count: (groupData.contact_count || 0) + results.success })
+          .eq('id', groupId);
+      }
     }
 
     return NextResponse.json({

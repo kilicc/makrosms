@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
 // GET /api/contacts/search - Kişi arama
@@ -25,29 +25,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const contacts = await prisma.contact.findMany({
-      where: {
-        userId: auth.user.userId,
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { phone: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      take: limit,
-      include: {
-        group: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    // Search using Supabase with case-insensitive ilike
+    const { data: contactsData, error } = await supabaseServer
+      .from('contacts')
+      .select('*, contact_groups(id, name, color)')
+      .eq('user_id', auth.user.userId)
+      .or(`name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
+      .order('name', { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Format contacts data
+    const contacts = (contactsData || []).map((contact: any) => ({
+      id: contact.id,
+      userId: contact.user_id,
+      groupId: contact.group_id,
+      name: contact.name,
+      phone: contact.phone,
+      email: contact.email,
+      notes: contact.notes,
+      tags: contact.tags || [],
+      isActive: contact.is_active ?? true,
+      isBlocked: contact.is_blocked ?? false,
+      lastContacted: contact.last_contacted,
+      contactCount: contact.contact_count || 0,
+      createdAt: contact.created_at,
+      updatedAt: contact.updated_at,
+      group: contact.contact_groups ? {
+        id: contact.contact_groups.id,
+        name: contact.contact_groups.name,
+        color: contact.contact_groups.color,
+      } : null,
+    }));
 
     return NextResponse.json({
       success: true,
