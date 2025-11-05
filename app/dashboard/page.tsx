@@ -92,6 +92,8 @@ export default function DashboardPage() {
             status: msg.status,
             sentAt: msg.sentAt,
           })));
+          // Admin için boş rapor listesi
+          setBulkSmsReports([]);
         }
       } else {
         // User dashboard - load user stats
