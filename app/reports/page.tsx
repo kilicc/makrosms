@@ -134,6 +134,80 @@ export default function SMSReportsPage() {
     }
   };
 
+  const loadBulkReports = async () => {
+    try {
+      setLoadingBulkReports(true);
+      const endpoint = isAdmin ? '/admin/sms-history?limit=100' : '/bulk-sms/history?limit=100';
+      const response = await api.get(endpoint);
+      
+      if (response.data.success) {
+        const messages = response.data.data.messages || [];
+        
+        // Mesajları grupla (aynı mesaj içeriğine sahip olanları)
+        const groupedMessages = new Map<string, {
+          message: string;
+          recipients: number;
+          successCount: number;
+          failedCount: number;
+          sentAt: string;
+          status: string;
+        }>();
+
+        messages.forEach((msg: any) => {
+          const messageText = msg.message || '';
+          const messageKey = messageText.substring(0, 50);
+          
+          if (!groupedMessages.has(messageKey)) {
+            groupedMessages.set(messageKey, {
+              message: messageText,
+              recipients: 0,
+              successCount: 0,
+              failedCount: 0,
+              sentAt: msg.sentAt,
+              status: 'sent',
+            });
+          }
+
+          const group = groupedMessages.get(messageKey)!;
+          group.recipients++;
+          if (msg.status === 'sent' || msg.status === 'delivered') {
+            group.successCount++;
+          } else if (msg.status === 'failed') {
+            group.failedCount++;
+          }
+          if (new Date(msg.sentAt) > new Date(group.sentAt)) {
+            group.sentAt = msg.sentAt;
+          }
+          if (group.failedCount > 0 && group.successCount > 0) {
+            group.status = 'partial';
+          } else if (group.failedCount > 0) {
+            group.status = 'failed';
+          } else {
+            group.status = 'sent';
+          }
+        });
+
+        const reports = Array.from(groupedMessages.values())
+          .map((group) => ({
+            message: group.message.length > 50 ? group.message.substring(0, 50) + '...' : group.message,
+            fullMessage: group.message,
+            recipients: group.recipients,
+            status: group.status,
+            sentAt: group.sentAt,
+            successCount: group.successCount,
+            failedCount: group.failedCount,
+          }))
+          .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+
+        setBulkSmsReports(reports);
+      }
+    } catch (error) {
+      console.error('Bulk reports load error:', error);
+    } finally {
+      setLoadingBulkReports(false);
+    }
+  };
+
   const loadStats = async () => {
     if (!isAdmin) return;
     
