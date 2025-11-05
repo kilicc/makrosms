@@ -101,7 +101,7 @@ export default function DashboardPage() {
         // User dashboard - load user stats
         const [contactsStats, smsHistory] = await Promise.all([
           api.get('/contacts/stats'),
-          api.get('/bulk-sms/history?limit=20'),
+          api.get('/bulk-sms/history?limit=100'),
         ]);
 
         if (contactsStats.data.success) {
@@ -117,16 +117,26 @@ export default function DashboardPage() {
           const messages = smsHistory.data.data.messages || [];
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startOfToday.setHours(0, 0, 0, 0);
+          const endOfToday = new Date(startOfToday);
+          endOfToday.setHours(23, 59, 59, 999);
 
           const sentThisMonth = messages.filter((msg: RecentActivity) => {
             const sentDate = new Date(msg.sentAt);
             return sentDate >= startOfMonth && msg.status === 'sent';
           }).length;
 
+          const sentToday = messages.filter((msg: RecentActivity) => {
+            const sentDate = new Date(msg.sentAt);
+            return sentDate >= startOfToday && sentDate <= endOfToday && (msg.status === 'sent' || msg.status === 'delivered');
+          }).length;
+
           setStats((prev) => ({
             ...prev,
             credit: user?.credit || 0,
             sentThisMonth,
+            sentToday,
           }));
 
           setRecentActivities(messages.slice(0, 5));
