@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Build Supabase query
+    // Build Supabase query - Use separate aliases for users relations to avoid duplicate table name error
     let query = supabaseServer
       .from('payment_requests')
-      .select('*, users!payment_requests_user_id_fkey(id, username, email), users!payment_requests_approved_by_fkey(id, username, email)', { count: 'exact' });
+      .select('*, user:users!payment_requests_user_id_fkey(id, username, email), approver:users!payment_requests_approved_by_fkey(id, username, email)', { count: 'exact' });
 
     if (status) {
       query = query.eq('status', status);
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       throw new Error(error.message);
     }
 
-    // Format requests data (Supabase returns nested relations differently)
+    // Format requests data (Supabase returns nested relations with aliases)
     const requests = (requestsData || []).map((req: any) => ({
       id: req.id,
       userId: req.user_id,
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
       rejectionReason: req.rejection_reason,
       createdAt: req.created_at,
       updatedAt: req.updated_at,
-      user: req.users ? (Array.isArray(req.users) ? req.users[0] : req.users) : null,
-      approver: req.users ? (Array.isArray(req.users) ? req.users.find((u: any) => u.id === req.approved_by) : (req.users.id === req.approved_by ? req.users : null)) : null,
+      user: req.user || null,
+      approver: req.approver || null,
     }));
 
     const total = count || 0;
