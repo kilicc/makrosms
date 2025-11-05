@@ -59,8 +59,8 @@ export default function SMSInterfacePage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -77,7 +77,7 @@ export default function SMSInterfacePage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
               }}
             >
@@ -89,7 +89,7 @@ export default function SMSInterfacePage() {
               color="text.secondary" 
               sx={{ 
                 mb: 2,
-                fontSize: '13px',
+                fontSize: '12px',
               }}
             >
               CepSMS servisini kullanarak tek bir telefon numarasına SMS gönderin.
@@ -107,9 +107,9 @@ export default function SMSInterfacePage() {
               </Alert>
             )}
 
-            <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Paper sx={{ p: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <Box component="form" onSubmit={handleSubmit}>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth

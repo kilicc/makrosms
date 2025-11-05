@@ -88,8 +88,8 @@ export default function SMSReportsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -106,7 +106,7 @@ export default function SMSReportsPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
               }}
             >

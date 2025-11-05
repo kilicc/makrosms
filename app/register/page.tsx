@@ -92,8 +92,8 @@ export default function RegisterPage() {
             <Image
               src="/logo3.png"
               alt="Logo"
-              width={140}
-              height={140}
+              width={120}
+              height={120}
               style={{
                 objectFit: 'contain',
                 borderRadius: 8,
@@ -107,7 +107,7 @@ export default function RegisterPage() {
             sx={{ 
               mb: 0.5, 
               fontWeight: 600,
-              fontSize: '22px',
+              fontSize: '20px',
               color: 'white',
             }}
           >
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             variant="body2" 
             sx={{ 
               color: 'rgba(255,255,255,0.9)',
-              fontSize: '13px',
+              fontSize: '11px',
             }}
           >
             Hesabınızı oluşturun
@@ -125,7 +125,7 @@ export default function RegisterPage() {
         </Box>
 
         {/* Form */}
-        <CardContent sx={{ padding: 2.5 }}>
+        <CardContent sx={{ padding: 2 }}>
           {error && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {error}
@@ -145,7 +145,7 @@ export default function RegisterPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -164,7 +164,7 @@ export default function RegisterPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -203,7 +203,7 @@ export default function RegisterPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -223,7 +223,7 @@ export default function RegisterPage() {
                 borderRadius: 1.5,
                 padding: '8px 20px',
                 fontWeight: 500,
-                fontSize: '14px',
+                fontSize: '13px',
                 textTransform: 'none',
                 '&:hover': {
                   boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
@@ -240,7 +240,7 @@ export default function RegisterPage() {
               align="center" 
               color="text.secondary"
               sx={{
-                fontSize: '12px',
+                fontSize: '11px',
                 mt: 1.5,
               }}
             >

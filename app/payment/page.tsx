@@ -213,8 +213,8 @@ export default function CryptoPaymentPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -231,7 +231,7 @@ export default function CryptoPaymentPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
               }}
             >
@@ -269,19 +269,19 @@ export default function CryptoPaymentPage() {
                 mb: 2,
               }}
             >
-              <CardContent sx={{ p: 2 }}>
+              <CardContent sx={{ p: 1.5 }}>
                 <Typography 
                   variant="h6" 
                   gutterBottom
                   sx={{
-                    fontSize: '20px',
+                    fontSize: '18px',
                     fontWeight: 500,
                     mb: 2,
                   }}
                 >
                   Kredi Paketi Seç
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   {packages.map((pkg) => (
                     <Grid size={{ xs: 12, sm: 6, md: 3, lg: 2.4 }} key={pkg.id}>
                           <Card
@@ -301,7 +301,7 @@ export default function CryptoPaymentPage() {
                             }}
                             onClick={() => handlePackageSelect(pkg.id)}
                           >
-                            <CardContent sx={{ p: 2 }}>
+                            <CardContent sx={{ p: 1.5 }}>
                               <Typography 
                                 variant="h6"
                                 sx={{
@@ -354,7 +354,7 @@ export default function CryptoPaymentPage() {
             </Card>
 
             {/* Kripto Para Seçimi ve Ödeme Oluştur */}
-            <Grid container spacing={2}>
+            <Grid container spacing={1.5}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card 
                   sx={{ 
@@ -362,7 +362,7 @@ export default function CryptoPaymentPage() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   }}
                 >
-                  <CardContent sx={{ p: 2 }}>
+                  <CardContent sx={{ p: 1.5 }}>
                     <Typography 
                       variant="h6" 
                       gutterBottom
@@ -447,7 +447,7 @@ export default function CryptoPaymentPage() {
                       background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
                     }}
                   >
-                    <CardContent sx={{ p: 2 }}>
+                    <CardContent sx={{ p: 1.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                         <CheckCircle sx={{ color: 'success.main', fontSize: 28 }} />
                         <Typography
@@ -482,7 +482,7 @@ export default function CryptoPaymentPage() {
                         </Typography>
                       </Alert>
 
-                      <Grid container spacing={2}>
+                      <Grid container spacing={1.5}>
                         {/* Sol Panel - Cüzdan Adresi ve QR Kod */}
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Box sx={{ mb: 3 }}>
@@ -749,12 +749,12 @@ export default function CryptoPaymentPage() {
                 mt: 2,
               }}
             >
-              <CardContent sx={{ p: 2 }}>
+              <CardContent sx={{ p: 1.5 }}>
                 <Typography 
                   variant="h6" 
                   gutterBottom
                   sx={{
-                    fontSize: '20px',
+                    fontSize: '18px',
                     fontWeight: 500,
                     mb: 2,
                   }}

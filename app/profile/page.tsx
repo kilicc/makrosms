@@ -177,8 +177,8 @@ export default function ProfilePage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -195,7 +195,7 @@ export default function ProfilePage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
               }}
             >
@@ -234,8 +234,8 @@ export default function ProfilePage() {
 
               {/* Profil Tab */}
               {tabValue === 0 && (
-                <CardContent sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
+                <CardContent sx={{ p: 1.5 }}>
+                  <Grid container spacing={1.5}>
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -295,8 +295,8 @@ export default function ProfilePage() {
 
               {/* Şifre Tab */}
               {tabValue === 1 && (
-                <CardContent sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
+                <CardContent sx={{ p: 1.5 }}>
+                  <Grid container spacing={1.5}>
                     <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
@@ -378,7 +378,7 @@ export default function ProfilePage() {
                     variant="h6" 
                     gutterBottom
                     sx={{
-                      fontSize: '20px',
+                      fontSize: '18px',
                       fontWeight: 500,
                     }}
                   >

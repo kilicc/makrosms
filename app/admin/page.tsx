@@ -319,8 +319,8 @@ export default function AdminDashboardPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 600,
               }}
             >
@@ -378,7 +378,7 @@ export default function AdminDashboardPage() {
 
             {/* Stats Cards */}
             {stats && (
-              <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card 
                     sx={{ 
@@ -403,7 +403,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '20px',
+                          fontSize: '18px',
                         }}
                       >
                         {stats.totalUsers}
@@ -435,7 +435,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '20px',
+                          fontSize: '18px',
                         }}
                       >
                         {stats.totalSMS}
@@ -467,7 +467,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '20px',
+                          fontSize: '18px',
                         }}
                       >
                         {stats.totalRevenue.toLocaleString('tr-TR')} TRY
@@ -485,7 +485,7 @@ export default function AdminDashboardPage() {
                   <Typography 
                     variant="h6"
                     sx={{
-                      fontSize: '20px',
+                      fontSize: '18px',
                       fontWeight: 500,
                     }}
                   >
@@ -713,7 +713,7 @@ export default function AdminDashboardPage() {
                     ))}
 
                     {refundsReport.reports.length === 0 && (
-                      <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
+                      <Paper sx={{ p: 1.5, borderRadius: 2, textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
                           Seçilen tarihte SMS gönderen veya iadesi olan kullanıcı bulunmuyor.
                         </Typography>
@@ -735,12 +735,12 @@ export default function AdminDashboardPage() {
             {/* Payment Requests Tab */}
             {tabValue === 2 && (
               <Box>
-                <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', p: 2 }}>
+                <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', p: 1.5 }}>
                   <Typography 
                     variant="h6" 
                     gutterBottom
                     sx={{
-                      fontSize: '20px',
+                      fontSize: '18px',
                       fontWeight: 500,
                       mb: 2,
                     }}

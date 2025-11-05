@@ -117,8 +117,8 @@ export default function RefundsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -135,7 +135,7 @@ export default function RefundsPage() {
                   component="h1" 
                   sx={{ 
                     color: 'primary.main',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     fontWeight: 600,
                     mb: 1,
                   }}
@@ -171,7 +171,7 @@ export default function RefundsPage() {
               <Typography
                 variant="h6"
                 sx={{
-                  fontSize: '16px',
+                  fontSize: '14px',
                   fontWeight: 600,
                   mb: 1,
                   color: 'primary.main',
@@ -182,7 +182,7 @@ export default function RefundsPage() {
               <Typography
                 variant="body1"
                 sx={{
-                  fontSize: '16px',
+                  fontSize: '14px',
                   lineHeight: 1.6,
                 }}
               >

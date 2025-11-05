@@ -147,9 +147,9 @@ export default function DashboardPage() {
         component="main"
         sx={{
           flexGrow: 1,
-          padding: { xs: 2, sm: 2, md: 2.5 },
-          paddingLeft: { xs: 2, sm: 2, md: 2.5 },
-          paddingRight: { xs: 2, sm: 2, md: 2.5 },
+          padding: { xs: 1.5, sm: 1.5, md: 2 },
+          paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
+          paddingRight: { xs: 1.5, sm: 1.5, md: 2 },
           marginLeft: { xs: 0, md: '280px' },
           width: { xs: '100%', md: 'calc(100% - 280px)' },
           minHeight: '100vh',
@@ -166,8 +166,8 @@ export default function DashboardPage() {
             gutterBottom 
             sx={{ 
               color: 'primary.main', 
-              mb: 2,
-              fontSize: '24px',
+              mb: 1.5,
+              fontSize: '18px',
               fontWeight: 600,
             }}
           >
@@ -175,7 +175,7 @@ export default function DashboardPage() {
           </Typography>
 
           {/* Stat Cards Grid - Modern Design */}
-          <Grid container spacing={0} sx={{ mb: 3, width: '100%', margin: 0, display: 'flex' }}>
+          <Grid container spacing={0} sx={{ mb: 2, width: '100%', margin: 0, display: 'flex' }}>
             {statCards.map((card, index) => {
               const isCreditCard = card.title === 'Mevcut Kredi';
               const isFirst = index === 0;
@@ -213,7 +213,7 @@ export default function DashboardPage() {
                         borderTopRightRadius: 8,
                         borderBottomRightRadius: 8,
                       }),
-                      p: 2,
+                      p: 1.5,
                       boxShadow: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -245,14 +245,14 @@ export default function DashboardPage() {
                           justifyContent: 'space-between',
                           flexDirection: 'column',
                           height: '100%',
-                          minHeight: '100px',
+                          minHeight: '80px',
                         }}
                       >
                         <Box sx={{ width: '100%', mb: 1.5 }}>
                           <Typography 
                             variant="body2" 
                             sx={{
-                              fontSize: '11px',
+                              fontSize: '10px',
                               mb: 1,
                               fontWeight: 500,
                               color: isCreditCard ? 'rgba(255,255,255,0.9)' : 'text.secondary',
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                             variant="h3"
                             sx={{ 
                               fontWeight: 700, 
-                              fontSize: '28px',
+                              fontSize: '22px',
                               lineHeight: 1.1,
                               color: isCreditCard ? '#ffffff' : 'primary.main',
                               mb: 0.5,
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                           <Typography 
                             variant="body2"
                             sx={{
-                              fontSize: '11px',
+                              fontSize: '10px',
                               fontWeight: 500,
                               color: isCreditCard ? 'rgba(255,255,255,0.8)' : 'text.secondary',
                               mt: 0.5,
@@ -293,9 +293,9 @@ export default function DashboardPage() {
                           <Avatar
                             sx={{
                               bgcolor: isCreditCard ? 'rgba(255,255,255,0.2)' : alpha(card.color, 0.1),
-                              width: 48,
-                              height: 48,
-                              fontSize: '24px',
+                              width: 40,
+                              height: 40,
+                              fontSize: '20px',
                               color: isCreditCard ? '#ffffff' : card.color,
                               border: isCreditCard ? '2px solid rgba(255,255,255,0.3)' : 'none',
                             }}
@@ -316,15 +316,15 @@ export default function DashboardPage() {
               borderRadius: 2, 
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               border: `1px solid ${alpha('#e0e0e0', 0.5)}`,
-              p: 2,
+              p: 1.5,
               background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Typography 
                 variant="h5" 
                 sx={{ 
-                  fontSize: '18px',
+                  fontSize: '16px',
                   fontWeight: 600,
                   color: 'primary.main',
                 }}
@@ -360,8 +360,8 @@ export default function DashboardPage() {
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 1.5,
-                        padding: 1.5,
+                        gap: 1,
+                        padding: 1,
                         background: isSuccess
                           ? alpha('#4caf50', 0.08)
                           : isFailed
@@ -383,9 +383,9 @@ export default function DashboardPage() {
                       <Avatar
                         sx={{
                           bgcolor: isSuccess ? '#4caf50' : isFailed ? '#f44336' : 'primary.main',
-                          width: 36,
-                          height: 36,
-                          fontSize: '16px',
+                          width: 32,
+                          height: 32,
+                          fontSize: '14px',
                           fontWeight: 600,
                           boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
                         }}
@@ -401,7 +401,7 @@ export default function DashboardPage() {
                           variant="body1" 
                           sx={{ 
                             fontWeight: 500,
-                            fontSize: '14px',
+                            fontSize: '12px',
                           }}
                         >
                           SMS Gönderildi
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                           variant="caption" 
                           color="text.secondary"
                           sx={{
-                            fontSize: '11px',
+                            fontSize: '10px',
                           }}
                         >
                           {activity.phoneNumber} - <ClientDate date={activity.sentAt} format="relative" />

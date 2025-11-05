@@ -73,8 +73,8 @@ export default function LoginPage() {
             <Image
               src="/logo3.png"
               alt="Logo"
-              width={140}
-              height={140}
+              width={120}
+              height={120}
               style={{
                 objectFit: 'contain',
                 borderRadius: 8,
@@ -88,7 +88,7 @@ export default function LoginPage() {
             sx={{ 
               mb: 0.5, 
               fontWeight: 600,
-              fontSize: '22px',
+              fontSize: '20px',
               color: 'white',
             }}
           >
@@ -98,7 +98,7 @@ export default function LoginPage() {
             variant="body2" 
             sx={{ 
               color: 'rgba(255,255,255,0.9)',
-              fontSize: '13px',
+              fontSize: '11px',
             }}
           >
             Hesabınıza giriş yapın
@@ -106,7 +106,7 @@ export default function LoginPage() {
         </Box>
 
         {/* Form - HTML_TEMPLATES.html'e göre */}
-        <CardContent sx={{ padding: 2.5 }}>
+        <CardContent sx={{ padding: 2 }}>
           {error && (
             <Alert 
               severity="error" 
@@ -132,7 +132,7 @@ export default function LoginPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -151,7 +151,7 @@ export default function LoginPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
-                    fontSize: '14px',
+                    fontSize: '13px',
                   },
                 }}
               />
@@ -171,7 +171,7 @@ export default function LoginPage() {
                 borderRadius: 1.5,
                 padding: '8px 20px',
                 fontWeight: 500,
-                fontSize: '14px',
+                fontSize: '13px',
                 textTransform: 'none',
                 '&:hover': {
                   boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
@@ -188,7 +188,7 @@ export default function LoginPage() {
               align="center" 
               color="text.secondary"
               sx={{ 
-                fontSize: '12px',
+                fontSize: '11px',
                 mt: 1.5,
               }}
             >

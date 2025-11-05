@@ -171,8 +171,8 @@ export default function ContactsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 2, md: 2.5 },
-            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
+            padding: { xs: 1.5, sm: 1.5, md: 2 },
+            paddingLeft: { xs: 1.5, sm: 1.5, md: 2 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -189,7 +189,7 @@ export default function ContactsPage() {
                   component="h1" 
                   sx={{ 
                     color: 'primary.main',
-                    fontSize: '16px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     mb: 1,
                   }}
@@ -200,7 +200,7 @@ export default function ContactsPage() {
                   variant="body2" 
                   color="text.secondary" 
                   sx={{ 
-                    fontSize: '14px',
+                    fontSize: '12px',
                   }}
                 >
                   Kişilerinizi ve gruplarınızı yönetin. SMS göndermek için kişileri gruplara ekleyebilirsiniz.
@@ -225,7 +225,7 @@ export default function ContactsPage() {
                   boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                   borderRadius: 2,
                   padding: '8px 20px',
-                    fontSize: '14px',
+                    fontSize: '12px',
                     size: 'small',
                   fontWeight: 500,
                   textTransform: 'none',
@@ -282,8 +282,8 @@ export default function ContactsPage() {
 
               {/* Kişiler Tab */}
               {tabValue === 0 && (
-                <Box sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
+                <Box sx={{ p: 1.5 }}>
+                  <Grid container spacing={1.5}>
                     {contacts.map((contact) => (
                       <Grid size={{ xs: 12, sm: 6, md: 4 }} key={contact.id}>
                         <Card 
@@ -299,7 +299,7 @@ export default function ContactsPage() {
                                 <Typography 
                                   variant="h6"
                                   sx={{
-                                    fontSize: '16px',
+                                    fontSize: '12px',
                                     fontWeight: 500,
                                   }}
                                 >
@@ -309,7 +309,7 @@ export default function ContactsPage() {
                                   variant="body2" 
                                   color="text.secondary"
                                   sx={{
-                                    fontSize: '14px',
+                                    fontSize: '12px',
                                   }}
                                 >
                                   {contact.phone}
@@ -319,7 +319,7 @@ export default function ContactsPage() {
                                     variant="body2" 
                                     color="text.secondary"
                                     sx={{
-                                      fontSize: '14px',
+                                      fontSize: '12px',
                                     }}
                                   >
                                     {contact.email}
@@ -377,8 +377,8 @@ export default function ContactsPage() {
 
               {/* Gruplar Tab */}
               {tabValue === 1 && (
-                <Box sx={{ p: 2 }}>
-                  <Grid container spacing={2}>
+                <Box sx={{ p: 1.5 }}>
+                  <Grid container spacing={1.5}>
                     {groups.map((group) => (
                       <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
                         <Card 
@@ -396,7 +396,7 @@ export default function ContactsPage() {
                                 <Typography 
                                   variant="h6"
                                   sx={{
-                                    fontSize: '16px',
+                                    fontSize: '12px',
                                     fontWeight: 500,
                                   }}
                                 >
@@ -406,7 +406,7 @@ export default function ContactsPage() {
                                   variant="body2" 
                                   color="text.secondary"
                                   sx={{
-                                    fontSize: '14px',
+                                    fontSize: '12px',
                                   }}
                                 >
                                   {group.contactCount} kişi
@@ -417,7 +417,7 @@ export default function ContactsPage() {
                                     color="text.secondary" 
                                     sx={{ 
                                       mt: 1,
-                                      fontSize: '14px',
+                                      fontSize: '12px',
                                     }}
                                   >
                                     {group.description}
