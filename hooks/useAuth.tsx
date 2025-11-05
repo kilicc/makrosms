@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   // User state'ini localStorage'dan restore et (sayfa yenilemelerinde ve sayfa geçişlerinde)
+  // Bu useEffect mount'ta bir kez çalışır, user state'ini hemen restore eder
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('user');
@@ -47,17 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedUser && token) {
         try {
           const parsedUser = JSON.parse(savedUser);
-          console.log('User localStorage\'dan restore ediliyor:', parsedUser.username);
+          console.log('User localStorage\'dan hemen restore ediliyor:', parsedUser.username);
+          // User state'ini hemen set et (sayfa geçişlerinde kaybolmasın)
           setUser(parsedUser);
           setLoading(false);
           // Restore edilen user'ı doğrula (checkAuth çağrılacak ama user zaten var)
           setHasCheckedAuth(true);
         } catch (error) {
           console.error('User restore error:', error);
+          setLoading(false);
         }
       } else if (!token) {
         // Token yok, user da null
         setUser(null);
+        setLoading(false);
+      } else {
+        // Token var ama user yok, loading'i false yap (checkAuth çağrılacak)
         setLoading(false);
       }
     }
@@ -100,14 +106,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [hasCheckedAuth]);
 
-  // Token varsa ama user yoksa, checkAuth'u tekrar çağır (sayfa geçişlerinde)
+  // Sayfa geçişlerinde user state'ini kontrol et ve restore et
+  // Bu useEffect her sayfa geçişinde çalışır, user state'ini korur
   useEffect(() => {
-    if (!loading && !user && hasCheckedAuth) {
+    // Sadece user null ise ve loading false ise kontrol et
+    if (!loading && !user) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      if (token) {
-        // Token var ama user yok, checkAuth'u tekrar çağır
-        console.log('Token var ama user yok, checkAuth tekrar çağrılıyor...');
-        checkAuth();
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      
+      if (token && savedUser) {
+        // Token ve user localStorage'da var, restore et
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          console.log('Sayfa geçişinde user restore ediliyor:', parsedUser.username);
+          setUser(parsedUser);
+          // User restore edildi, checkAuth'a gerek yok
+        } catch (error) {
+          console.error('User restore error:', error);
+          // Parse hatası, checkAuth çağır
+          if (token && hasCheckedAuth) {
+            console.log('Token var ama user parse hatası, checkAuth çağrılıyor...');
+            checkAuth();
+          }
+        }
+      } else if (token && !savedUser) {
+        // Token var ama user localStorage'da yok
+        // Eğer checkAuth henüz çalışmadıysa, çalıştır
+        if (!hasCheckedAuth) {
+          console.log('Token var ama user localStorage\'da yok, checkAuth çağrılıyor...');
+          checkAuth();
+          setHasCheckedAuth(true);
+        }
       }
     }
   }, [loading, user, hasCheckedAuth]);
