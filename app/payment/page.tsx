@@ -213,8 +213,8 @@ export default function CryptoPaymentPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -231,7 +231,7 @@ export default function CryptoPaymentPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '34px',
+                fontSize: '20px',
                 fontWeight: 600,
               }}
             >
@@ -242,7 +242,7 @@ export default function CryptoPaymentPage() {
               variant="body2" 
               color="text.secondary" 
               sx={{ 
-                mb: 3,
+                mb: 2,
                 fontSize: '14px',
               }}
             >
@@ -266,17 +266,17 @@ export default function CryptoPaymentPage() {
               sx={{ 
                 borderRadius: 2,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                mb: 3,
+                mb: 2,
               }}
             >
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 2 }}>
                 <Typography 
                   variant="h6" 
                   gutterBottom
                   sx={{
                     fontSize: '20px',
                     fontWeight: 500,
-                    mb: 3,
+                    mb: 2,
                   }}
                 >
                   Kredi Paketi Seç
@@ -354,7 +354,7 @@ export default function CryptoPaymentPage() {
             </Card>
 
             {/* Kripto Para Seçimi ve Ödeme Oluştur */}
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Card 
                   sx={{ 
@@ -362,12 +362,12 @@ export default function CryptoPaymentPage() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent sx={{ p: 2 }}>
                     <Typography 
                       variant="h6" 
                       gutterBottom
                       sx={{
-                        fontSize: '20px',
+                        fontSize: '16px',
                         fontWeight: 500,
                       }}
                     >
@@ -417,7 +417,9 @@ export default function CryptoPaymentPage() {
                         background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
                         boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                         borderRadius: 2,
-                        padding: '10px 24px',
+                        padding: '8px 20px',
+                          fontSize: '14px',
+                          size: 'small',
                         fontWeight: 500,
                         textTransform: 'none',
                         '&:hover': {
@@ -445,7 +447,7 @@ export default function CryptoPaymentPage() {
                       background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
                     }}
                   >
-                    <CardContent sx={{ p: 3 }}>
+                    <CardContent sx={{ p: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                         <CheckCircle sx={{ color: 'success.main', fontSize: 28 }} />
                         <Typography
@@ -467,7 +469,7 @@ export default function CryptoPaymentPage() {
                         severity="info"
                         icon={<Info />}
                         sx={{
-                          mb: 3,
+                          mb: 2,
                           borderRadius: 2,
                           bgcolor: alpha('#1976d2', 0.1),
                         }}
@@ -480,7 +482,7 @@ export default function CryptoPaymentPage() {
                         </Typography>
                       </Alert>
 
-                      <Grid container spacing={3}>
+                      <Grid container spacing={2}>
                         {/* Sol Panel - Cüzdan Adresi ve QR Kod */}
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Box sx={{ mb: 3 }}>
@@ -624,7 +626,7 @@ export default function CryptoPaymentPage() {
                             variant="body2"
                             color="text.secondary"
                             sx={{
-                              mb: 3,
+                              mb: 2,
                               fontSize: '14px',
                             }}
                           >
@@ -658,7 +660,7 @@ export default function CryptoPaymentPage() {
                               min: 0,
                             }}
                             sx={{
-                              mb: 3,
+                              mb: 2,
                               '& .MuiOutlinedInput-root': {
                                 borderRadius: 2,
                               },
@@ -676,10 +678,11 @@ export default function CryptoPaymentPage() {
                               background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
                               boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                               borderRadius: 2,
-                              padding: '12px 24px',
+                              padding: '8px 20px',
+                              fontSize: '14px',
                               fontWeight: 500,
                               textTransform: 'none',
-                              fontSize: '16px',
+                              size: 'small',
                               '&:hover': {
                                 boxShadow: '0 8px 25px rgba(25, 118, 210, 0.4)',
                                 transform: 'translateY(-2px)',
@@ -743,23 +746,23 @@ export default function CryptoPaymentPage() {
               sx={{ 
                 borderRadius: 2,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                mt: 3,
+                mt: 2,
               }}
             >
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 2 }}>
                 <Typography 
                   variant="h6" 
                   gutterBottom
                   sx={{
                     fontSize: '20px',
                     fontWeight: 500,
-                    mb: 3,
+                    mb: 2,
                   }}
                 >
                   Ödeme Taleplerim
                 </Typography>
                 {loadingRequests ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
                     <CircularProgress />
                   </Box>
                 ) : paymentRequests.length === 0 ? (

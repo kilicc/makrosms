@@ -88,8 +88,8 @@ export default function SMSReportsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -106,7 +106,7 @@ export default function SMSReportsPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '34px',
+                fontSize: '20px',
                 fontWeight: 600,
               }}
             >
@@ -117,7 +117,7 @@ export default function SMSReportsPage() {
               variant="body2" 
               color="text.secondary" 
               sx={{ 
-                mb: 3,
+                mb: 2,
                 fontSize: '14px',
               }}
             >
@@ -125,7 +125,7 @@ export default function SMSReportsPage() {
             </Typography>
 
             {/* Filters */}
-            <Paper sx={{ p: 2, mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Paper sx={{ p: 2, mb: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <Grid container spacing={2} alignItems="center">
                 <Grid size={{ xs: 12, md: 3 }}>
                   <TextField
@@ -191,7 +191,9 @@ export default function SMSReportsPage() {
                       background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
                       boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                       borderRadius: 2,
-                      padding: '10px 24px',
+                      padding: '8px 20px',
+                    fontSize: '14px',
+                    size: 'small',
                       fontWeight: 500,
                       textTransform: 'none',
                       '&:hover': {
@@ -217,11 +219,11 @@ export default function SMSReportsPage() {
             {/* Messages Table */}
             <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
                   <CircularProgress />
                 </Box>
               ) : messages.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Box sx={{ p: 2, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
                     {filters.startDate || filters.endDate || filters.status
                       ? 'Filtre kriterlerine uygun SMS bulunamadı'

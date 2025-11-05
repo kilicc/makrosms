@@ -59,25 +59,25 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 4,
+        padding: 2,
       }}
     >
       <Card
         sx={{
-          maxWidth: 600,
+          maxWidth: 480,
           width: '100%',
           background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(20px)',
-          borderRadius: 16,
+          borderRadius: 12,
           overflow: 'hidden',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
         }}
       >
         {/* Header with gradient - Login sayfasıyla aynı */}
         <Box
           sx={{
             background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-            padding: 3,
+            padding: 2,
             textAlign: 'center',
             color: 'white',
           }}
@@ -86,18 +86,18 @@ export default function RegisterPage() {
             sx={{
               display: 'flex',
               justifyContent: 'center',
-              mb: 2,
+              mb: 1.5,
             }}
           >
             <Image
               src="/logo3.png"
               alt="Logo"
-              width={200}
-              height={200}
+              width={140}
+              height={140}
               style={{
                 objectFit: 'contain',
-                borderRadius: 12,
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3)',
+                borderRadius: 8,
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
               }}
             />
           </Box>
@@ -105,9 +105,9 @@ export default function RegisterPage() {
             variant="h4" 
             component="h1" 
             sx={{ 
-              mb: 1, 
+              mb: 0.5, 
               fontWeight: 600,
-              fontSize: '34px',
+              fontSize: '22px',
               color: 'white',
             }}
           >
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             variant="body2" 
             sx={{ 
               color: 'rgba(255,255,255,0.9)',
-              fontSize: '16px',
+              fontSize: '13px',
             }}
           >
             Hesabınızı oluşturun
@@ -125,7 +125,7 @@ export default function RegisterPage() {
         </Box>
 
         {/* Form */}
-        <CardContent sx={{ padding: 4 }}>
+        <CardContent sx={{ padding: 2.5 }}>
           {error && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {error}
@@ -133,69 +133,77 @@ export default function RegisterPage() {
           )}
 
           <Box component="form" onSubmit={handleSubmit}>
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
                 label="Kullanıcı Adı"
                 variant="outlined"
+                size="small"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1.5,
+                    fontSize: '14px',
                   },
                 }}
               />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
                 label="E-posta"
                 type="email"
                 variant="outlined"
+                size="small"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1.5,
+                    fontSize: '14px',
                   },
                 }}
               />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
                 label="Şifre"
                 type="password"
                 variant="outlined"
+                size="small"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 helperText="En az 8 karakter"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1.5,
+                    fontSize: '14px',
                   },
                 }}
               />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
                 label="Şifre Tekrar"
                 type="password"
                 variant="outlined"
+                size="small"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1.5,
+                    fontSize: '14px',
                   },
                 }}
               />
@@ -206,18 +214,20 @@ export default function RegisterPage() {
               fullWidth
               variant="contained"
               disabled={loading}
+              size="small"
               sx={{
-                mt: 2,
-                mb: 2,
+                mt: 1.5,
+                mb: 1.5,
                 background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
-                borderRadius: 2,
-                padding: '10px 24px',
+                boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                borderRadius: 1.5,
+                padding: '8px 20px',
                 fontWeight: 500,
+                fontSize: '14px',
                 textTransform: 'none',
                 '&:hover': {
-                  boxShadow: '0 8px 25px rgba(25, 118, 210, 0.4)',
-                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                  transform: 'translateY(-1px)',
                 },
                 transition: 'all 0.3s',
               }}
@@ -230,8 +240,8 @@ export default function RegisterPage() {
               align="center" 
               color="text.secondary"
               sx={{
-                fontSize: '14px',
-                mt: 2,
+                fontSize: '12px',
+                mt: 1.5,
               }}
             >
               Zaten hesabınız var mı?{' '}

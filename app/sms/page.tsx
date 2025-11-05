@@ -59,8 +59,8 @@ export default function SMSInterfacePage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -76,8 +76,8 @@ export default function SMSInterfacePage() {
               gutterBottom 
               sx={{ 
                 color: 'primary.main', 
-                mb: 3,
-                fontSize: '34px',
+                mb: 2,
+                fontSize: '20px',
                 fontWeight: 600,
               }}
             >
@@ -88,8 +88,8 @@ export default function SMSInterfacePage() {
               variant="body2" 
               color="text.secondary" 
               sx={{ 
-                mb: 3,
-                fontSize: '14px',
+                mb: 2,
+                fontSize: '13px',
               }}
             >
               CepSMS servisini kullanarak tek bir telefon numarasına SMS gönderin.
@@ -107,14 +107,15 @@ export default function SMSInterfacePage() {
               </Alert>
             )}
 
-            <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <Box component="form" onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                   <Grid size={{ xs: 12 }}>
                     <TextField
                       fullWidth
                       label="Telefon Numarası"
                       variant="outlined"
+                      size="small"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="905xxxxxxxxx"
@@ -122,7 +123,8 @@ export default function SMSInterfacePage() {
                       helperText="Telefon numarasını 90 veya 5 ile başlayarak girin (örn: 905551234567)"
                       sx={{
                         '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
+                          borderRadius: 1.5,
+                          fontSize: '14px',
                         },
                       }}
                     />
@@ -133,15 +135,17 @@ export default function SMSInterfacePage() {
                       fullWidth
                       label="Mesaj İçeriği"
                       variant="outlined"
+                      size="small"
                       multiline
-                      rows={8}
+                      rows={6}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       required
                       helperText={`Mesaj karakter sayısı: ${formData.message.length}`}
                       sx={{
                         '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
+                          borderRadius: 1.5,
+                          fontSize: '14px',
                         },
                       }}
                     />
@@ -149,15 +153,15 @@ export default function SMSInterfacePage() {
 
                   <Grid size={{ xs: 12 }}>
                     <Box sx={{ 
-                      p: 2, 
+                      p: 1.5, 
                       bgcolor: 'rgba(25, 118, 210, 0.05)', 
-                      borderRadius: 2,
-                      mb: 2,
+                      borderRadius: 1.5,
+                      mb: 1.5,
                     }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px', mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
                         <strong>Servis:</strong> CepSMS
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                         <strong>Maliyet:</strong> 1 SMS = 1 Kredi
                       </Typography>
                     </Box>
@@ -167,21 +171,21 @@ export default function SMSInterfacePage() {
                     <Button
                       type="submit"
                       variant="contained"
-                      size="large"
+                      size="small"
                       startIcon={<Send />}
                       disabled={loading}
                       fullWidth
                       sx={{
                         background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                        boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
-                        borderRadius: 2,
-                        padding: '12px 24px',
+                        boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                        borderRadius: 1.5,
+                        padding: '8px 20px',
                         fontWeight: 500,
+                        fontSize: '14px',
                         textTransform: 'none',
-                        fontSize: '16px',
                         '&:hover': {
-                          boxShadow: '0 8px 25px rgba(25, 118, 210, 0.4)',
-                          transform: 'translateY(-2px)',
+                          boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                          transform: 'translateY(-1px)',
                         },
                         transition: 'all 0.3s',
                       }}

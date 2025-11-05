@@ -319,8 +319,8 @@ export default function AdminDashboardPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '34px',
+                fontSize: '20px',
                 fontWeight: 600,
               }}
             >
@@ -348,7 +348,7 @@ export default function AdminDashboardPage() {
               variant="body2" 
               color="text.secondary" 
               sx={{ 
-                mb: 3,
+                mb: 2,
                 fontSize: '14px',
               }}
             >
@@ -368,7 +368,7 @@ export default function AdminDashboardPage() {
             )}
 
             {/* Tabs */}
-            <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', mb: 3 }}>
+            <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', mb: 2 }}>
               <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
                 <Tab icon={<People />} label="Kullanıcılar" />
                 <Tab icon={<Assessment />} label="İade Raporu" />
@@ -378,7 +378,7 @@ export default function AdminDashboardPage() {
 
             {/* Stats Cards */}
             {stats && (
-              <Grid container spacing={3} sx={{ mb: 3 }}>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card 
                     sx={{ 
@@ -403,7 +403,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '34px',
+                          fontSize: '20px',
                         }}
                       >
                         {stats.totalUsers}
@@ -435,7 +435,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '34px',
+                          fontSize: '20px',
                         }}
                       >
                         {stats.totalSMS}
@@ -467,7 +467,7 @@ export default function AdminDashboardPage() {
                         color="primary" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '34px',
+                          fontSize: '20px',
                         }}
                       >
                         {stats.totalRevenue.toLocaleString('tr-TR')} TRY
@@ -713,7 +713,7 @@ export default function AdminDashboardPage() {
                     ))}
 
                     {refundsReport.reports.length === 0 && (
-                      <Paper sx={{ p: 4, borderRadius: 2, textAlign: 'center' }}>
+                      <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
                         <Typography variant="body2" color="text.secondary">
                           Seçilen tarihte SMS gönderen veya iadesi olan kullanıcı bulunmuyor.
                         </Typography>
@@ -723,7 +723,7 @@ export default function AdminDashboardPage() {
                 )}
 
                 {!refundsReport && !refundsReportLoading && (
-                  <Paper sx={{ p: 4, borderRadius: 2, textAlign: 'center' }}>
+                  <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
                       Raporu yüklemek için tarih seçin ve "Raporu Yükle" butonuna tıklayın.
                     </Typography>
@@ -735,20 +735,20 @@ export default function AdminDashboardPage() {
             {/* Payment Requests Tab */}
             {tabValue === 2 && (
               <Box>
-                <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', p: 3 }}>
+                <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', p: 2 }}>
                   <Typography 
                     variant="h6" 
                     gutterBottom
                     sx={{
                       fontSize: '20px',
                       fontWeight: 500,
-                      mb: 3,
+                      mb: 2,
                     }}
                   >
                     Ödeme Talepleri
                   </Typography>
                   {loadingPaymentRequests ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
                       <CircularProgress />
                     </Box>
                   ) : paymentRequests.length === 0 ? (

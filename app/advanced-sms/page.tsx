@@ -291,8 +291,8 @@ export default function AdvancedSMSPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -309,7 +309,7 @@ export default function AdvancedSMSPage() {
               sx={{ 
                 color: 'primary.main', 
                 mb: 2,
-                fontSize: '34px',
+                fontSize: '20px',
                 fontWeight: 600,
               }}
             >
@@ -320,8 +320,8 @@ export default function AdvancedSMSPage() {
               variant="body2" 
               color="text.secondary" 
               sx={{ 
-                mb: 3,
-                fontSize: '14px',
+                mb: 2,
+                fontSize: '13px',
               }}
             >
               CepSMS servisini kullanarak birden fazla kişiye toplu SMS gönderin. Grup seçerek veya manuel olarak kişileri seçebilirsiniz.
@@ -339,7 +339,7 @@ export default function AdvancedSMSPage() {
               </Alert>
             )}
 
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               {/* Sol Panel - Grup/Kişi Seçimi */}
               <Grid size={{ xs: 12, md: 4 }}>
                 <Card 
@@ -348,13 +348,14 @@ export default function AdvancedSMSPage() {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                   }}
                 >
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent sx={{ p: 2 }}>
                     <Typography 
                       variant="h6" 
                       gutterBottom
                       sx={{
-                        fontSize: '20px',
+                        fontSize: '16px',
                         fontWeight: 500,
+                        mb: 1.5,
                       }}
                     >
                       Grup/Kişi Seçimi

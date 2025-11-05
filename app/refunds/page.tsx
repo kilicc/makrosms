@@ -117,8 +117,8 @@ export default function RefundsPage() {
           component="main"
           sx={{
             flexGrow: 1,
-            padding: { xs: 2, sm: 3, md: 3 },
-            paddingLeft: { xs: 2, sm: 3, md: 2 },
+            padding: { xs: 2, sm: 2, md: 2.5 },
+            paddingLeft: { xs: 2, sm: 2, md: 2.5 },
             marginLeft: { xs: 0, md: '280px' },
             width: { xs: '100%', md: 'calc(100% - 280px)' },
             minHeight: '100vh',
@@ -135,7 +135,7 @@ export default function RefundsPage() {
                   component="h1" 
                   sx={{ 
                     color: 'primary.main',
-                    fontSize: '34px',
+                    fontSize: '16px',
                     fontWeight: 600,
                     mb: 1,
                   }}
@@ -159,7 +159,7 @@ export default function RefundsPage() {
               severity="info"
               icon={<Info sx={{ fontSize: 32 }} />}
               sx={{
-                mb: 3,
+                mb: 2,
                 borderRadius: 2,
                 bgcolor: alpha('#1976d2', 0.1),
                 border: '1px solid',
@@ -171,7 +171,7 @@ export default function RefundsPage() {
               <Typography
                 variant="h6"
                 sx={{
-                  fontSize: '20px',
+                  fontSize: '16px',
                   fontWeight: 600,
                   mb: 1,
                   color: 'primary.main',
@@ -201,7 +201,9 @@ export default function RefundsPage() {
                   background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
                   boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                   borderRadius: 2,
-                  padding: '10px 24px',
+                  padding: '8px 20px',
+                    fontSize: '14px',
+                    size: 'small',
                   fontWeight: 500,
                   textTransform: 'none',
                   '&:hover': {
@@ -216,7 +218,7 @@ export default function RefundsPage() {
             </Box>
 
             {refunds.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4, mb: 3 }}>
+              <Box sx={{ textAlign: 'center', py: 2, mb: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
                   Henüz iade talebi bulunmuyor. İade talebi oluşturmak için "İade Talebi Oluştur" butonuna tıklayın.
                 </Typography>
@@ -238,11 +240,11 @@ export default function RefundsPage() {
             {/* Refunds Table */}
             <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
                   <CircularProgress />
                 </Box>
               ) : refunds.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Box sx={{ p: 2, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
                     Henüz iade talebi bulunmuyor. Yeni iade talebi oluşturmak için "İade Talebi Oluştur" butonuna tıklayın.
                   </Typography>
