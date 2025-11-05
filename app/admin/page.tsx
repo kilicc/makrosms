@@ -606,7 +606,7 @@ export default function AdminDashboardPage() {
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)', border: '1px solid rgba(25, 118, 210, 0.1)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                          <CardContent>
+                          <CardContent sx={{ p: 1.5 }}>
                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                               Toplam İade
                             </Typography>
@@ -618,7 +618,7 @@ export default function AdminDashboardPage() {
                       </Grid>
                       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                         <Card sx={{ borderRadius: 2, background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)', border: '1px solid rgba(25, 118, 210, 0.1)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                          <CardContent>
+                          <CardContent sx={{ p: 1.5 }}>
                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                               Toplam İade Tutarı
                             </Typography>
