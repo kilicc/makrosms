@@ -175,30 +175,46 @@ export default function DashboardPage() {
           </Typography>
 
           {/* Stat Cards Grid - Modern Design */}
-          <Grid container spacing={2} sx={{ mb: 3, width: '100%', margin: 0 }}>
+          <Grid container spacing={0} sx={{ mb: 3, width: '100%', margin: 0, display: 'flex' }}>
             {statCards.map((card, index) => {
               const isCreditCard = card.title === 'Mevcut Kredi';
+              const isFirst = index === 0;
+              const isLast = index === statCards.length - 1;
               return (
                 <Grid 
                   size={{ xs: 12, sm: 6, md: 3 }} 
                   key={index}
-                  sx={{ display: 'flex', minWidth: 0 }}
+                  sx={{ 
+                    display: 'flex', 
+                    minWidth: 0,
+                    padding: '0 !important',
+                    '&:not(:last-child)': {
+                      borderRight: `1px solid ${alpha('#e0e0e0', 0.3)}`,
+                    },
+                  }}
                 >
                   <Card
                     onClick={() => router.push(card.path)}
                     sx={{
                       height: '100%',
+                      width: '100%',
                       background: isCreditCard
                         ? 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)'
                         : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                      border: isCreditCard 
-                        ? 'none'
-                        : `1px solid ${alpha('#e0e0e0', 0.5)}`,
-                      borderRadius: 2,
+                      border: 'none',
+                      borderRadius: 0,
+                      borderLeft: isFirst ? 'none' : `1px solid ${alpha('#e0e0e0', 0.3)}`,
+                      borderRight: isLast ? 'none' : `1px solid ${alpha('#e0e0e0', 0.3)}`,
+                      ...(isFirst && {
+                        borderTopLeftRadius: 8,
+                        borderBottomLeftRadius: 8,
+                      }),
+                      ...(isLast && {
+                        borderTopRightRadius: 8,
+                        borderBottomRightRadius: 8,
+                      }),
                       p: 2,
-                      boxShadow: isCreditCard
-                        ? '0 6px 16px rgba(76, 175, 80, 0.2)'
-                        : '0 2px 8px rgba(0, 0, 0, 0.06)',
+                      boxShadow: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       position: 'relative',
@@ -214,13 +230,11 @@ export default function DashboardPage() {
                         pointerEvents: 'none',
                       } : {},
                       '&:hover': {
-                        transform: 'translateY(-4px) scale(1.01)',
+                        transform: 'translateY(-2px)',
                         boxShadow: isCreditCard
                           ? '0 8px 20px rgba(76, 175, 80, 0.3)'
                           : '0 4px 12px rgba(0, 0, 0, 0.1)',
-                        border: isCreditCard 
-                          ? 'none'
-                          : `1px solid ${alpha('#1976d2', 0.3)}`,
+                        zIndex: 1,
                       },
                     }}
                   >
