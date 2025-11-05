@@ -201,6 +201,19 @@ npm run build
 npm start
 ```
 
+## 🌐 Vercel Deployment
+
+Proje Vercel'e deploy edilmeye hazırdır. Detaylı bilgi için `VERCEL_DEPLOY.md` dosyasına bakın.
+
+### Hızlı Deploy
+
+1. [Vercel Dashboard](https://vercel.com/dashboard) açın
+2. GitHub repository'yi import edin: `https://github.com/kilicc/finsms2.git`
+3. Environment variables'ları ekleyin (`.env.example` dosyasına bakın)
+4. Deploy butonuna tıklayın
+
+**ÖNEMLİ:** `DATABASE_URL` içindeki özel karakterler URL encode edilmelidir!
+
 ## 📝 Lisans
 
 Bu proje özel bir lisans altındadır.
