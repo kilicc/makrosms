@@ -1,10 +1,51 @@
-/* Global CSS - Tüm sayfalara etki eder */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== THEME COLORS (Exported Styles) ===== */
+:root {
+  --primary-main: #1976d2;
+  --primary-light: rgba(25, 118, 210, 0.1);
+  --primary-medium: rgba(25, 118, 210, 0.2);
+  --primary-dark: rgba(25, 118, 210, 0.3);
+  
+  --secondary-main: #dc004e;
+  --secondary-light: rgba(220, 0, 78, 0.1);
+  --secondary-medium: rgba(220, 0, 78, 0.2);
+  
+  --success-main: #4caf50;
+  --success-light: rgba(76, 175, 80, 0.2);
+  
+  --error-main: #f44336;
+  --error-light: rgba(244, 67, 54, 0.1);
+  
+  --warning-main: #ff9800;
+  --warning-light: rgba(255, 193, 7, 0.2);
+  
+  --info-main: #2196f3;
+  --info-light: rgba(33, 150, 243, 0.2);
+  
+  --background-default: #f5f5f5;
+  --background-paper: #ffffff;
+  
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-disabled: rgba(0, 0, 0, 0.38);
+  
+  --gradient-login: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-navbar: linear-gradient(135deg, #1976d2 0%, #dc004e 100%);
+  --gradient-card-light: linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%);
+  --gradient-card-medium: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  --gradient-button: linear-gradient(135deg, #1976d2 0%, #dc004e 100%);
+}
+
+/* Global CSS - Normal çözünürlük için standart değerler */
 * {
   box-sizing: border-box;
 }
 
 html {
-  font-size: 14px; /* Base font size küçültüldü (16px → 14px) */
+  font-size: 16px; /* Standart base font size */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -12,14 +53,15 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-size: 0.875rem; /* 14px → 12px */
+  font-size: 0.875rem; /* 14px - Normal body font */
   line-height: 1.5;
   color: rgba(0, 0, 0, 0.87);
   background-color: #f5f5f5;
   overflow-x: hidden;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
-/* Tüm başlıklar için küçük font boyutları */
+/* Normal başlık boyutları */
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
   font-weight: 600;
@@ -27,195 +69,70 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-  font-size: 1.75rem; /* 28px */
+  font-size: 2rem; /* 32px */
 }
 
 h2 {
-  font-size: 1.5rem; /* 24px */
+  font-size: 1.75rem; /* 28px */
 }
 
 h3 {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.5rem; /* 24px */
 }
 
 h4 {
-  font-size: 1.125rem; /* 18px */
+  font-size: 1.25rem; /* 20px */
 }
 
 h5 {
-  font-size: 1rem; /* 16px */
+  font-size: 1.125rem; /* 18px */
 }
 
 h6 {
-  font-size: 0.9375rem; /* 15px */
+  font-size: 1rem; /* 16px */
 }
 
-/* Tüm paragraflar için küçük font */
+/* Normal paragraf ve link boyutları */
 p {
   font-size: 0.875rem; /* 14px */
   line-height: 1.6;
   margin: 0;
 }
 
-/* Tüm linkler için küçük font */
 a {
   font-size: 0.875rem; /* 14px */
   text-decoration: none;
 }
 
-/* Tüm butonlar için küçük font (override için) */
-button {
-  font-size: 0.75rem; /* 12px */
-}
-
-/* Tüm input alanları için küçük font */
-input, textarea, select {
-  font-size: 0.875rem !important; /* 14px */
-}
-
-/* Scrollbar küçültülmüş */
+/* Normal scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #888;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
-/* MUI component'leri için global override'lar */
-.MuiButton-root {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 6px 16px !important;
-  min-height: 32px !important;
-}
-
-.MuiButton-sizeSmall {
-  font-size: 0.6875rem !important; /* 11px */
-  padding: 4px 12px !important;
-  min-height: 28px !important;
-}
-
-.MuiTextField-root .MuiOutlinedInput-input {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 8px 12px !important;
-}
-
-.MuiInputLabel-root {
-  font-size: 0.75rem !important; /* 12px */
-}
-
-.MuiTableCell-root {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 8px 12px !important;
-}
-
-.MuiTableCell-head {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 10px 12px !important;
-}
-
-.MuiChip-root {
-  font-size: 0.6875rem !important; /* 11px */
-  height: 20px !important;
-}
-
-.MuiDialogTitle-root {
-  font-size: 1rem !important; /* 16px */
-  padding: 12px 16px !important;
-  padding-bottom: 8px !important;
-}
-
-.MuiDialogContent-root {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 12px 16px !important;
-}
-
-.MuiDialogActions-root {
-  padding: 8px 16px 12px !important;
-}
-
-.MuiListItemButton-root {
-  padding: 6px 12px !important;
-  min-height: 40px !important;
-}
-
-.MuiListItemIcon-root {
-  min-width: 32px !important;
-  font-size: 18px !important;
-}
-
-.MuiListItemText-primary {
-  font-size: 0.8125rem !important; /* 13px */
-}
-
-.MuiListItemText-secondary {
-  font-size: 0.6875rem !important; /* 11px */
-}
-
-.MuiAvatar-root {
-  width: 32px !important;
-  height: 32px !important;
-  font-size: 0.875rem !important; /* 14px */
-}
-
-.MuiCardContent-root {
-  padding: 12px !important;
-}
-
-.MuiPaper-root {
-  border-radius: 8px !important;
-}
-
-.MuiTab-root {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 8px 16px !important;
-  min-height: 40px !important;
-}
-
-.MuiIconButton-root {
-  padding: 6px !important;
-}
-
-.MuiIconButton-root svg {
-  font-size: 18px !important;
-}
-
-.MuiCircularProgress-root {
-  width: 24px !important;
-  height: 24px !important;
-}
-
-.MuiSelect-select {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 8px 12px !important;
-}
-
-.MuiMenuItem-root {
-  font-size: 0.75rem !important; /* 12px */
-  padding: 6px 12px !important;
-  min-height: 36px !important;
-}
-
-/* Responsive font scaling */
+/* Responsive font scaling - sadece mobile için hafif küçültme */
 @media (max-width: 768px) {
   html {
-    font-size: 13px;
+    font-size: 15px;
   }
 }
 
 @media (max-width: 480px) {
   html {
-    font-size: 12px;
+    font-size: 14px;
   }
 }
