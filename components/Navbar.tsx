@@ -18,7 +18,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
-const drawerWidth = 280;
+const drawerWidth = 240;
 
 interface MenuItem {
   label: string;
@@ -69,7 +69,7 @@ export default function Navbar() {
       {/* Logo Header - HTML_TEMPLATES.html'e göre */}
       <Box
         sx={{
-          p: 2,
+          p: 1.5,
           background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
           color: 'white',
           borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
@@ -85,12 +85,12 @@ export default function Navbar() {
           <Image
             src="/logo3.png"
             alt="Logo"
-            width={150}
-            height={50}
+            width={120}
+            height={40}
             style={{
               objectFit: 'contain',
-              borderRadius: 8,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: 6,
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
             }}
           />
         </Box>
@@ -99,13 +99,13 @@ export default function Navbar() {
       {/* User Info - HTML_TEMPLATES.html'e göre */}
       <Box
         sx={{
-          p: 2,
+          p: 1.5,
           background: alpha('#1976d2', 0.05),
           borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32, fontSize: '14px' }}>
             {initials}
           </Avatar>
           <Box sx={{ flex: 1 }}>
@@ -113,21 +113,21 @@ export default function Navbar() {
               variant="subtitle2" 
               sx={{ 
                 fontWeight: 600,
-                fontSize: '16px',
+                fontSize: '13px',
               }}
             >
               {user?.username || 'Kullanıcı'}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 0.75, mt: 0.5, alignItems: 'center' }}>
               <Chip
                 label={`${user?.credit || 0} SMS`}
                 color="success"
-                size="medium"
+                size="small"
                 sx={{ 
-                  height: 28, 
-                  fontSize: '0.85rem',
+                  height: 22, 
+                  fontSize: '0.7rem',
                   fontWeight: 600,
-                  px: 1,
+                  px: 0.75,
                 }}
               />
               <Chip
@@ -135,8 +135,8 @@ export default function Navbar() {
                 color={user?.role === 'admin' ? 'error' : 'warning'}
                 size="small"
                 sx={{ 
-                  height: 20, 
-                  fontSize: '0.7rem',
+                  height: 18, 
+                  fontSize: '0.65rem',
                   fontWeight: 500,
                 }}
               />
@@ -146,15 +146,17 @@ export default function Navbar() {
       </Box>
 
       {/* Menu Items */}
-      <List sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+      <List sx={{ flex: 1, overflow: 'auto', p: 0.75 }}>
         {menuItems.map((item) => (
           <ListItemButton
             key={item.path}
             selected={isActive(item.path)}
             onClick={() => router.push(item.path)}
             sx={{
-              borderRadius: 2,
-              mb: 0.5,
+              borderRadius: 1.5,
+              mb: 0.25,
+              py: 0.75,
+              px: 1,
               bgcolor: isActive(item.path) ? alpha('#1976d2', 0.1) : 'transparent',
               '&:hover': {
                 bgcolor: alpha('#1976d2', 0.05),
@@ -170,7 +172,8 @@ export default function Navbar() {
             <ListItemIcon
               sx={{
                 color: isActive(item.path) ? 'primary.main' : 'inherit',
-                minWidth: 40,
+                minWidth: 32,
+                fontSize: '18px',
               }}
             >
               {item.icon}
@@ -180,10 +183,11 @@ export default function Navbar() {
               secondary={item.description}
               primaryTypographyProps={{
                 fontWeight: isActive(item.path) ? 600 : 400,
+                fontSize: '13px',
                 color: isActive(item.path) ? 'primary.main' : 'inherit',
               }}
               secondaryTypographyProps={{
-                fontSize: '0.7rem',
+                fontSize: '0.65rem',
               }}
             />
           </ListItemButton>
@@ -192,15 +196,17 @@ export default function Navbar() {
         {/* Admin Menu Items */}
         {(user?.role === 'admin' || user?.role === 'moderator') && (
           <>
-            <Divider sx={{ my: 1 }} />
+            <Divider sx={{ my: 0.75 }} />
             {adminMenuItems.map((item) => (
               <ListItemButton
                 key={item.path}
                 selected={isActive(item.path)}
                 onClick={() => router.push(item.path)}
                 sx={{
-                  borderRadius: 2,
-                  mb: 0.5,
+                  borderRadius: 1.5,
+                  mb: 0.25,
+                  py: 0.75,
+                  px: 1,
                   bgcolor: isActive(item.path) ? alpha('#dc004e', 0.1) : 'transparent',
                   '&:hover': {
                     bgcolor: alpha('#dc004e', 0.05),
@@ -216,7 +222,8 @@ export default function Navbar() {
                 <ListItemIcon
                   sx={{
                     color: isActive(item.path) ? 'secondary.main' : 'inherit',
-                    minWidth: 40,
+                    minWidth: 32,
+                    fontSize: '18px',
                   }}
                 >
                   {item.icon}
@@ -226,10 +233,11 @@ export default function Navbar() {
                   secondary={item.description}
                   primaryTypographyProps={{
                     fontWeight: isActive(item.path) ? 600 : 400,
+                    fontSize: '13px',
                     color: isActive(item.path) ? 'secondary.main' : 'inherit',
                   }}
                   secondaryTypographyProps={{
-                    fontSize: '0.7rem',
+                    fontSize: '0.65rem',
                   }}
                 />
               </ListItemButton>
@@ -239,20 +247,22 @@ export default function Navbar() {
       </List>
 
       {/* Logout */}
-      <Box sx={{ p: 1, borderTop: '1px solid rgba(0,0,0,0.12)' }}>
+      <Box sx={{ p: 0.75, borderTop: '1px solid rgba(0,0,0,0.12)' }}>
         <ListItemButton
           onClick={() => {
             logout();
           }}
           sx={{
-            borderRadius: 2,
+            borderRadius: 1.5,
+            py: 0.75,
+            px: 1,
             bgcolor: alpha('#f44336', 0.05),
             '&:hover': {
               bgcolor: alpha('#f44336', 0.1),
             },
           }}
         >
-          <ListItemIcon sx={{ color: 'error.main', minWidth: 40 }}>
+          <ListItemIcon sx={{ color: 'error.main', minWidth: 32, fontSize: '18px' }}>
             <Logout />
           </ListItemIcon>
           <ListItemText
@@ -260,6 +270,7 @@ export default function Navbar() {
             primaryTypographyProps={{
               color: 'error.main',
               fontWeight: 500,
+              fontSize: '13px',
             }}
           />
         </ListItemButton>
