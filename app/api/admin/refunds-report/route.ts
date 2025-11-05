@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest, requireAdmin } from '@/lib/middleware/auth';
 
 // GET /api/admin/refunds-report - İade raporu (kullanıcı bazlı günlük SMS ve iadeler)
@@ -29,69 +29,51 @@ export async function GET(request: NextRequest) {
     const endDate = new Date(date);
     endDate.setHours(23, 59, 59, 999);
 
-    // Tüm kullanıcıları al
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        email: true,
-      },
-    });
+    // Tüm kullanıcıları al using Supabase
+    const { data: usersData, error: usersError } = await supabaseServer
+      .from('users')
+      .select('id, username, email');
 
-    // Her kullanıcı için günlük SMS sayısı ve iade bilgilerini al
+    if (usersError) {
+      throw new Error(usersError.message);
+    }
+
+    const users = usersData || [];
+
+    // Her kullanıcı için günlük SMS sayısı ve iade bilgilerini al using Supabase
     const userReports = await Promise.all(
-      users.map(async (user) => {
+      users.map(async (user: any) => {
         // Bugünkü SMS sayısı
-        const todaySMS = await prisma.smsMessage.count({
-          where: {
-            userId: user.id,
-            sentAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-        });
+        const { count: todaySMSCount } = await supabaseServer
+          .from('sms_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .gte('sent_at', startDate.toISOString())
+          .lte('sent_at', endDate.toISOString());
 
         // Bugünkü başarısız SMS sayısı
-        const todayFailedSMS = await prisma.smsMessage.count({
-          where: {
-            userId: user.id,
-            status: 'failed',
-            sentAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-        });
+        const { count: todayFailedSMSCount } = await supabaseServer
+          .from('sms_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'failed')
+          .gte('sent_at', startDate.toISOString())
+          .lte('sent_at', endDate.toISOString());
 
         // Bugünkü iadeler
-        const todayRefunds = await prisma.refund.findMany({
-          where: {
-            userId: user.id,
-            createdAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          include: {
-            sms: {
-              select: {
-                id: true,
-                phoneNumber: true,
-                message: true,
-                sentAt: true,
-                status: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
+        const { data: todayRefundsData } = await supabaseServer
+          .from('refunds')
+          .select('*, sms_messages(id, phone_number, message, sent_at, status)')
+          .eq('user_id', user.id)
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
+          .order('created_at', { ascending: false });
+
+        const todayRefunds = todayRefundsData || [];
 
         // Toplam iade tutarı
         const totalRefundAmount = todayRefunds.reduce(
-          (sum, refund) => sum + Number(refund.refundAmount),
+          (sum: number, refund: any) => sum + (Number(refund.refund_amount) || 0),
           0
         );
 
@@ -101,24 +83,24 @@ export async function GET(request: NextRequest) {
             username: user.username,
             email: user.email,
           },
-          todaySMS,
-          todayFailedSMS,
+          todaySMS: todaySMSCount || 0,
+          todayFailedSMS: todayFailedSMSCount || 0,
           todayRefunds: todayRefunds.length,
           totalRefundAmount,
-          refunds: todayRefunds.map((refund) => ({
+          refunds: todayRefunds.map((refund: any) => ({
             id: refund.id,
             sms: {
-              id: refund.sms?.id || '',
-              phoneNumber: refund.sms?.phoneNumber || '',
-              message: refund.sms?.message || '',
-              sentAt: refund.sms?.sentAt || null,
-              status: refund.sms?.status || '',
+              id: refund.sms_messages?.id || '',
+              phoneNumber: refund.sms_messages?.phone_number || '',
+              message: refund.sms_messages?.message || '',
+              sentAt: refund.sms_messages?.sent_at || null,
+              status: refund.sms_messages?.status || '',
             },
-            originalCost: Number(refund.originalCost),
-            refundAmount: Number(refund.refundAmount),
+            originalCost: Number(refund.original_cost),
+            refundAmount: Number(refund.refund_amount),
             reason: refund.reason,
             status: refund.status,
-            createdAt: refund.createdAt,
+            createdAt: refund.created_at,
           })),
         };
       })
