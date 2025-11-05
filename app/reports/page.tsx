@@ -125,11 +125,12 @@ export default function SMSReportsPage() {
             </Typography>
 
             {/* Filters */}
-            <Paper sx={{ p: 2, mb: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <Grid container spacing={2} alignItems="center">
                 <Grid size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
+                    size="small"
                     label="Başlangıç Tarihi"
                     type="date"
                     value={filters.startDate}
@@ -137,7 +138,8 @@ export default function SMSReportsPage() {
                     InputLabelProps={{ shrink: true }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
+                        borderRadius: 1.5,
+                        fontSize: '12px',
                       },
                     }}
                   />
@@ -145,6 +147,7 @@ export default function SMSReportsPage() {
                 <Grid size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
+                    size="small"
                     label="Bitiş Tarihi"
                     type="date"
                     value={filters.endDate}
@@ -152,7 +155,8 @@ export default function SMSReportsPage() {
                     InputLabelProps={{ shrink: true }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
+                        borderRadius: 1.5,
+                        fontSize: '12px',
                       },
                     }}
                   />
@@ -160,6 +164,7 @@ export default function SMSReportsPage() {
                 <Grid size={{ xs: 12, md: 3 }}>
                   <TextField
                     fullWidth
+                    size="small"
                     label="Durum"
                     select
                     SelectProps={{ native: true }}
@@ -167,7 +172,8 @@ export default function SMSReportsPage() {
                     onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
+                        borderRadius: 1.5,
+                        fontSize: '12px',
                       },
                     }}
                     inputProps={{
@@ -191,14 +197,13 @@ export default function SMSReportsPage() {
                       background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
                       boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
                       borderRadius: 2,
-                      padding: '8px 20px',
-                    fontSize: '14px',
-                    size: 'small',
+                      padding: '6px 16px',
+                      fontSize: '12px',
                       fontWeight: 500,
                       textTransform: 'none',
                       '&:hover': {
-                        boxShadow: '0 8px 25px rgba(25, 118, 210, 0.4)',
-                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                        transform: 'translateY(-1px)',
                       },
                       transition: 'all 0.3s',
                     }}
@@ -219,12 +224,12 @@ export default function SMSReportsPage() {
             {/* Messages Table */}
             <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
-                  <CircularProgress />
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 1.5 }}>
+                  <CircularProgress size={24} />
                 </Box>
               ) : messages.length === 0 ? (
-                <Box sx={{ p: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box sx={{ p: 1.5, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                     {filters.startDate || filters.endDate || filters.status
                       ? 'Filtre kriterlerine uygun SMS bulunamadı'
                       : 'Henüz SMS gönderilmemiş'}
@@ -232,37 +237,37 @@ export default function SMSReportsPage() {
                 </Box>
               ) : (
                 <TableContainer>
-                  <Table>
+                  <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Kişi</TableCell>
-                        <TableCell>Telefon</TableCell>
-                        <TableCell>Mesaj</TableCell>
-                        <TableCell>Durum</TableCell>
-                        <TableCell>Maliyet</TableCell>
-                        <TableCell>Tarih</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kişi</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Maliyet</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {messages.map((message) => (
                         <TableRow key={message.id}>
-                          <TableCell>{message.contact?.name || '-'}</TableCell>
-                          <TableCell>{message.phoneNumber}</TableCell>
-                          <TableCell>{message.message.substring(0, 50)}...</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.contact?.name || '-'}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.phoneNumber}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.message.substring(0, 50)}...</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                             <Chip
                               label={message.status}
                               color={getStatusColor(message.status)}
                               size="small"
                               sx={{
-                                fontSize: '0.75rem',
+                                fontSize: '0.65rem',
                                 fontWeight: 500,
-                                height: 24,
+                                height: 20,
                               }}
                             />
                           </TableCell>
-                          <TableCell>{Number(message.cost)} kredi</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(message.cost)} kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                             <ClientDate date={message.sentAt} />
                           </TableCell>
                         </TableRow>

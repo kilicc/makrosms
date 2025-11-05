@@ -461,18 +461,25 @@ export default function ContactsPage() {
 
           {/* Contact Dialog */}
           <Dialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>{editingContact ? 'Kişi Düzenle' : 'Kişi Ekle'}</DialogTitle>
-            <DialogContent>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>{editingContact ? 'Kişi Düzenle' : 'Kişi Ekle'}</DialogTitle>
+            <DialogContent sx={{ pt: 1.5 }}>
               <TextField
                 fullWidth
+                size="small"
                 label="İsim"
                 value={contactForm.name}
                 onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                margin="normal"
+                margin="dense"
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
               <TextField
                 fullWidth
+                size="small"
                 label="Telefon"
                 value={contactForm.phone}
                 onChange={(e) => {
@@ -480,50 +487,70 @@ export default function ContactsPage() {
                   const value = e.target.value.replace(/\D/g, '');
                   setContactForm({ ...contactForm, phone: value });
                 }}
-                margin="normal"
+                margin="dense"
                 required
                 placeholder="905551234567"
                 helperText="Telefon numarasını girin (örn: 905551234567 veya 05551234567)"
                 inputProps={{
                   maxLength: 13,
                 }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
               <TextField
                 fullWidth
+                size="small"
                 label="E-posta"
                 type="email"
                 value={contactForm.email}
                 onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                margin="normal"
+                margin="dense"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
-                    <TextField
-                      fullWidth
-                      label="Notlar"
-                      multiline
-                      rows={3}
-                      value={contactForm.notes}
-                      onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                      margin="normal"
-                    />
-                    <FormControl fullWidth margin="normal">
-                      <InputLabel>Grup</InputLabel>
-                      <Select
-                        value={contactForm.groupId}
-                        onChange={(e) => setContactForm({ ...contactForm, groupId: e.target.value })}
-                        label="Grup"
-                      >
-                        <MenuItem value="">Grup Yok</MenuItem>
-                        {groups.map((group) => (
-                          <MenuItem key={group.id} value={group.id}>
-                            {group.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+              <TextField
+                fullWidth
+                size="small"
+                label="Notlar"
+                multiline
+                rows={3}
+                value={contactForm.notes}
+                onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
+                margin="dense"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
+              />
+              <FormControl fullWidth size="small" margin="dense">
+                <InputLabel sx={{ fontSize: '12px' }}>Grup</InputLabel>
+                <Select
+                  value={contactForm.groupId}
+                  onChange={(e) => setContactForm({ ...contactForm, groupId: e.target.value })}
+                  label="Grup"
+                  sx={{
+                    fontSize: '12px',
+                  }}
+                >
+                  <MenuItem value="" sx={{ fontSize: '12px' }}>Grup Yok</MenuItem>
+                  {groups.map((group) => (
+                    <MenuItem key={group.id} value={group.id} sx={{ fontSize: '12px' }}>
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setContactDialogOpen(false)}>İptal</Button>
-              <Button onClick={handleContactSubmit} variant="contained">
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button size="small" onClick={() => setContactDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
+              <Button size="small" onClick={handleContactSubmit} variant="contained" sx={{ fontSize: '12px' }}>
                 {editingContact ? 'Güncelle' : 'Ekle'}
               </Button>
             </DialogActions>
@@ -531,37 +558,55 @@ export default function ContactsPage() {
 
           {/* Group Dialog */}
           <Dialog open={groupDialogOpen} onClose={() => setGroupDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>{editingGroup ? 'Grup Düzenle' : 'Grup Oluştur'}</DialogTitle>
-            <DialogContent>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>{editingGroup ? 'Grup Düzenle' : 'Grup Oluştur'}</DialogTitle>
+            <DialogContent sx={{ pt: 1.5 }}>
               <TextField
                 fullWidth
+                size="small"
                 label="Grup Adı"
                 value={groupForm.name}
                 onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                margin="normal"
+                margin="dense"
                 required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
               <TextField
                 fullWidth
+                size="small"
                 label="Açıklama"
                 multiline
                 rows={3}
                 value={groupForm.description}
                 onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-                margin="normal"
+                margin="dense"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
               <TextField
                 fullWidth
+                size="small"
                 label="Renk"
                 type="color"
                 value={groupForm.color}
                 onChange={(e) => setGroupForm({ ...groupForm, color: e.target.value })}
-                margin="normal"
+                margin="dense"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setGroupDialogOpen(false)}>İptal</Button>
-              <Button onClick={handleGroupSubmit} variant="contained">
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button size="small" onClick={() => setGroupDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
+              <Button size="small" onClick={handleGroupSubmit} variant="contained" sx={{ fontSize: '12px' }}>
                 {editingGroup ? 'Güncelle' : 'Oluştur'}
               </Button>
             </DialogActions>

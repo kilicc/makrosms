@@ -251,39 +251,39 @@ export default function RefundsPage() {
                 </Box>
               ) : (
                 <TableContainer>
-                  <Table>
+                  <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Telefon</TableCell>
-                        <TableCell>Mesaj</TableCell>
-                        <TableCell>Orijinal Maliyet</TableCell>
-                        <TableCell>İade Tutarı</TableCell>
-                        <TableCell>Sebep</TableCell>
-                        <TableCell>Durum</TableCell>
-                        <TableCell>Tarih</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Orijinal Maliyet</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İade Tutarı</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Sebep</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {refunds.map((refund) => (
                         <TableRow key={refund.id}>
-                          <TableCell>{refund.sms.phoneNumber}</TableCell>
-                          <TableCell>{refund.sms.message.substring(0, 30)}...</TableCell>
-                          <TableCell>{Number(refund.originalCost)} kredi</TableCell>
-                          <TableCell>{Number(refund.refundAmount)} kredi</TableCell>
-                          <TableCell>{refund.reason}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{refund.sms.phoneNumber}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{refund.sms.message.substring(0, 30)}...</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(refund.originalCost)} kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(refund.refundAmount)} kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{refund.reason}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                             <Chip
                               label={refund.status}
                               color={getStatusColor(refund.status)}
                               size="small"
                               sx={{
-                                fontSize: '0.75rem',
+                                fontSize: '0.65rem',
                                 fontWeight: 500,
-                                height: 24,
+                                height: 20,
                               }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                             <ClientDate date={refund.createdAt} />
                           </TableCell>
                         </TableRow>
@@ -296,32 +296,44 @@ export default function RefundsPage() {
 
           {/* Refund Dialog */}
           <Dialog open={refundDialogOpen} onClose={() => setRefundDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>İade Talebi Oluştur</DialogTitle>
-            <DialogContent>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>İade Talebi Oluştur</DialogTitle>
+            <DialogContent sx={{ pt: 1.5 }}>
               <TextField
                 fullWidth
+                size="small"
                 label="SMS ID"
                 value={refundForm.smsId}
                 onChange={(e) => setRefundForm({ ...refundForm, smsId: e.target.value })}
-                margin="normal"
+                margin="dense"
                 required
                 placeholder="UUID"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
               <TextField
                 fullWidth
+                size="small"
                 label="Sebep"
                 multiline
-                rows={4}
+                rows={3}
                 value={refundForm.reason}
                 onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
-                margin="normal"
+                margin="dense"
                 required
                 placeholder="İade sebebini açıklayın"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
               />
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setRefundDialogOpen(false)}>İptal</Button>
-              <Button onClick={handleRefundSubmit} variant="contained" disabled={loading}>
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button size="small" onClick={() => setRefundDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
+              <Button size="small" onClick={handleRefundSubmit} variant="contained" disabled={loading} sx={{ fontSize: '12px' }}>
                 {loading ? 'Oluşturuluyor...' : 'Oluştur'}
               </Button>
             </DialogActions>

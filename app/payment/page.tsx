@@ -274,7 +274,7 @@ export default function CryptoPaymentPage() {
                   variant="h6" 
                   gutterBottom
                   sx={{
-                    fontSize: '18px',
+                    fontSize: '16px',
                     fontWeight: 500,
                     mb: 2,
                   }}
@@ -490,7 +490,7 @@ export default function CryptoPaymentPage() {
                               variant="h6"
                               gutterBottom
                               sx={{
-                                fontSize: '18px',
+                                fontSize: '16px',
                                 fontWeight: 500,
                                 mb: 2,
                               }}
@@ -534,7 +534,7 @@ export default function CryptoPaymentPage() {
                               variant="h6"
                               gutterBottom
                               sx={{
-                                fontSize: '18px',
+                                fontSize: '16px',
                                 fontWeight: 500,
                                 mb: 2,
                               }}
@@ -573,7 +573,7 @@ export default function CryptoPaymentPage() {
                               variant="h6"
                               gutterBottom
                               sx={{
-                                fontSize: '18px',
+                                fontSize: '16px',
                                 fontWeight: 500,
                                 mb: 2,
                               }}
@@ -615,7 +615,7 @@ export default function CryptoPaymentPage() {
                             variant="h6"
                             gutterBottom
                             sx={{
-                              fontSize: '18px',
+                              fontSize: '16px',
                               fontWeight: 500,
                               mb: 2,
                             }}
@@ -712,7 +712,7 @@ export default function CryptoPaymentPage() {
                           <Typography
                             variant="h6"
                             sx={{
-                              fontSize: '18px',
+                              fontSize: '16px',
                               fontWeight: 600,
                               color: 'warning.main',
                             }}
@@ -754,7 +754,7 @@ export default function CryptoPaymentPage() {
                   variant="h6" 
                   gutterBottom
                   sx={{
-                    fontSize: '18px',
+                    fontSize: '16px',
                     fontWeight: 500,
                     mb: 2,
                   }}
@@ -762,25 +762,25 @@ export default function CryptoPaymentPage() {
                   Ödeme Taleplerim
                 </Typography>
                 {loadingRequests ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                    <CircularProgress />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 1.5 }}>
+                    <CircularProgress size={24} />
                   </Box>
                 ) : paymentRequests.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                       Henüz ödeme talebi bulunmuyor.
                     </Typography>
                   </Box>
                 ) : (
                   <TableContainer>
-                    <Table>
+                    <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>Tutar</TableCell>
-                          <TableCell>Kredi</TableCell>
-                          <TableCell>Ödeme Yöntemi</TableCell>
-                          <TableCell>Durum</TableCell>
-                          <TableCell>Oluşturulma</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Oluşturulma</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -813,22 +813,22 @@ export default function CryptoPaymentPage() {
 
                           return (
                             <TableRow key={request.id}>
-                              <TableCell>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
-                              <TableCell>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
-                              <TableCell>{request.paymentMethod || '-'}</TableCell>
-                              <TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.paymentMethod || '-'}</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 <Chip
                                   label={getStatusLabel(request.status)}
                                   color={getStatusColor(request.status)}
                                   size="small"
                                   sx={{
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.65rem',
                                     fontWeight: 500,
-                                    height: 24,
+                                    height: 20,
                                   }}
                                 />
                               </TableCell>
-                              <TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 <ClientDate date={request.createdAt} />
                               </TableCell>
                             </TableRow>
