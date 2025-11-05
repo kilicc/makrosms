@@ -566,6 +566,7 @@ export default function DashboardPage() {
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlem</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
