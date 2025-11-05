@@ -1,0 +1,121 @@
+version: 1
+project_type: nextjs
+
+rules:
+  - name: "Preserve full architecture and UI parity"
+    description: |
+      Advanced SMS Verification System yapısı birebir korunmalıdır.
+      Next.js 16 sürümünde yeniden inşa edilirken:
+        • Tüm sayfa rotaları ve component isimleri aynı kalır.
+        • Görünüm, önceki React + MUI temasına tam olarak eşleşir.
+        • API endpoint’leri, Express tabanlı yapıya denk gelen Next.js API Routes altında oluşturulur.
+    actions:
+      - preserve_ui_layouts: true
+      - mirror_previous_api_routes: true
+      - enforce_page_equivalence: true
+      - maintain_component_structure: true
+
+  - name: "Build verification and halt-on-error"
+    description: |
+      Her kod değişikliğinden veya dependency update’inden sonra `npm run build`
+      komutu otomatik çalıştırılır. Build hatası oluşursa süreç durdurulur.
+      Hata çözülmeden commit, deploy veya merge işlemi engellenir.
+    triggers:
+      - on_commit
+      - on_pull
+      - on_dependency_update
+      - on_deploy
+    actions:
+      - run_command: "npm run build"
+      - halt_on_error: true
+      - block_commit_on_failure: true
+      - notify_on_failure: true
+
+  - name: "Prisma ↔ Supabase schema synchronization"
+    description: |
+      Veritabanı şeması Supabase ile otomatik senkronize edilir.
+      Her başlatma, build veya DB değişikliğinde:
+        • `npx prisma db pull` → Supabase’ten şema çekilir.
+        • `npx prisma generate` → Prisma Client yeniden oluşturulur.
+        • `prisma validate` → şema bütünlüğü kontrol edilir.
+    triggers:
+      - on_start
+      - on_db_change
+      - on_build
+    actions:
+      - run_command: "npx prisma db pull"
+      - run_command: "npx prisma generate"
+      - run_command: "npx prisma validate"
+      - ensure_supabase_url_from_env: true
+      - validate_schema: true
+
+  - name: "Strict Next.js 16 environment"
+    description: |
+      Proje sadece aşağıdaki stack’i içermelidir:
+        - Next.js 16.x
+        - React 19.x
+        - TypeScript 5+
+        - TailwindCSS
+        - Prisma ORM
+        - Supabase (PostgreSQL)
+      Diğer framework veya runtime’lar (Express, Nest, Vue vb.) yasaktır.
+    actions:
+      - enforce_next_version: "16.x"
+      - restrict_frameworks:
+          allow_only:
+            - nextjs
+            - react
+            - typescript
+            - tailwindcss
+            - prisma
+            - supabase
+
+  - name: "Security & authentication integrity"
+    description: |
+      JWT, 2FA, ve şifreleme sistemleri önceki sistemle birebir uyumlu kalmalıdır.
+      RLS Supabase’de aktif tutulur. `.env`’de şu değişkenler zorunludur:
+        JWT_SECRET, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY
+    actions:
+      - require_env_vars:
+          - JWT_SECRET
+          - SUPABASE_URL
+          - SUPABASE_ANON_KEY
+          - SUPABASE_SERVICE_KEY
+      - enforce_2fa_support: true
+      - validate_jwt_structure: true
+      - validate_rls_enabled: true
+
+  - name: "Frontend consistency and Auth flow"
+    description: |
+      UI bileşenleri (Navbar, Dashboard, Contacts, CryptoPayment, AdminDashboard, Refunds)
+      aynı yapıda korunur. Auth Context API (useAuth.tsx) yeniden uygulanmalı,
+      axios interceptor’lar Next.js server actions veya fetch API’ye taşınmalıdır.
+    actions:
+      - maintain_component_structure: true
+      - keep_react_hooks_intact: true
+      - enforce_api_route_migration: true
+      - verify_auth_flow_integrity: true
+
+  - name: "Code quality checks"
+    description: |
+      Kaydedilen veya commit’lenen her değişiklikte lint ve type-check yapılır.
+      Hata varsa build durur.
+    triggers:
+      - on_save
+      - on_commit
+    actions:
+      - run_command: "npm run lint"
+      - run_command: "npm run type-check"
+      - halt_on_error: true
+
+  - name: "Deployment integrity (Docker/Dokploy)"
+    description: |
+      Build sonrasında Docker veya Dokploy deployment’ı yalnızca
+      `/api/health` endpoint başarılıysa devam eder.
+      `.env` değerleri Docker container ortamıyla eşleşmelidir.
+    triggers:
+      - on_deploy
+    actions:
+      - verify_dockerfile_exists: true
+      - validate_health_endpoint: "/api/health"
+      - match_envs_to_deployment: true

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMS Sistemi - HTML Templates</title>
+  <link rel="stylesheet" href="exported-styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    /* Material Icons için ek stil */
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- LOGIN PAGE TEMPLATE -->
+<!-- ============================================ -->
+<section id="login-template" style="display: none;">
+  <div class="login-container">
+    <div class="login-card">
+      <!-- Header -->
+      <div class="login-card-header">
+        <img src="/logo3.png" alt="Logo" class="login-logo">
+        <h1 style="color: white; font-size: 34px; font-weight: 600; margin: 16px 0 8px 0;">
+          Giriş Yap
+        </h1>
+        <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin: 0;">
+          Hesabınıza giriş yapın
+        </p>
+      </div>
+      
+      <!-- Form -->
+      <div class="login-form">
+        <form>
+          <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px;">
+              Kullanıcı Adı
+            </label>
+            <input type="text" class="input-field" placeholder="Kullanıcı adınızı girin">
+          </div>
+          
+          <div style="margin-bottom: 24px;">
+            <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 14px;">
+              Şifre
+            </label>
+            <input type="password" class="input-field" placeholder="Şifrenizi girin">
+          </div>
+          
+          <button type="submit" class="button-primary" style="width: 100%; margin-bottom: 16px;">
+            Giriş Yap
+          </button>
+          
+          <p style="text-align: center; color: var(--text-secondary); font-size: 14px;">
+            Hesabınız yok mu? <a href="#" style="color: var(--primary-main); text-decoration: none;">Kayıt Ol</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- DASHBOARD TEMPLATE -->
+<!-- ============================================ -->
+<section id="dashboard-template" style="display: none;">
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="navbar-header">
+      <img src="/logo3.png" alt="Logo" class="navbar-logo">
+    </div>
+    
+    <div class="navbar-user-info">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="avatar avatar-medium avatar-primary">
+          D
+        </div>
+        <div>
+          <div style="font-weight: 600; font-size: 16px;">demo</div>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <span class="chip chip-success">181 SMS</span>
+            <span class="chip chip-warning">Premium</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="flex: 1; overflow: auto; padding: 8px;">
+      <div class="navbar-menu-item active">
+        <span style="margin-right: 12px;">📊</span>
+        Ana Sayfa
+      </div>
+      <div class="navbar-menu-item">
+        <span style="margin-right: 12px;">📱</span>
+        SMS Gönder
+      </div>
+      <div class="navbar-menu-item">
+        <span style="margin-right: 12px;">🚀</span>
+        Gelişmiş SMS
+      </div>
+      <div class="navbar-menu-item">
+        <span style="margin-right: 12px;">👤</span>
+        Rehberim
+      </div>
+    </div>
+    
+    <div style="padding: 16px; border-top: 1px solid rgba(0,0,0,0.12);">
+      <div class="navbar-menu-item" style="color: var(--error-main);">
+        <span style="margin-right: 12px;">🚪</span>
+        Çıkış Yap
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="main-content">
+    <div style="max-width: 1400px; margin: 0 auto;">
+      <h4 style="color: var(--primary-main); margin-bottom: 24px;">Dashboard</h4>
+      
+      <!-- Stat Cards Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 24px;">
+        <!-- Stat Card 1 -->
+        <div class="card stat-card">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="stat-card-title">Mevcut Kredi</div>
+              <div class="stat-card-value">181</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">SMS</div>
+            </div>
+            <div class="stat-card-icon avatar avatar-large avatar-success">
+              💰
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stat Card 2 -->
+        <div class="card stat-card">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="stat-card-title">Bu Ay Gönderilen</div>
+              <div class="stat-card-value">5</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">SMS</div>
+            </div>
+            <div class="stat-card-icon avatar avatar-large avatar-info">
+              📤
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stat Card 3 -->
+        <div class="card stat-card">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="stat-card-title">Kayıtlı Kişi</div>
+              <div class="stat-card-value">0</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Rehber</div>
+            </div>
+            <div class="stat-card-icon avatar avatar-large avatar-warning">
+              👤
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stat Card 4 -->
+        <div class="card stat-card">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div class="stat-card-title">Toplam Hata</div>
+              <div class="stat-card-value">0</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Başarısız SMS</div>
+            </div>
+            <div class="stat-card-icon avatar avatar-large avatar-error">
+              ⚠️
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Recent Activity Card -->
+      <div class="card">
+        <h5 style="margin-bottom: 16px;">Son Aktiviteler</h5>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(25, 118, 210, 0.05); border-radius: 8px;">
+            <div class="avatar avatar-small avatar-primary">S</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">SMS Gönderildi</div>
+              <div class="caption-text">905075708797 - 2 dakika önce</div>
+            </div>
+            <span class="chip chip-success">Başarılı</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- USAGE INSTRUCTIONS -->
+<!-- ============================================ -->
+<section style="padding: 40px; max-width: 1200px; margin: 0 auto;">
+  <h1 style="color: var(--primary-main); margin-bottom: 24px;">HTML Templates Kullanım Rehberi</h1>
+  
+  <div class="card">
+    <h3 style="margin-bottom: 16px;">1. Login Sayfası</h3>
+    <p class="body-text-secondary">
+      Login template'ini kullanmak için <code>#login-template</code> section'ını gösterin ve diğerlerini gizleyin.
+    </p>
+    <pre style="background: #f5f5f5; padding: 16px; border-radius: 8px; overflow-x: auto;">
+&lt;!-- Login template'i göster -->
+&lt;section id="login-template" style="display: block;">
+  &lt;!-- Login içeriği -->
+&lt;/section>
+    </pre>
+  </div>
+  
+  <div class="card" style="margin-top: 24px;">
+    <h3 style="margin-bottom: 16px;">2. Dashboard</h3>
+    <p class="body-text-secondary">
+      Dashboard template'ini kullanmak için <code>#dashboard-template</code> section'ını gösterin.
+    </p>
+  </div>
+  
+  <div class="card" style="margin-top: 24px;">
+    <h3 style="margin-bottom: 16px;">3. CSS Dosyası</h3>
+    <p class="body-text-secondary">
+      Bu template'ler <code>exported-styles.css</code> dosyasını kullanır. 
+      CSS dosyasını HTML dosyasıyla aynı klasöre koyun.
+    </p>
+  </div>
+  
+  <div class="card" style="margin-top: 24px;">
+    <h3 style="margin-bottom: 16px;">4. Logo Dosyası</h3>
+    <p class="body-text-secondary">
+      <code>logo3.png</code> dosyasını HTML dosyasıyla aynı klasöre veya <code>/</code> root dizinine koyun.
+    </p>
+  </div>
+</section>
+
+</body>
+</html>
+

@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== THEME COLORS (Exported Styles) ===== */
+:root {
+  --primary-main: #1976d2;
+  --primary-light: rgba(25, 118, 210, 0.1);
+  --primary-medium: rgba(25, 118, 210, 0.2);
+  --primary-dark: rgba(25, 118, 210, 0.3);
+  
+  --secondary-main: #dc004e;
+  --secondary-light: rgba(220, 0, 78, 0.1);
+  --secondary-medium: rgba(220, 0, 78, 0.2);
+  
+  --success-main: #4caf50;
+  --success-light: rgba(76, 175, 80, 0.2);
+  
+  --error-main: #f44336;
+  --error-light: rgba(244, 67, 54, 0.1);
+  
+  --warning-main: #ff9800;
+  --warning-light: rgba(255, 193, 7, 0.2);
+  
+  --info-main: #2196f3;
+  --info-light: rgba(33, 150, 243, 0.2);
+  
+  --background-default: #f5f5f5;
+  --background-paper: #ffffff;
+  
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-disabled: rgba(0, 0, 0, 0.38);
+  
+  --gradient-login: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-navbar: linear-gradient(135deg, #1976d2 0%, #dc004e 100%);
+  --gradient-card-light: linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%);
+  --gradient-card-medium: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  --gradient-button: linear-gradient(135deg, #1976d2 0%, #dc004e 100%);
+}
+
+/* MUI ile uyumluluk için */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+body {
+  background-color: var(--background-default);
+  color: var(--text-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
