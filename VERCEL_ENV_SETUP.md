@@ -24,16 +24,37 @@ Aşağıdaki tüm environment variables'ları ekleyin:
 
 **Supabase'den Connection String Nasıl Alınır:**
 
+**Yöntem 1: Connection Pooling (Vercel için ÖNERİLEN)**
+
+1. https://supabase.com → Projenizi seçin
+2. **Settings** → **Database** → **Connection Pooling**
+3. **URI** formatını seçin
+4. Connection string'i kopyalayın
+5. `[YOUR-PASSWORD]` kısmını gerçek şifrenizle değiştirin
+6. Format: `postgresql://postgres.[PROJECT-REF]:[ŞİFRE]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true`
+
+**Yöntem 2: Direct Connection (Alternatif)**
+
 1. https://supabase.com → Projenizi seçin
 2. **Settings** → **Database** → **Connection string**
 3. **URI** formatını seçin
 4. Connection string'i kopyalayın
 5. `[YOUR-PASSWORD]` kısmını gerçek şifrenizle değiştirin
+6. ⚠️ Vercel'de IP whitelist sorunları olabilir
 
-**Format:**
+**Formatlar:**
+
+**✅ Vercel için ÖNERİLEN: Connection Pooling (Port 6543)**
+```
+postgresql://postgres.[PROJECT-REF]:[ŞİFRE]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true
+```
+
+**Alternatif: Direct Connection (Port 5432) - Vercel'de sorun çıkarabilir**
 ```
 postgresql://postgres:[ŞİFRE]@db.[PROJECT-REF].supabase.co:5432/postgres
 ```
+
+**⚠️ ÖNEMLİ:** Vercel deployment'ları için **Connection Pooling** (port 6543) kullanın. Direct connection (port 5432) IP whitelist sorunları nedeniyle çalışmayabilir.
 
 **ÖNEMLİ - URL Encoding:**
 Şifrenizde özel karakterler varsa encode edin:
