@@ -794,9 +794,15 @@ export default function CryptoPaymentPage() {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
+                          {(user?.role === 'admin' || user?.role === 'moderator') && (
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
+                          )}
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                          {(user?.role === 'admin' || user?.role === 'moderator') && (
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
+                          )}
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Oluşturulma</TableCell>
                         </TableRow>
