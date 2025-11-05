@@ -67,7 +67,7 @@ export async function POST(
         where: { id },
         data: {
           status: 'approved',
-          approvedBy: auth.user.userId,
+          approvedBy: auth.user?.userId || null,
           approvedAt: new Date(),
           adminNotes,
         },
