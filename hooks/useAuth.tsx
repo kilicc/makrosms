@@ -32,10 +32,36 @@ const api = axios.create({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // User state'ini localStorage'dan restore et (sayfa yenilemelerinde)
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const router = useRouter();
+
+  // User state'ini localStorage'dan restore et (sayfa yenilemelerinde ve sayfa geçişlerinde)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('accessToken');
+      
+      if (savedUser && token) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          console.log('User localStorage\'dan restore ediliyor:', parsedUser.username);
+          setUser(parsedUser);
+          setLoading(false);
+          // Restore edilen user'ı doğrula (checkAuth çağrılacak ama user zaten var)
+          setHasCheckedAuth(true);
+        } catch (error) {
+          console.error('User restore error:', error);
+        }
+      } else if (!token) {
+        // Token yok, user da null
+        setUser(null);
+        setLoading(false);
+      }
+    }
+  }, []);
 
   // Request interceptor - Token ekle
   api.interceptors.request.use((config) => {
@@ -74,6 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [hasCheckedAuth]);
 
+  // Token varsa ama user yoksa, checkAuth'u tekrar çağır (sayfa geçişlerinde)
+  useEffect(() => {
+    if (!loading && !user && hasCheckedAuth) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token) {
+        // Token var ama user yok, checkAuth'u tekrar çağır
+        console.log('Token var ama user yok, checkAuth tekrar çağrılıyor...');
+        checkAuth();
+      }
+    }
+  }, [loading, user, hasCheckedAuth]);
+
   async function checkAuth() {
     try {
       console.log('checkAuth çalışıyor...');
@@ -90,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (response.data.success && response.data.data?.user) {
               console.log('User set ediliyor:', response.data.data.user.username);
               setUser(response.data.data.user);
+              // User'ı localStorage'a kaydet (sayfa yenilemelerinde restore etmek için)
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('user', JSON.stringify(response.data.data.user));
+              }
             } else {
               // Token geçersiz, logout yap
               console.log('Token geçersiz - logout yapılıyor');
@@ -153,6 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false); // Loading'i false yap
         setHasCheckedAuth(true); // checkAuth'u tekrar çalıştırma
         
+        // User'ı localStorage'a kaydet (sayfa yenilemelerinde restore etmek için)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+        
         console.log('User set edildi, yönlendiriliyor...');
         
         // Subdomain'e göre yönlendirme
@@ -183,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user'); // User'ı da temizle
     }
     setUser(null);
     router.push('/login');

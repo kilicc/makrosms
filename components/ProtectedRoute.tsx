@@ -8,20 +8,23 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
     // Auth kontrolü tamamlandıktan sonra ve user yoksa kontrol et
-    if (!loading && !user) {
+    if (!loading && !user && !hasRedirected) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       
       if (!token) {
-        // Token yok, login'e yönlendir
+        // Token yok, login'e yönlendir (sadece bir kez)
+        setHasRedirected(true);
         router.push('/login');
       }
       // Token varsa ama user yok, checkAuth henüz tamamlanmamış olabilir
       // Bu durumda loading gösterilecek ve user beklenilecek
+      // checkAuth otomatik olarak çağrılacak (useAuth içinde)
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, hasRedirected]);
 
   // Loading durumunda göster
   if (loading) {
