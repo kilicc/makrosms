@@ -17,7 +17,11 @@ Proje zaten GitHub'a push edildi:
 
 ### 3. Environment Variables Ayarları
 
-Vercel'de aşağıdaki environment variables'ları ekleyin:
+**⚠️ ÖNEMLİ: Vercel `.env` dosyasını otomatik okumaz! Environment variables'ları manuel olarak eklemeniz gerekir.**
+
+Detaylı kurulum için: [VERCEL_ENV_SETUP.md](./VERCEL_ENV_SETUP.md)
+
+Vercel Dashboard → Settings → Environment Variables bölümünde aşağıdaki environment variables'ları ekleyin:
 
 #### Supabase Configuration
 ```
