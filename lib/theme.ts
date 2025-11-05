@@ -99,26 +99,26 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 5.12, // 8px × 0.8 × 0.8 = 5.12px
-          padding: '5.12px 10.24px', // 8px 16px × 0.8 × 0.8
+          borderRadius: 5.12,
+          padding: '5.12px 10.24px',
           fontWeight: 500,
-          fontSize: '0.56rem', // 14px × 0.8 × 0.8 = 11.2px × 0.8 = 8.96px ≈ 0.56rem
-          minHeight: '23.04px', // 36px × 0.8 × 0.8 = 23.04px
+          fontSize: '0.625rem', // 0.56rem → 0.625rem (8.96px → 10px) - biraz büyütüldü
+          minHeight: '22px', // 23.04px → 22px - biraz azaltıldı
         },
         sizeSmall: {
-          padding: '3.84px 7.68px', // 6px 12px × 0.8 × 0.8
-          fontSize: '0.52rem', // 13px × 0.8 × 0.8 = 10.4px × 0.8 = 8.32px ≈ 0.52rem
-          minHeight: '20.48px', // 32px × 0.8 × 0.8 = 20.48px
+          padding: '3.84px 7.68px',
+          fontSize: '0.575rem', // 0.52rem → 0.575rem (8.32px → 9.2px) - biraz büyütüldü
+          minHeight: '20px', // 20.48px → 20px - biraz azaltıldı
         },
         sizeMedium: {
-          padding: '5.12px 10.24px', // 8px 16px × 0.8 × 0.8
-          fontSize: '0.56rem', // 14px × 0.8 × 0.8
-          minHeight: '23.04px', // 36px × 0.8 × 0.8
+          padding: '5.12px 10.24px',
+          fontSize: '0.625rem', // 0.56rem → 0.625rem - biraz büyütüldü
+          minHeight: '22px', // 23.04px → 22px - biraz azaltıldı
         },
         sizeLarge: {
-          padding: '6.4px 12.8px', // 10px 20px × 0.8 × 0.8
-          fontSize: '0.6rem', // 15px × 0.8 × 0.8 = 12px × 0.8 = 9.6px ≈ 0.6rem
-          minHeight: '26.88px', // 42px × 0.8 × 0.8 = 26.88px
+          padding: '6.4px 12.8px',
+          fontSize: '0.65rem', // 0.6rem → 0.65rem (9.6px → 10.4px) - biraz büyütüldü
+          minHeight: '26px', // 26.88px → 26px - biraz azaltıldı
         },
       },
     },
