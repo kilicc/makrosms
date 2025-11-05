@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Card, CardContent, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, Tabs, Tab, Chip, alpha, Accordion, AccordionSummary, AccordionDetails, Checkbox, FormControlLabel, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Card, CardContent, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, Tabs, Tab, Chip, alpha, Accordion, AccordionSummary, AccordionDetails, Checkbox, FormControlLabel, CircularProgress, Select, MenuItem, FormControl, InputLabel, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
-import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore } from '@mui/icons-material';
+import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import { useRouter } from 'next/navigation';
 import ClientDate from '@/components/ClientDate';
@@ -89,6 +89,11 @@ export default function AdminDashboardPage() {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'user', credit: 0 });
+  const [userDetailsDialogOpen, setUserDetailsDialogOpen] = useState(false);
+  const [selectedUserDetails, setSelectedUserDetails] = useState<any | null>(null);
+  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
 
   useEffect(() => {
     // Check if user is admin
@@ -101,9 +106,12 @@ export default function AdminDashboardPage() {
       loadStats();
       loadUsers();
       if (tabValue === 1) {
-        loadRefundsReport();
+        // Raporlar tab - users listesi zaten yüklü
       }
       if (tabValue === 2) {
+        loadRefundsReport();
+      }
+      if (tabValue === 3) {
         loadPaymentRequests();
       }
     }
@@ -266,6 +274,56 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUser.username || !newUser.email || !newUser.password) {
+      setError('Kullanıcı adı, email ve şifre gerekli');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.post('/admin/users', {
+        username: newUser.username,
+        email: newUser.email,
+        password: newUser.password,
+        role: newUser.role,
+        credit: newUser.credit || 0,
+      });
+
+      if (response.data.success) {
+        setSuccess('Kullanıcı başarıyla oluşturuldu');
+        setCreateUserDialogOpen(false);
+        setNewUser({ username: '', email: '', password: '', role: 'user', credit: 0 });
+        loadUsers();
+        loadStats();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Kullanıcı oluşturma hatası');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewUserDetails = async (userId: string) => {
+    setLoadingUserDetails(true);
+    setUserDetailsDialogOpen(true);
+    setSelectedUserDetails(null);
+
+    try {
+      const response = await api.get(`/admin/users/${userId}/details`);
+      if (response.data.success) {
+        setSelectedUserDetails(response.data.data);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Kullanıcı detayları yüklenirken hata oluştu');
+    } finally {
+      setLoadingUserDetails(false);
+    }
+  };
+
   // Show loading while checking user role
   if (!user) {
     return (
@@ -374,6 +432,7 @@ export default function AdminDashboardPage() {
             <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', mb: 2 }}>
               <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
                 <Tab icon={<People />} label="Kullanıcılar" />
+                <Tab icon={<Sms />} label="Raporlar" />
                 <Tab icon={<Assessment />} label="İade Raporu" />
                 <Tab icon={<AccountBalanceWallet />} label="Ödeme Talepleri" />
               </Tabs>
@@ -494,6 +553,27 @@ export default function AdminDashboardPage() {
                   >
                     Kullanıcılar
                   </Typography>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    startIcon={<PersonAdd />}
+                    onClick={() => {
+                      setNewUser({ username: '', email: '', password: '', role: 'user', credit: 0 });
+                      setCreateUserDialogOpen(true);
+                    }}
+                    sx={{
+                      background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                      borderRadius: 1.5,
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      py: 0.75,
+                      px: 1.5,
+                    }}
+                  >
+                    Yeni Kullanıcı
+                  </Button>
                 </Box>
                     <TableContainer>
                       <Table size="small">
@@ -508,31 +588,40 @@ export default function AdminDashboardPage() {
                         </TableHead>
                         <TableBody>
                           {users.map((u) => (
-                            <TableRow key={u.id}>
+                            <TableRow 
+                              key={u.id}
+                              sx={{ 
+                                cursor: 'pointer',
+                                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                              }}
+                            >
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.username}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.email}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.credit}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.role}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<Add />}
-                                  onClick={() => {
-                                    setSelectedUser(u);
-                                    setCreditDialogOpen(true);
-                                  }}
-                                  sx={{
-                                    borderRadius: 1.5,
-                                    textTransform: 'none',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    py: 0.5,
-                                    px: 1,
-                                  }}
-                                >
-                                  Kredi Yükle
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 0.75 }}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<Add />}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedUser(u);
+                                      setCreditDialogOpen(true);
+                                    }}
+                                    sx={{
+                                      borderRadius: 1.5,
+                                      textTransform: 'none',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      py: 0.5,
+                                      px: 1,
+                                    }}
+                                  >
+                                    Kredi Yükle
+                                  </Button>
+                                </Box>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -543,6 +632,73 @@ export default function AdminDashboardPage() {
             )}
 
             {tabValue === 1 && (
+              <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography 
+                    variant="h6"
+                    sx={{
+                      fontSize: '18px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Kullanıcı Raporları
+                  </Typography>
+                </Box>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı Adı</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>E-posta</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Rol</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlemler</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((u) => (
+                        <TableRow 
+                          key={u.id}
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                          }}
+                          onClick={() => handleViewUserDetails(u.id)}
+                        >
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.username}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.email}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.credit}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{u.role}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Visibility />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewUserDetails(u.id);
+                              }}
+                              sx={{
+                                borderRadius: 1.5,
+                                textTransform: 'none',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                py: 0.5,
+                                px: 1,
+                              }}
+                            >
+                              Detay
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            )}
+
+            {tabValue === 2 && (
               <Box>
                 <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
                   <TextField
@@ -745,7 +901,7 @@ export default function AdminDashboardPage() {
             )}
 
             {/* Payment Requests Tab */}
-            {tabValue === 2 && (
+            {tabValue === 3 && (
               <Box>
                 <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', p: 1.5 }}>
                   <Typography 
@@ -1027,6 +1183,242 @@ export default function AdminDashboardPage() {
               <Button size="small" onClick={() => setCreditDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
               <Button size="small" onClick={handleCreditSubmit} variant="contained" disabled={loading} sx={{ fontSize: '12px' }}>
                 {loading ? 'Yükleniyor...' : 'Yükle'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Create User Dialog */}
+          <Dialog open={createUserDialogOpen} onClose={() => setCreateUserDialogOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>Yeni Kullanıcı Oluştur</DialogTitle>
+            <DialogContent sx={{ pt: 1.5 }}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Kullanıcı Adı *"
+                value={newUser.username}
+                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                margin="dense"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="E-posta *"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                margin="dense"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Şifre *"
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                margin="dense"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
+              />
+              <FormControl fullWidth size="small" margin="dense" sx={{ mt: 1 }}>
+                <InputLabel sx={{ fontSize: '12px' }}>Rol</InputLabel>
+                <Select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                  label="Rol"
+                  sx={{ fontSize: '12px' }}
+                >
+                  <MenuItem value="user" sx={{ fontSize: '12px' }}>Kullanıcı</MenuItem>
+                  <MenuItem value="admin" sx={{ fontSize: '12px' }}>Admin</MenuItem>
+                  <MenuItem value="moderator" sx={{ fontSize: '12px' }}>Moderatör</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                size="small"
+                label="Başlangıç Kredisi"
+                type="number"
+                value={newUser.credit}
+                onChange={(e) => setNewUser({ ...newUser, credit: parseInt(e.target.value) || 0 })}
+                margin="dense"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '12px',
+                  },
+                }}
+              />
+            </DialogContent>
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button size="small" onClick={() => setCreateUserDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
+              <Button size="small" onClick={handleCreateUser} variant="contained" disabled={loading} sx={{ fontSize: '12px' }}>
+                {loading ? 'Oluşturuluyor...' : 'Oluştur'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* User Details Dialog */}
+          <Dialog open={userDetailsDialogOpen} onClose={() => setUserDetailsDialogOpen(false)} maxWidth="md" fullWidth>
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>
+              {selectedUserDetails?.user?.username || 'Kullanıcı'} Detayları
+            </DialogTitle>
+            <DialogContent sx={{ pt: 1.5 }}>
+              {loadingUserDetails ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : selectedUserDetails ? (
+                <Box>
+                  {/* User Info */}
+                  <Paper sx={{ p: 1.5, mb: 2, borderRadius: 1.5 }}>
+                    <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
+                      Kullanıcı Bilgileri
+                    </Typography>
+                    <Grid container spacing={1.5}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          Kullanıcı Adı: <strong>{selectedUserDetails.user.username}</strong>
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          E-posta: <strong>{selectedUserDetails.user.email}</strong>
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          Kredi: <strong>{selectedUserDetails.user.credit}</strong>
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          Rol: <strong>{selectedUserDetails.user.role}</strong>
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          Toplam SMS: <strong>{selectedUserDetails.stats.totalSMS}</strong>
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                          Toplam Ödeme Talebi: <strong>{selectedUserDetails.stats.totalPaymentRequests}</strong>
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+
+                  {/* SMS Messages */}
+                  <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
+                    Son SMS Mesajları ({selectedUserDetails.smsMessages.length})
+                  </Typography>
+                  <TableContainer sx={{ mb: 2, maxHeight: 200 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedUserDetails.smsMessages.length > 0 ? (
+                          selectedUserDetails.smsMessages.map((sms: any) => (
+                            <TableRow key={sms.id}>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{sms.phoneNumber}</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{sms.message.substring(0, 30)}...</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Chip
+                                  label={sms.status}
+                                  color={sms.status === 'sent' ? 'success' : sms.status === 'failed' ? 'error' : 'warning'}
+                                  size="small"
+                                  sx={{ fontSize: '0.65rem', height: 20 }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <ClientDate date={sms.sentAt} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} sx={{ textAlign: 'center', py: 2, fontSize: '12px' }}>
+                              SMS mesajı bulunamadı
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Payment Requests */}
+                  <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
+                    Ödeme Talepleri ({selectedUserDetails.paymentRequests.length})
+                  </Typography>
+                  <TableContainer sx={{ maxHeight: 200 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedUserDetails.paymentRequests.length > 0 ? (
+                          selectedUserDetails.paymentRequests.map((req: any) => (
+                            <TableRow key={req.id}>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{req.amount} {req.currency}</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{req.credits} SMS</TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Chip
+                                  label={req.status === 'approved' ? 'Onaylandı' : req.status === 'rejected' ? 'Reddedildi' : 'Beklemede'}
+                                  color={req.status === 'approved' ? 'success' : req.status === 'rejected' ? 'error' : 'warning'}
+                                  size="small"
+                                  sx={{ fontSize: '0.65rem', height: 20 }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <ClientDate date={req.createdAt} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} sx={{ textAlign: 'center', py: 2, fontSize: '12px' }}>
+                              Ödeme talebi bulunamadı
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2, fontSize: '12px' }}>
+                  Kullanıcı detayları yükleniyor...
+                </Typography>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button size="small" onClick={() => setUserDetailsDialogOpen(false)} sx={{ fontSize: '12px' }}>
+                Kapat
               </Button>
             </DialogActions>
           </Dialog>

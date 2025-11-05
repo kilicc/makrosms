@@ -30,7 +30,7 @@ interface CryptoCurrency {
 }
 
 export default function CryptoPaymentPage() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [packages, setPackages] = useState<PaymentPackage[]>([]);
   const [currencies, setCurrencies] = useState<CryptoCurrency[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>('');
@@ -50,8 +50,10 @@ export default function CryptoPaymentPage() {
   useEffect(() => {
     loadPackages();
     loadCurrencies();
-    loadPaymentRequests();
-  }, []);
+    if (user) {
+      loadPaymentRequests();
+    }
+  }, [user]);
 
   const loadPackages = async () => {
     try {
@@ -140,11 +142,24 @@ export default function CryptoPaymentPage() {
   };
 
   const loadPaymentRequests = async () => {
+    if (!user) return;
+    
     try {
       setLoadingRequests(true);
-      const response = await api.get('/payment-requests');
+      // Admin ise tüm ödeme talepleri, değilse sadece kullanıcının talepleri
+      const endpoint = user.role === 'admin' || user.role === 'moderator' 
+        ? '/admin/payment-requests' 
+        : '/payment-requests';
+      const response = await api.get(endpoint);
       if (response.data.success) {
-        setPaymentRequests(response.data.data.requests || []);
+        const requests = response.data.data.requests || [];
+        // Yeni→eski sıralama (created_at descending)
+        const sortedRequests = requests.sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || a.created_at).getTime();
+          const dateB = new Date(b.createdAt || b.created_at).getTime();
+          return dateB - dateA; // Yeni önce
+        });
+        setPaymentRequests(sortedRequests);
       }
     } catch (error) {
       console.error('Payment requests load error:', error);
@@ -762,7 +777,7 @@ export default function CryptoPaymentPage() {
                     mb: 2,
                   }}
                 >
-                  Ödeme Taleplerim
+                  {user?.role === 'admin' || user?.role === 'moderator' ? 'Tüm Ödeme Talepleri' : 'Ödeme Taleplerim'}
                 </Typography>
                 {loadingRequests ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 1.5 }}>
@@ -816,9 +831,25 @@ export default function CryptoPaymentPage() {
 
                           return (
                             <TableRow key={request.id}>
+                              {(user?.role === 'admin' || user?.role === 'moderator') && (
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {request.user?.username || '-'}
+                                  <br />
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                    {request.user?.email || '-'}
+                                  </Typography>
+                                </TableCell>
+                              )}
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.paymentMethod || '-'}</TableCell>
+                              {(user?.role === 'admin' || user?.role === 'moderator') && (
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                                    {request.transactionId ? request.transactionId.substring(0, 20) + '...' : '-'}
+                                  </Typography>
+                                </TableCell>
+                              )}
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 <Chip
                                   label={getStatusLabel(request.status)}
