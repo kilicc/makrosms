@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { generate2FASecret, generateQRCode } from '@/lib/utils/2fa';
 
@@ -15,20 +15,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { id: auth.user.userId },
-      select: { username: true, twoFactorEnabled: true },
-    });
+    // Get user using Supabase
+    const { data: user, error: userError } = await supabaseServer
+      .from('users')
+      .select('username, two_factor_enabled')
+      .eq('id', auth.user.userId)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json(
         { success: false, message: 'Kullanıcı bulunamadı' },
         { status: 404 }
       );
     }
 
-    if (user.twoFactorEnabled) {
+    if (user.two_factor_enabled) {
       return NextResponse.json(
         { success: false, message: '2FA zaten aktif' },
         { status: 400 }
@@ -42,10 +43,17 @@ export async function POST(request: NextRequest) {
     const qrCode = await generateQRCode(otpauthUrl);
 
     // Save secret to user (but don't enable yet - user needs to verify first)
-    await prisma.user.update({
-      where: { id: auth.user.userId },
-      data: { twoFactorSecret: secret },
-    });
+    const { error: updateError } = await supabaseServer
+      .from('users')
+      .update({ two_factor_secret: secret })
+      .eq('id', auth.user.userId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { success: false, message: updateError.message || '2FA secret kaydedilemedi' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

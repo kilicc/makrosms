@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { verify2FACode } from '@/lib/utils/2fa';
 
@@ -25,13 +25,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { id: auth.user.userId },
-      select: { twoFactorSecret: true, twoFactorEnabled: true },
-    });
+    // Get user using Supabase
+    const { data: user, error: userError } = await supabaseServer
+      .from('users')
+      .select('two_factor_secret, two_factor_enabled')
+      .eq('id', auth.user.userId)
+      .single();
 
-    if (!user || !user.twoFactorSecret) {
+    if (userError || !user || !user.two_factor_secret) {
       return NextResponse.json(
         { success: false, message: '2FA secret bulunamadı' },
         { status: 404 }
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify 2FA code
-    const isValid = verify2FACode(user.twoFactorSecret, twoFactorCode);
+    const isValid = verify2FACode(user.two_factor_secret, twoFactorCode);
 
     if (!isValid) {
       return NextResponse.json(
@@ -48,11 +49,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enable 2FA
-    await prisma.user.update({
-      where: { id: auth.user.userId },
-      data: { twoFactorEnabled: true },
-    });
+    // Enable 2FA using Supabase
+    const { error: updateError } = await supabaseServer
+      .from('users')
+      .update({ two_factor_enabled: true })
+      .eq('id', auth.user.userId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { success: false, message: updateError.message || '2FA etkinleştirilemedi' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { verify2FACode } from '@/lib/utils/2fa';
 import { verifyPassword } from '@/lib/utils/password';
@@ -26,17 +26,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { id: auth.user.userId },
-      select: {
-        passwordHash: true,
-        twoFactorSecret: true,
-        twoFactorEnabled: true,
-      },
-    });
+    // Get user using Supabase
+    const { data: user, error: userError } = await supabaseServer
+      .from('users')
+      .select('password_hash, two_factor_secret, two_factor_enabled')
+      .eq('id', auth.user.userId)
+      .single();
 
-    if (!user || !user.twoFactorEnabled) {
+    if (userError || !user || !user.two_factor_enabled) {
       return NextResponse.json(
         { success: false, message: '2FA aktif değil' },
         { status: 400 }
@@ -44,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    const isValidPassword = await verifyPassword(password, user.password_hash);
     if (!isValidPassword) {
       return NextResponse.json(
         { success: false, message: 'Şifre hatalı' },
@@ -53,8 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify 2FA code
-    if (user.twoFactorSecret) {
-      const isValid2FA = verify2FACode(user.twoFactorSecret, twoFactorCode);
+    if (user.two_factor_secret) {
+      const isValid2FA = verify2FACode(user.two_factor_secret, twoFactorCode);
       if (!isValid2FA) {
         return NextResponse.json(
           { success: false, message: 'Geçersiz 2FA kodu' },
@@ -63,14 +60,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Disable 2FA
-    await prisma.user.update({
-      where: { id: auth.user.userId },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-      },
-    });
+    // Disable 2FA using Supabase
+    const { error: updateError } = await supabaseServer
+      .from('users')
+      .update({
+        two_factor_enabled: false,
+        two_factor_secret: null,
+      })
+      .eq('id', auth.user.userId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { success: false, message: updateError.message || '2FA devre dışı bırakılamadı' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
