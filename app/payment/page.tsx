@@ -59,6 +59,13 @@ export default function CryptoPaymentPage() {
   const [editingCrypto, setEditingCrypto] = useState<CryptoCurrency | null>(null);
   const [packageForm, setPackageForm] = useState({ name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
   const [cryptoForm, setCryptoForm] = useState({ symbol: '', name: '', decimals: 18, minAmount: 0, networkFee: 0, confirmations: 3, walletAddress: '', isActive: true });
+  
+  // Admin payment request states
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     loadPackages();
@@ -302,52 +309,249 @@ export default function CryptoPaymentPage() {
                 onChange={(e, newValue) => setTabValue(newValue)}
                 sx={{ mb: 2 }}
               >
-                <Tab label="Ödeme" icon={<AccountBalanceWallet />} />
+                <Tab label="Ödeme Talepleri" icon={<AccountBalanceWallet />} />
                 <Tab label="Yönetim" icon={<Settings />} />
               </Tabs>
             )}
 
             {tabValue === 0 ? (
               <>
-                <Typography 
-                  variant="h4" 
-                  component="h1" 
-                  gutterBottom 
-                  sx={{ 
-                    color: 'primary.main', 
-                    mb: 2.5,
-                    mt: 1,
-                    fontSize: '18px',
-                    fontWeight: 600,
-                  }}
-                >
-                  Kripto Ödeme
-                </Typography>
+                {isAdmin ? (
+                  // Admin için sadece ödeme talepleri listesi
+                  <>
+                    <Typography 
+                      variant="h4" 
+                      component="h1" 
+                      gutterBottom 
+                      sx={{ 
+                        color: 'primary.main', 
+                        mb: 2.5,
+                        mt: 1,
+                        fontSize: '18px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Ödeme Talepleri
+                    </Typography>
 
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
-                  sx={{ 
-                    mb: 2,
-                    fontSize: '14px',
-                  }}
-                >
-                  Kripto para ile SMS kredisi satın alın. Kredi paketlerinden birini seçin ve ödeme yapın.
-                </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mb: 2,
+                        fontSize: '14px',
+                      }}
+                    >
+                      Kullanıcıların açtığı ödeme taleplerini onaylayın veya reddedin.
+                    </Typography>
 
-            {error && (
-              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-                {error}
-              </Alert>
-            )}
+                    {error && (
+                      <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                        {error}
+                      </Alert>
+                    )}
 
-            {success && (
-              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>
-                {success}
-              </Alert>
-            )}
+                    {success && (
+                      <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>
+                        {success}
+                      </Alert>
+                    )}
 
-            {/* Paket Seçimi - Tam Genişlik */}
+                    {/* Ödeme Talepleri - Admin için */}
+                    <Card 
+                      sx={{ 
+                        borderRadius: 2,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        mt: 2,
+                      }}
+                    >
+                      <CardContent sx={{ p: 1.5 }}>
+                        <Typography 
+                          variant="h6" 
+                          gutterBottom
+                          sx={{
+                            fontSize: '16px',
+                            fontWeight: 500,
+                            mb: 2,
+                          }}
+                        >
+                          Tüm Ödeme Talepleri
+                        </Typography>
+                        {loadingRequests ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', p: 1.5 }}>
+                            <CircularProgress size={24} />
+                          </Box>
+                        ) : paymentRequests.length === 0 ? (
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                              Henüz ödeme talebi bulunmuyor.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Oluşturulma</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlemler</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {paymentRequests.map((request) => {
+                                  const getStatusColor = (status: string) => {
+                                    switch (status) {
+                                      case 'approved':
+                                        return 'success';
+                                      case 'rejected':
+                                        return 'error';
+                                      case 'pending':
+                                        return 'warning';
+                                      default:
+                                        return 'default';
+                                    }
+                                  };
+
+                                  const getStatusLabel = (status: string) => {
+                                    switch (status) {
+                                      case 'approved':
+                                        return 'Onaylandı';
+                                      case 'rejected':
+                                        return 'Reddedildi';
+                                      case 'pending':
+                                        return 'Beklemede';
+                                      default:
+                                        return status;
+                                    }
+                                  };
+
+                                  return (
+                                    <TableRow key={request.id}>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        {request.user?.username || '-'}
+                                        <br />
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                          {request.user?.email || '-'}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.paymentMethod || '-'}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                                          {request.transactionId ? request.transactionId.substring(0, 20) + '...' : '-'}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        <Chip
+                                          label={getStatusLabel(request.status)}
+                                          color={getStatusColor(request.status)}
+                                          size="small"
+                                          sx={{
+                                            fontSize: '0.65rem',
+                                            fontWeight: 500,
+                                            height: 20,
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        <ClientDate date={request.createdAt} />
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        {request.status === 'pending' && (
+                                          <Box sx={{ display: 'flex', gap: 0.75 }}>
+                                            <Button
+                                              size="small"
+                                              variant="contained"
+                                              color="success"
+                                              onClick={() => {
+                                                setSelectedRequest(request);
+                                                setAdminNotes('');
+                                                setApproveDialogOpen(true);
+                                              }}
+                                              sx={{ textTransform: 'none', fontSize: '0.7rem', py: 0.5, px: 1 }}
+                                            >
+                                              Onayla
+                                            </Button>
+                                            <Button
+                                              size="small"
+                                              variant="contained"
+                                              color="error"
+                                              onClick={() => {
+                                                setSelectedRequest(request);
+                                                setRejectionReason('');
+                                                setAdminNotes('');
+                                                setRejectDialogOpen(true);
+                                              }}
+                                              sx={{ textTransform: 'none', fontSize: '0.7rem', py: 0.5, px: 1 }}
+                                            >
+                                              Reddet
+                                            </Button>
+                                          </Box>
+                                        )}
+                                        {request.status !== 'pending' && (
+                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            {request.status === 'approved' ? 'Onaylandı' : 'Reddedildi'}
+                                          </Typography>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  // Normal kullanıcı için kripto ödeme bölümü
+                  <>
+                    <Typography 
+                      variant="h4" 
+                      component="h1" 
+                      gutterBottom 
+                      sx={{ 
+                        color: 'primary.main', 
+                        mb: 2.5,
+                        mt: 1,
+                        fontSize: '18px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Kripto Ödeme
+                    </Typography>
+
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        mb: 2,
+                        fontSize: '14px',
+                      }}
+                    >
+                      Kripto para ile SMS kredisi satın alın. Kredi paketlerinden birini seçin ve ödeme yapın.
+                    </Typography>
+
+                    {error && (
+                      <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                        {error}
+                      </Alert>
+                    )}
+
+                    {success && (
+                      <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>
+                        {success}
+                      </Alert>
+                    )}
+
+                    {/* Paket Seçimi - Tam Genişlik */}
             <Card 
               sx={{ 
                 borderRadius: 2,
@@ -825,129 +1029,107 @@ export default function CryptoPaymentPage() {
                   </Card>
                 </Grid>
               </Grid>
-            )}
+                    {/* Ödeme Talepleri - Normal kullanıcı için */}
+                    <Card 
+                      sx={{ 
+                        borderRadius: 2,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        mt: 2,
+                      }}
+                    >
+                      <CardContent sx={{ p: 1.5 }}>
+                        <Typography 
+                          variant="h6" 
+                          gutterBottom
+                          sx={{
+                            fontSize: '16px',
+                            fontWeight: 500,
+                            mb: 2,
+                          }}
+                        >
+                          Ödeme Taleplerim
+                        </Typography>
+                        {loadingRequests ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', p: 1.5 }}>
+                            <CircularProgress size={24} />
+                          </Box>
+                        ) : paymentRequests.length === 0 ? (
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                              Henüz ödeme talebi bulunmuyor.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <TableContainer>
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                                  <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Oluşturulma</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {paymentRequests.map((request) => {
+                                  const getStatusColor = (status: string) => {
+                                    switch (status) {
+                                      case 'approved':
+                                        return 'success';
+                                      case 'rejected':
+                                        return 'error';
+                                      case 'pending':
+                                        return 'warning';
+                                      default:
+                                        return 'default';
+                                    }
+                                  };
 
-            {/* Ödeme Talepleri - En Alta Taşındı */}
-            <Card 
-              sx={{ 
-                borderRadius: 2,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                mt: 2,
-              }}
-            >
-              <CardContent sx={{ p: 1.5 }}>
-                <Typography 
-                  variant="h6" 
-                  gutterBottom
-                  sx={{
-                    fontSize: '16px',
-                    fontWeight: 500,
-                    mb: 2,
-                  }}
-                >
-                  {user?.role === 'admin' || user?.role === 'moderator' ? 'Tüm Ödeme Talepleri' : 'Ödeme Taleplerim'}
-                </Typography>
-                {loadingRequests ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 1.5 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : paymentRequests.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
-                      Henüz ödeme talebi bulunmuyor.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          {(user?.role === 'admin' || user?.role === 'moderator') && (
-                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
-                          )}
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
-                          {(user?.role === 'admin' || user?.role === 'moderator') && (
-                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
-                          )}
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Oluşturulma</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paymentRequests.map((request) => {
-                          const getStatusColor = (status: string) => {
-                            switch (status) {
-                              case 'approved':
-                                return 'success';
-                              case 'rejected':
-                                return 'error';
-                              case 'pending':
-                                return 'warning';
-                              default:
-                                return 'default';
-                            }
-                          };
+                                  const getStatusLabel = (status: string) => {
+                                    switch (status) {
+                                      case 'approved':
+                                        return 'Onaylandı';
+                                      case 'rejected':
+                                        return 'Reddedildi';
+                                      case 'pending':
+                                        return 'Beklemede';
+                                      default:
+                                        return status;
+                                    }
+                                  };
 
-                          const getStatusLabel = (status: string) => {
-                            switch (status) {
-                              case 'approved':
-                                return 'Onaylandı';
-                              case 'rejected':
-                                return 'Reddedildi';
-                              case 'pending':
-                                return 'Beklemede';
-                              default:
-                                return status;
-                            }
-                          };
-
-                          return (
-                            <TableRow key={request.id}>
-                              {(user?.role === 'admin' || user?.role === 'moderator') && (
-                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                  {request.user?.username || '-'}
-                                  <br />
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
-                                    {request.user?.email || '-'}
-                                  </Typography>
-                                </TableCell>
-                              )}
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.paymentMethod || '-'}</TableCell>
-                              {(user?.role === 'admin' || user?.role === 'moderator') && (
-                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
-                                    {request.transactionId ? request.transactionId.substring(0, 20) + '...' : '-'}
-                                  </Typography>
-                                </TableCell>
-                              )}
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <Chip
-                                  label={getStatusLabel(request.status)}
-                                  color={getStatusColor(request.status)}
-                                  size="small"
-                                  sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: 500,
-                                    height: 20,
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <ClientDate date={request.createdAt} />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                                  return (
+                                    <TableRow key={request.id}>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(request.amount)} {request.currency || 'TRY'}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{request.paymentMethod || '-'}</TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        <Chip
+                                          label={getStatusLabel(request.status)}
+                                          color={getStatusColor(request.status)}
+                                          size="small"
+                                          sx={{
+                                            fontSize: '0.65rem',
+                                            fontWeight: 500,
+                                            height: 20,
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                        <ClientDate date={request.createdAt} />
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </>
                 )}
-              </CardContent>
-            </Card>
               </>
             ) : null}
 
@@ -1321,6 +1503,91 @@ export default function CryptoPaymentPage() {
                 <Button onClick={() => setCryptoDialogOpen(false)}>İptal</Button>
                 <Button onClick={handleSaveCrypto} variant="contained" disabled={loading}>
                   {loading ? 'Kaydediliyor...' : 'Kaydet'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Approve Dialog */}
+            <Dialog open={approveDialogOpen} onClose={() => setApproveDialogOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Ödeme Talebini Onayla</DialogTitle>
+              <DialogContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  {selectedRequest && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Kullanıcı: <strong>{selectedRequest.user?.username || '-'}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Tutar: <strong>{Number(selectedRequest.amount)} {selectedRequest.currency || 'TRY'}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Kredi: <strong>{selectedRequest.credits} SMS</strong>
+                      </Typography>
+                    </Box>
+                  )}
+                  <TextField
+                    label="Admin Notu (Opsiyonel)"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={3}
+                    size="small"
+                  />
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setApproveDialogOpen(false)}>İptal</Button>
+                <Button onClick={handleApproveRequest} variant="contained" color="success" disabled={loading}>
+                  {loading ? 'Onaylanıyor...' : 'Onayla'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Reject Dialog */}
+            <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>Ödeme Talebini Reddet</DialogTitle>
+              <DialogContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  {selectedRequest && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Kullanıcı: <strong>{selectedRequest.user?.username || '-'}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Tutar: <strong>{Number(selectedRequest.amount)} {selectedRequest.currency || 'TRY'}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Kredi: <strong>{selectedRequest.credits} SMS</strong>
+                      </Typography>
+                    </Box>
+                  )}
+                  <TextField
+                    label="Red Sebebi *"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={3}
+                    size="small"
+                    required
+                    error={!rejectionReason}
+                  />
+                  <TextField
+                    label="Admin Notu (Opsiyonel)"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    fullWidth
+                    multiline
+                    rows={2}
+                    size="small"
+                  />
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setRejectDialogOpen(false)}>İptal</Button>
+                <Button onClick={handleRejectRequest} variant="contained" color="error" disabled={loading || !rejectionReason}>
+                  {loading ? 'Reddediliyor...' : 'Reddet'}
                 </Button>
               </DialogActions>
             </Dialog>
