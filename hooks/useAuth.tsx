@@ -56,15 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 401 hatası alındığında sadece error'u döndür
       // Logout işlemi checkAuth içinde yapılacak
       // Bu sayede her sayfa geçişinde logout yapılmaz
+      // setUser(null) yapmayı kaldırdık - bu ProtectedRoute'u tetikliyordu
       if (error.response?.status === 401) {
-        // Sadece /auth/profile endpoint'inde user'ı temizle
-        // Diğer endpoint'lerde sadece error'u döndür
-        if (error.config?.url?.includes('/auth/profile')) {
-          // Token geçersiz, user'ı temizle ama logout() çağırma
-          setUser(null);
-        }
-        // Diğer endpoint'lerde sadece error'u döndür
-        // Sayfa içindeki error handling bu hatayı yakalayacak
+        // Sadece error'u döndür, logout yapma
+        // Logout işlemi sadece checkAuth içinde yapılacak
+        // Bu sayede her API çağrısında logout yapılmaz
       }
       return Promise.reject(error);
     }
