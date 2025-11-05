@@ -37,6 +37,14 @@ interface BulkSmsReport {
   sentAt: string;
   successCount: number;
   failedCount: number;
+  messageKey: string;
+  messages: Array<{
+    id: string;
+    phoneNumber: string;
+    contactName?: string;
+    status: string;
+    sentAt: string;
+  }>;
 }
 
 export default function DashboardPage() {
@@ -151,10 +159,29 @@ export default function DashboardPage() {
             failedCount: number;
             sentAt: string;
             status: string;
+            messages: Array<{
+              id: string;
+              phoneNumber: string;
+              contactName?: string;
+              status: string;
+              sentAt: string;
+            }>;
           }>();
 
-          // Son 20 mesajı al ve grupla (aynı mesaj içeriğine sahip olanları)
-          messages.slice(0, 20).forEach((msg: any) => {
+          // Bugünün tarihini al
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const todayEnd = new Date();
+          todayEnd.setHours(23, 59, 59, 999);
+
+          // Bugün gönderilen mesajları filtrele
+          const todayMessages = messages.filter((msg: any) => {
+            const sentDate = new Date(msg.sentAt);
+            return sentDate >= today && sentDate <= todayEnd;
+          });
+
+          // Bugünkü mesajları veya son 20 mesajı al ve grupla (aynı mesaj içeriğine sahip olanları)
+          (todayMessages.length > 0 ? todayMessages : messages.slice(0, 20)).forEach((msg: any) => {
             const messageText = msg.message || '';
             const messageKey = messageText.substring(0, 50); // İlk 50 karakteri key olarak kullan
             
@@ -166,11 +193,19 @@ export default function DashboardPage() {
                 failedCount: 0,
                 sentAt: msg.sentAt,
                 status: 'sent',
+                messages: [],
               });
             }
 
             const group = groupedMessages.get(messageKey)!;
             group.recipients++;
+            group.messages.push({
+              id: msg.id,
+              phoneNumber: msg.phoneNumber,
+              contactName: msg.contact?.name,
+              status: msg.status,
+              sentAt: msg.sentAt,
+            });
             if (msg.status === 'sent' || msg.status === 'delivered') {
               group.successCount++;
             } else if (msg.status === 'failed') {
@@ -199,6 +234,8 @@ export default function DashboardPage() {
               sentAt: group.sentAt,
               successCount: group.successCount,
               failedCount: group.failedCount,
+              messageKey: group.message.substring(0, 50),
+              messages: group.messages,
             }))
             .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
             .slice(0, 10); // Son 10 rapor
@@ -361,9 +398,12 @@ export default function DashboardPage() {
                 >
                   <Card
                     onClick={() => {
-                      if (card.tab !== undefined) {
+                      if ((card as any).tab !== undefined) {
                         // Admin sayfasına tab ile yönlendir
-                        router.push(`${card.path}?tab=${card.tab}`);
+                        router.push(`${card.path}?tab=${(card as any).tab}`);
+                      } else if ((card as any).query) {
+                        // Query parametresi ile yönlendir
+                        router.push(`${card.path}?${(card as any).query}`);
                       } else {
                         router.push(card.path);
                       }
