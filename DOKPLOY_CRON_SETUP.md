@@ -1,10 +1,51 @@
 # 🔄 Dokploy için Cron Job Kurulum Rehberi
 
-Dokploy'da cron job özelliği olmadığı için, sunucuda direkt cron job kurulumu yapacağız.
+Dokploy'da **"Schedules"** sekmesi ile cron job'ları kurabilirsiniz!
 
 ## 🚀 Hızlı Kurulum
 
-### Yöntem 1: Otomatik Kurulum Script'i (Önerilen)
+### Yöntem 1: Dokploy Schedules (Önerilen) ⭐
+
+Dokploy'un kendi cron job özelliğini kullanın:
+
+1. **Dokploy Dashboard'a gidin**
+2. **Projenizi seçin** (`finsms` → `production` → `v1`)
+3. **"Schedules"** sekmesine tıklayın
+4. **"Add Schedule"** butonuna tıklayın
+
+#### SMS Durum Kontrolü Cron Job:
+
+**Schedule Ayarları:**
+- **Name**: `SMS Durum Kontrolü`
+- **Description**: `Gönderilen SMS'lerin durumunu CepSMS API'den kontrol eder`
+- **Schedule**: `*/5 * * * *` (Her 5 dakikada bir)
+- **Method**: `POST`
+- **URL**: `https://panel.finsms.io/api/sms/check-status`
+- **Headers**:
+  ```
+  x-secret-key: YOUR_CRON_SECRET_KEY
+  Content-Type: application/json
+  ```
+- **Body**: (Boş bırakabilirsiniz veya `{}`)
+
+#### Otomatik İade Cron Job:
+
+**Schedule Ayarları:**
+- **Name**: `Otomatik İade İşleme`
+- **Description**: `48 saat önce oluşturulan beklemede iadeleri işler`
+- **Schedule**: `0 * * * *` (Her saat başı)
+- **Method**: `POST`
+- **URL**: `https://panel.finsms.io/api/refunds/process-auto`
+- **Headers**:
+  ```
+  x-secret-key: YOUR_CRON_SECRET_KEY
+  Content-Type: application/json
+  ```
+- **Body**: (Boş bırakabilirsiniz veya `{}`)
+
+**Not:** `YOUR_CRON_SECRET_KEY` yerine `.env` dosyasındaki `CRON_SECRET_KEY` değerini kullanın.
+
+### Yöntem 2: Sunucuda Otomatik Kurulum Script'i
 
 Sunucuya SSH ile bağlanın ve şu komutu çalıştırın:
 
