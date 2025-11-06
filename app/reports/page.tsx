@@ -312,12 +312,12 @@ export default function SMSReportsPage() {
               onChange={(e, newValue) => setTabValue(newValue)}
               sx={{ mb: 2 }}
             >
-              <Tab label="SMS Raporları" icon={<Assessment />} />
-              <Tab label="Toplu SMS" icon={<Send />} />
+              <Tab label="SMS Raporları" icon={<Assessment />} value={0} />
+              <Tab label="Toplu SMS" icon={<Send />} value={1} />
               {isAdmin && (
                 <>
-                  <Tab label="İstatistikler" icon={<BarChart />} />
-                  <Tab label="Ödeme Raporları" icon={<Payment />} />
+                  <Tab label="İstatistikler" icon={<BarChart />} value={2} />
+                  <Tab label="Ödeme Raporları" icon={<Payment />} value={3} />
                 </>
               )}
             </Tabs>
