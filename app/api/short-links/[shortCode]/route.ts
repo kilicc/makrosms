@@ -18,10 +18,22 @@ export async function GET(
       .eq('is_active', true)
       .maybeSingle();
 
-    if (error || !shortLink) {
-      console.error('Short link find Supabase error:', error);
+    if (error) {
+      console.error('Short link find Supabase error:', JSON.stringify(error, null, 2));
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error details:', error.details);
+      console.error('Error hint:', error.hint);
       return NextResponse.json(
-        { success: false, message: error?.message || 'Kısa link bulunamadı', error: error },
+        { success: false, message: error.message || 'Kısa link bulunamadı', error: error },
+        { status: 404 }
+      );
+    }
+
+    if (!shortLink) {
+      console.error('Short link not found for code:', shortCode);
+      return NextResponse.json(
+        { success: false, message: 'Kısa link bulunamadı' },
         { status: 404 }
       );
     }
