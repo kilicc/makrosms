@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Telefon numarası validasyonu: Sadece 905**, 05**, 5** formatları kabul edilir
-    const phoneNumbers = phone.split(/[,\n]/).map(p => p.trim()).filter(p => p);
+    const phoneNumbers = phone.split(/[,\n]/).map((p: string) => p.trim()).filter((p: string) => p);
     const phoneRegex = /^(905|05|5)\d+$/;
-    const invalidPhones = phoneNumbers.filter(p => !phoneRegex.test(p));
+    const invalidPhones = phoneNumbers.filter((p: string) => !phoneRegex.test(p));
     
     if (invalidPhones.length > 0) {
       return NextResponse.json(

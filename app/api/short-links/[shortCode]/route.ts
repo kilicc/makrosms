@@ -4,10 +4,10 @@ import { getSupabaseServer } from '@/lib/supabase-server';
 // GET /api/short-links/[shortCode] - Kısa linke tıklama ve yönlendirme
 export async function GET(
   request: NextRequest,
-  { params }: { params: { shortCode: string } }
+  { params }: { params: Promise<{ shortCode: string }> }
 ) {
   try {
-    const shortCode = params.shortCode;
+    const { shortCode } = await params;
     const supabaseServer = getSupabaseServer();
 
     // Kısa linki bul

@@ -5,7 +5,7 @@ import { authenticateRequest } from '@/lib/middleware/auth';
 // GET /api/short-links/[id]/stats - Kısa link istatistiklerini getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = authenticateRequest(request);
@@ -17,7 +17,8 @@ export async function GET(
       );
     }
 
-    const shortLinkId = params.id;
+    const { id } = await params;
+    const shortLinkId = id;
     const supabaseServer = getSupabaseServer();
 
     // Kısa linkin kullanıcıya ait olduğunu kontrol et

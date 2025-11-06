@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Send, Group, Person, Add, Delete, Edit, Description, Message, People, CheckCircle, Info, Warning, Star, AutoAwesome, ContentCopy, Search, FilterList } from '@mui/icons-material';
+import { Send, Group, Person, Add, Delete, Edit, Description, Message, People, CheckCircle, Info, Warning, Star, AutoAwesome, ContentCopy, Search, FilterList, Link, BarChart } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 
 interface Contact {
@@ -47,6 +47,10 @@ export default function AdvancedSMSPage() {
   const MAX_CHARACTERS = 180;
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [shortLinkEnabled, setShortLinkEnabled] = useState(false);
+  const [shortLinkUrl, setShortLinkUrl] = useState('');
+  const [shortLinkDialogOpen, setShortLinkDialogOpen] = useState(false);
+  const [shortLinkStats, setShortLinkStats] = useState<any>(null);
   
   // Template Dialog States
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -679,6 +683,78 @@ export default function AdvancedSMSPage() {
                             ))}
                           </Select>
                         </FormControl>
+
+                        {/* Kısa Link Modülü */}
+                        <Box sx={{ 
+                          mt: 2,
+                          p: 1.5, 
+                          borderRadius: 2,
+                          border: '1px solid rgba(25, 118, 210, 0.2)',
+                          bgcolor: 'rgba(25, 118, 210, 0.05)',
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Link sx={{ fontSize: 18, color: 'primary.main' }} />
+                              <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 600 }}>
+                                Kısa Link
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={shortLinkEnabled ? 'Aktif' : 'Pasif'}
+                              size="small"
+                              color={shortLinkEnabled ? 'success' : 'default'}
+                              onClick={() => setShortLinkEnabled(!shortLinkEnabled)}
+                              sx={{ cursor: 'pointer', fontSize: '11px', height: 22 }}
+                            />
+                          </Box>
+                          {shortLinkEnabled && (
+                            <Box sx={{ mt: 1.5 }}>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="URL"
+                                value={shortLinkUrl}
+                                onChange={(e) => setShortLinkUrl(e.target.value)}
+                                placeholder="https://example.com"
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    borderRadius: 1.5,
+                                    fontSize: '14px',
+                                  },
+                                }}
+                                InputProps={{
+                                  endAdornment: shortLinkUrl && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={async () => {
+                                        try {
+                                          const response = await api.post('/short-links', {
+                                            originalUrl: shortLinkUrl,
+                                            title: 'SMS Kısa Link',
+                                          });
+                                          if (response.data.success) {
+                                            const shortCode = response.data.data.shortLink.short_code;
+                                            const shortLink = `${window.location.origin}/s/${shortCode}`;
+                                            setMessage(message + ' ' + shortLink);
+                                            setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
+                                            setShortLinkUrl('');
+                                          }
+                                        } catch (err: any) {
+                                          setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
+                                        }
+                                      }}
+                                    >
+                                      <ContentCopy fontSize="small" />
+                                    </IconButton>
+                                  ),
+                                }}
+                              />
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', mt: 0.5, display: 'block' }}>
+                                Mesajınıza eklenecek kısa link oluşturun
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
                         
                         {/* Template Actions */}
                         {selectedTemplateId && (

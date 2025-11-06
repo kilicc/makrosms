@@ -1,12 +1,12 @@
 'use client';
 
-import { Box, Container, Typography, Paper, TextField, Button, Grid, Alert, FormControl, InputLabel, Select, MenuItem, Chip, IconButton } from '@mui/material';
+import { Box, Container, Typography, Paper, TextField, Button, Grid, Alert, FormControl, InputLabel, Select, MenuItem, Chip, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Send, Description, Close } from '@mui/icons-material';
+import { Send, Description, Close, Link, ContentCopy, BarChart } from '@mui/icons-material';
 
 interface SMSTemplate {
   id: string;
@@ -28,6 +28,10 @@ export default function SMSInterfacePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [shortLinkEnabled, setShortLinkEnabled] = useState(false);
+  const [shortLinkUrl, setShortLinkUrl] = useState('');
+  const [shortLinkDialogOpen, setShortLinkDialogOpen] = useState(false);
+  const [shortLinkStats, setShortLinkStats] = useState<any>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -231,6 +235,85 @@ export default function SMSInterfacePage() {
                       </FormControl>
                     </Grid>
                   )}
+
+                  {/* Kısa Link Modülü */}
+                  <Grid size={{ xs: 12 }}>
+                    <Box sx={{ 
+                      p: 1.5, 
+                      borderRadius: 1.5,
+                      border: '1px solid rgba(25, 118, 210, 0.2)',
+                      bgcolor: 'rgba(25, 118, 210, 0.05)',
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Link sx={{ fontSize: 18, color: 'primary.main' }} />
+                          <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 600 }}>
+                            Kısa Link
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={shortLinkEnabled ? 'Aktif' : 'Pasif'}
+                          size="small"
+                          color={shortLinkEnabled ? 'success' : 'default'}
+                          onClick={() => setShortLinkEnabled(!shortLinkEnabled)}
+                          sx={{ cursor: 'pointer', fontSize: '11px', height: 22 }}
+                        />
+                      </Box>
+                      {shortLinkEnabled && (
+                        <Box sx={{ mt: 1.5 }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="URL"
+                            value={shortLinkUrl}
+                            onChange={(e) => setShortLinkUrl(e.target.value)}
+                            placeholder="https://example.com"
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 1.5,
+                                fontSize: '14px',
+                              },
+                            }}
+                            InputProps={{
+                              endAdornment: shortLinkUrl && (
+                                <IconButton
+                                  size="small"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await api.post('/short-links', {
+                                        originalUrl: shortLinkUrl,
+                                        title: 'SMS Kısa Link',
+                                      });
+                                      if (response.data.success) {
+                                        const shortCode = response.data.data.shortLink.short_code;
+                                        const shortLink = `${window.location.origin}/s/${shortCode}`;
+                                        const newMessage = formData.message + ' ' + shortLink;
+                                        // 180 karakter limiti kontrolü
+                                        if (newMessage.length <= MAX_CHARACTERS) {
+                                          setFormData({ ...formData, message: newMessage });
+                                          setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
+                                          setShortLinkUrl('');
+                                        } else {
+                                          setError('Kısa link eklendiğinde mesaj 180 karakteri aşıyor!');
+                                        }
+                                      }
+                                    } catch (err: any) {
+                                      setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
+                                    }
+                                  }}
+                                >
+                                  <ContentCopy fontSize="small" />
+                                </IconButton>
+                              ),
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', mt: 0.5, display: 'block' }}>
+                            Mesajınıza eklenecek kısa link oluşturun
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Grid>
 
                   <Grid size={{ xs: 12 }}>
                     <TextField
