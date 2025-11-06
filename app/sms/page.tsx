@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Send, Description, Close, Link, ContentCopy, BarChart } from '@mui/icons-material';
+import { Send, Description, Close, Link, ContentCopy, BarChart, OpenInNew } from '@mui/icons-material';
 
 interface SMSTemplate {
   id: string;
