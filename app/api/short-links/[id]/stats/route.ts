@@ -26,7 +26,7 @@ export async function GET(
       .select('*')
       .eq('id', shortLinkId)
       .eq('user_id', auth.user.userId)
-      .single();
+      .maybeSingle();
 
     if (linkError || !shortLink) {
       console.error('Short link stats find Supabase error:', linkError);

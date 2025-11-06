@@ -15,7 +15,7 @@ export async function GET(
       .select('*')
       .eq('short_code', shortCode)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (error || !shortLink) {
       console.error('Short link find Supabase error:', error);

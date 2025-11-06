@@ -92,16 +92,30 @@ export async function POST(request: NextRequest) {
 
     // Benzersiz kod bul
     while (attempts < maxAttempts) {
-      const { data: existing } = await supabaseServer
+      const { data: existing, error: checkError } = await supabaseServer
         .from('short_links')
         .select('id')
         .eq('short_code', shortCode)
-        .single();
+        .maybeSingle();
 
+      // Hata varsa (tablo yoksa veya başka bir hata) veya kayıt yoksa benzersiz kod bulundu
+      if (checkError) {
+        // Eğer hata "relation does not exist" ise tablo yok demektir, ilk kayıt olabilir
+        if (checkError.message?.includes('does not exist')) {
+          break; // Tablo yok, ilk kayıt olabilir
+        }
+        // Diğer hatalar için tekrar dene
+        shortCode = generateShortCode();
+        attempts++;
+        continue;
+      }
+
+      // Kayıt yoksa benzersiz kod bulundu
       if (!existing) {
         break; // Benzersiz kod bulundu
       }
 
+      // Kayıt varsa yeni kod oluştur
       shortCode = generateShortCode();
       attempts++;
     }
@@ -114,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Kısa link oluştur
-    const { data: shortLink, error } = await supabaseServer
+    const { data: shortLinkData, error } = await supabaseServer
       .from('short_links')
       .insert({
         user_id: auth.user.userId,
@@ -129,10 +143,20 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error || !shortLink) {
+    const shortLink = shortLinkData;
+
+    if (error) {
       console.error('Short link create Supabase error:', error);
       return NextResponse.json(
-        { success: false, message: error?.message || 'Kısa link oluşturulamadı', error: error },
+        { success: false, message: error.message || 'Kısa link oluşturulamadı', error: error },
+        { status: 500 }
+      );
+    }
+
+    if (!shortLink || !Array.isArray(shortLink) && !shortLink.id) {
+      console.error('Short link create error: No data returned');
+      return NextResponse.json(
+        { success: false, message: 'Kısa link oluşturulamadı - veri dönmedi' },
         { status: 500 }
       );
     }
