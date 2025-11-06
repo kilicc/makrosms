@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, DeleteSweep } from '@mui/icons-material';
+import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, Delete } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import { useRouter } from 'next/navigation';
 import ClientDate from '@/components/ClientDate';
@@ -76,7 +76,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [cleanupLoading, setCleanupLoading] = useState(false);
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [creditAmount, setCreditAmount] = useState<number>(0);
@@ -301,29 +300,28 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleCleanupDemoData = async () => {
-    if (!confirm('Demo verileri temizlemek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!confirm(`${username} kullanıcısını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve kullanıcının tüm verileri (mesajlar, kişiler, şablonlar vb.) silinecektir!`)) {
       return;
     }
 
-    setCleanupLoading(true);
+    setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const response = await api.post('/admin/cleanup-demo-data');
+      const response = await api.delete(`/admin/users/${userId}`);
       if (response.data.success) {
-        setSuccess(`Demo veriler başarıyla temizlendi! ${response.data.results.deletedUsers} kullanıcı, ${response.data.results.deletedSms} mesaj, ${response.data.results.deletedContacts} kişi, ${response.data.results.deletedTemplates} şablon silindi.`);
-        // Kullanıcı listesini yenile
+        setSuccess(`${username} kullanıcısı başarıyla silindi.`);
         loadUsers();
         loadStats();
       } else {
-        setError(response.data.error || 'Demo veriler temizlenirken hata oluştu');
+        setError(response.data.error || 'Kullanıcı silinirken hata oluştu');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Demo veriler temizlenirken hata oluştu');
+      setError(err.response?.data?.error || err.message || 'Kullanıcı silinirken hata oluştu');
     } finally {
-      setCleanupLoading(false);
+      setLoading(false);
     }
   };
 
@@ -502,31 +500,16 @@ export default function AdminDashboardPage() {
               Admin Paneli
             </Typography>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography 
-                variant="body2" 
-                color="text.secondary" 
-                sx={{ 
-                  fontSize: '14px',
-                }}
-              >
-                Sistem istatistiklerini görüntüleyin ve kullanıcıları yönetin.
-              </Typography>
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                onClick={handleCleanupDemoData}
-                disabled={cleanupLoading}
-                startIcon={<DeleteSweep />}
-                sx={{
-                  fontSize: '12px',
-                  textTransform: 'none',
-                }}
-              >
-                {cleanupLoading ? 'Temizleniyor...' : 'Demo Verileri Temizle'}
-              </Button>
-            </Box>
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ 
+                mb: 2,
+                fontSize: '14px',
+              }}
+            >
+              Sistem istatistiklerini görüntüleyin ve kullanıcıları yönetin.
+            </Typography>
 
             {error && (
               <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
@@ -867,6 +850,28 @@ export default function AdminDashboardPage() {
                                     >
                                       Kredi
                                     </Button>
+                                    {u.username !== 'admin' && u.username !== 'testuser' && (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="error"
+                                        startIcon={<Delete />}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteUser(u.id, u.username);
+                                        }}
+                                        sx={{
+                                          borderRadius: 1.5,
+                                          textTransform: 'none',
+                                          fontSize: '12px',
+                                          fontWeight: 500,
+                                          py: 0.5,
+                                          px: 1,
+                                        }}
+                                      >
+                                        Sil
+                                      </Button>
+                                    )}
                                   </Box>
                                 </TableCell>
                               </TableRow>
