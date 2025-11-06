@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Button, Grid, Tabs, Tab, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Chip, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Paper, Button, Grid, Tabs, Tab, Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Chip, FormControl, InputLabel, Select, MenuItem, CircularProgress, Checkbox, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, InputAdornment, Pagination } from '@mui/material';
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
-import { Add, Edit, Delete, Group, Person, Upload, Download } from '@mui/icons-material';
+import { Add, Edit, Delete, Group, Person, Upload, Download, Search, FilterList, DeleteSweep } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 
 interface Contact {
@@ -41,6 +41,16 @@ export default function ContactsPage() {
   const [success, setSuccess] = useState('');
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Bulk operations
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  
+  // Search and filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Contact dialog
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -145,6 +155,45 @@ export default function ContactsPage() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Silme hatası');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedContacts.length === 0) return;
+    
+    try {
+      for (const id of selectedContacts) {
+        await api.delete(`/contacts/${id}`);
+      }
+      setSuccess(`${selectedContacts.length} kişi silindi`);
+      setSelectedContacts([]);
+      setBulkDeleteDialogOpen(false);
+      loadContacts();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Toplu silme hatası');
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const filtered = contacts.filter((contact) => {
+        const matchesSearch = searchQuery === '' || 
+          contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          contact.phone.includes(searchQuery);
+        const matchesGroup = groupFilter === 'all' || contact.group?.id === groupFilter;
+        return matchesSearch && matchesGroup;
+      });
+      setSelectedContacts(filtered.map(c => c.id));
+    } else {
+      setSelectedContacts([]);
+    }
+  };
+
+  const handleToggleContact = (id: string) => {
+    setSelectedContacts(prev => 
+      prev.includes(id) 
+        ? prev.filter(contactId => contactId !== id)
+        : [...prev, id]
+    );
   };
 
   const handleDeleteGroup = async (id: string) => {
@@ -438,8 +487,98 @@ export default function ContactsPage() {
               {/* Kişiler Tab */}
               {tabValue === 0 && (
                 <Box sx={{ p: 1.5 }}>
-                  <Grid container spacing={1.5}>
-                    {contacts.map((contact) => (
+                  {/* Search and Filter */}
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <TextField
+                      size="small"
+                      placeholder="İsim veya telefon ara..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search sx={{ fontSize: 18, color: 'text.secondary' }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ flex: 1, minWidth: 200 }}
+                    />
+                    <FormControl size="small" sx={{ minWidth: 150 }}>
+                      <InputLabel>Grup Filtresi</InputLabel>
+                      <Select
+                        value={groupFilter}
+                        label="Grup Filtresi"
+                        onChange={(e) => {
+                          setGroupFilter(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <MenuItem value="all">Tüm Gruplar</MenuItem>
+                        <MenuItem value="nogroup">Grup Yok</MenuItem>
+                        {groups.map((group) => (
+                          <MenuItem key={group.id} value={group.id}>{group.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {selectedContacts.length > 0 && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteSweep />}
+                        onClick={() => setBulkDeleteDialogOpen(true)}
+                        sx={{ minWidth: 'auto' }}
+                      >
+                        Seçilenleri Sil ({selectedContacts.length})
+                      </Button>
+                    )}
+                  </Box>
+
+                  {(() => {
+                    // Filter contacts
+                    let filteredContacts = contacts.filter((contact) => {
+                      const matchesSearch = searchQuery === '' || 
+                        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        contact.phone.includes(searchQuery) ||
+                        (contact.email && contact.email.toLowerCase().includes(searchQuery.toLowerCase()));
+                      const matchesGroup = groupFilter === 'all' 
+                        ? true 
+                        : groupFilter === 'nogroup' 
+                          ? !contact.group 
+                          : contact.group?.id === groupFilter;
+                      return matchesSearch && matchesGroup;
+                    });
+
+                    // Pagination
+                    const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const paginatedContacts = filteredContacts.slice(startIndex, startIndex + itemsPerPage);
+
+                    return filteredContacts.length > 0 ? (
+                      <>
+                        {/* Select All */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                          <Checkbox
+                            checked={selectedContacts.length === paginatedContacts.length && paginatedContacts.length > 0}
+                            indeterminate={selectedContacts.length > 0 && selectedContacts.length < paginatedContacts.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedContacts(prev => [...new Set([...prev, ...paginatedContacts.map(c => c.id)])]);
+                              } else {
+                                setSelectedContacts(prev => prev.filter(id => !paginatedContacts.map(c => c.id).includes(id)));
+                              }
+                            }}
+                            size="small"
+                          />
+                          <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary', ml: 1 }}>
+                            {selectedContacts.length > 0 ? `${selectedContacts.length} seçili` : 'Tümünü seç'}
+                          </Typography>
+                        </Box>
+                        <Grid container spacing={1.5}>
+                          {paginatedContacts.map((contact) => (
                       <Grid size={{ xs: 12, sm: 6, md: 4 }} key={contact.id}>
                         <Card 
                           sx={{ 
@@ -450,8 +589,15 @@ export default function ContactsPage() {
                         >
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                              <Box>
-                                <Typography 
+                              <Box sx={{ display: 'flex', alignItems: 'start', gap: 1, flex: 1 }}>
+                                <Checkbox
+                                  checked={selectedContacts.includes(contact.id)}
+                                  onChange={() => handleToggleContact(contact.id)}
+                                  size="small"
+                                  sx={{ mt: -0.5 }}
+                                />
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography 
                                   variant="h6"
                                   sx={{
                                     fontSize: '12px',
@@ -494,6 +640,7 @@ export default function ContactsPage() {
                                     }}
                                   />
                                 )}
+                                </Box>
                               </Box>
                               <Box>
                                 <IconButton
@@ -525,8 +672,28 @@ export default function ContactsPage() {
                           </CardContent>
                         </Card>
                       </Grid>
-                    ))}
-                  </Grid>
+                        ))}
+                        </Grid>
+                        {totalPages > 1 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                            <Pagination
+                              count={totalPages}
+                              page={currentPage}
+                              onChange={(e, page) => setCurrentPage(page)}
+                              color="primary"
+                              size="small"
+                            />
+                          </Box>
+                        )}
+                      </>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                        {contacts.length === 0
+                          ? 'Henüz kişi eklenmemiş'
+                          : 'Arama kriterlerinize uygun kişi bulunamadı'}
+                      </Typography>
+                    );
+                  })()}
                 </Box>
               )}
 
@@ -613,6 +780,22 @@ export default function ContactsPage() {
                 </Box>
               )}
             </Paper>
+
+          {/* Bulk Delete Dialog */}
+          <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
+            <DialogTitle>Toplu Silme Onayı</DialogTitle>
+            <DialogContent>
+              <Typography>
+                {selectedContacts.length} kişiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setBulkDeleteDialogOpen(false)}>İptal</Button>
+              <Button onClick={handleBulkDelete} color="error" variant="contained">
+                Sil
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* Contact Dialog */}
           <Dialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} maxWidth="sm" fullWidth>
