@@ -1,12 +1,12 @@
 'use client';
 
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, alpha } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, alpha, TextField, Grid } from '@mui/material';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Link, BarChart, ContentCopy, Visibility } from '@mui/icons-material';
+import { Link, BarChart, ContentCopy, Visibility, Add, OpenInNew } from '@mui/icons-material';
 import ClientDate from '@/components/ClientDate';
 
 interface ShortLink {
@@ -43,6 +43,10 @@ export default function ShortLinksPage() {
   const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null);
   const [linkStats, setLinkStats] = useState<{ clicks: ShortLinkClick[]; totalClicks: number; uniqueClicks: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     loadShortLinks();
@@ -88,10 +92,40 @@ export default function ShortLinksPage() {
   };
 
   const copyShortLink = (shortCode: string) => {
-    const shortLink = `${window.location.origin}/s/${shortCode}`;
+    const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'urlci.com';
+    const shortLink = `https://${shortLinkDomain}/${shortCode}`;
     navigator.clipboard.writeText(shortLink);
     setSuccess('Kısa link kopyalandı!');
     setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleCreateShortLink = async () => {
+    if (!newLinkUrl) {
+      setError('URL gerekli');
+      return;
+    }
+
+    try {
+      setCreating(true);
+      setError('');
+      const response = await api.post('/short-links', {
+        originalUrl: newLinkUrl,
+        title: newLinkTitle || null,
+      });
+      if (response.data.success) {
+        setSuccess('Kısa link başarıyla oluşturuldu!');
+        setNewLinkUrl('');
+        setNewLinkTitle('');
+        setCreateDialogOpen(false);
+        loadShortLinks();
+      } else {
+        setError(response.data.message || 'Kısa link oluşturulamadı');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -121,31 +155,53 @@ export default function ShortLinksPage() {
             mx: { md: 'auto' },
           }}
         >
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            gutterBottom 
-            sx={{ 
-              color: 'primary.main', 
-              mb: 2.5,
-              mt: 1,
-              fontSize: '18px',
-              fontWeight: 600,
-            }}
-          >
-            Kısa Linklerim
-          </Typography>
-
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ 
-              mb: 2,
-              fontSize: '12px',
-            }}
-          >
-            Oluşturduğunuz kısa linkleri görüntüleyin ve istatistiklerini kontrol edin.
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, mt: 1 }}>
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1" 
+                gutterBottom 
+                sx={{ 
+                  color: 'primary.main', 
+                  mb: 0.5,
+                  fontSize: '18px',
+                  fontWeight: 600,
+                }}
+              >
+                Kısa Linklerim
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  fontSize: '12px',
+                }}
+              >
+                Oluşturduğunuz kısa linkleri görüntüleyin ve IP tabanlı istatistiklerini kontrol edin.
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setCreateDialogOpen(true)}
+              sx={{
+                background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                borderRadius: 1.5,
+                padding: '8px 20px',
+                fontWeight: 500,
+                fontSize: '13px',
+                textTransform: 'none',
+                '&:hover': {
+                  boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s',
+              }}
+            >
+              Yeni Kısa Link
+            </Button>
+          </Box>
 
           {error && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
@@ -188,8 +244,8 @@ export default function ShortLinksPage() {
                       <TableRow key={link.id}>
                         <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
-                              {window.location.origin}/s/{link.short_code}
+                            <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace', color: 'primary.main' }}>
+                              {process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'urlci.com'}/{link.short_code}
                             </Typography>
                             <IconButton
                               size="small"
@@ -265,25 +321,42 @@ export default function ShortLinksPage() {
             </DialogTitle>
             <DialogContent sx={{ pt: 1.5 }}>
               {selectedLink && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
-                    <strong>Kısa Link:</strong> {window.location.origin}/s/{selectedLink.short_code}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
-                    <strong>Orijinal URL:</strong> {selectedLink.original_url}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, mt: 1.5 }}>
-                    <Chip
-                      label={`Toplam: ${linkStats?.totalClicks || 0}`}
-                      color="primary"
-                      size="small"
-                    />
-                    <Chip
-                      label={`Benzersiz: ${linkStats?.uniqueClicks || 0}`}
-                      color="success"
-                      size="small"
-                    />
-                  </Box>
+                <Box sx={{ mb: 3 }}>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                      borderRadius: 1.5,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 1 }}>
+                      <strong>Kısa Link:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace', color: 'primary.main', mb: 1.5 }}>
+                      {process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'urlci.com'}/{selectedLink.short_code}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 1 }}>
+                      <strong>Orijinal URL:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace', wordBreak: 'break-all', mb: 1.5 }}>
+                      {selectedLink.original_url}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, mt: 1.5 }}>
+                      <Chip
+                        label={`Toplam Tıklama: ${linkStats?.totalClicks || 0}`}
+                        color="primary"
+                        size="small"
+                        sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+                      />
+                      <Chip
+                        label={`Benzersiz IP: ${linkStats?.uniqueClicks || 0}`}
+                        color="success"
+                        size="small"
+                        sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+                      />
+                    </Box>
+                  </Paper>
                 </Box>
               )}
 
@@ -296,20 +369,57 @@ export default function ShortLinksPage() {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>#</TableCell>
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>IP Adresi</TableCell>
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Tarih</TableCell>
                         <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Referer</TableCell>
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>User Agent</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {linkStats.clicks.map((click) => (
+                      {linkStats.clicks.map((click, index) => (
                         <TableRow key={click.id}>
-                          <TableCell sx={{ fontSize: '12px' }}>{click.ip_address}</TableCell>
+                          <TableCell sx={{ fontSize: '12px' }}>{index + 1}</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                            <Chip
+                              label={click.ip_address}
+                              size="small"
+                              color="primary"
+                              sx={{
+                                fontSize: '0.7rem',
+                                fontFamily: 'monospace',
+                                height: 22,
+                              }}
+                            />
+                          </TableCell>
                           <TableCell sx={{ fontSize: '12px' }}>
                             <ClientDate date={click.clicked_at} />
                           </TableCell>
-                          <TableCell sx={{ fontSize: '12px' }}>
-                            {click.referer || '-'}
+                          <TableCell sx={{ fontSize: '12px', maxWidth: 200 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: '11px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {click.referer || '-'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '12px', maxWidth: 200 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: '11px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {click.user_agent || '-'}
+                            </Typography>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -329,6 +439,75 @@ export default function ShortLinksPage() {
                 setLinkStats(null);
               }} sx={{ fontSize: '12px' }}>
                 Kapat
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Kısa Link Oluştur Dialog */}
+          <Dialog
+            open={createDialogOpen}
+            onClose={() => {
+              setCreateDialogOpen(false);
+              setNewLinkUrl('');
+              setNewLinkTitle('');
+            }}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle sx={{ pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Link sx={{ color: 'primary.main' }} />
+                <Typography variant="h6">Yeni Kısa Link Oluştur</Typography>
+              </Box>
+            </DialogTitle>
+            <DialogContent>
+              <Box sx={{ mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Orijinal URL"
+                  variant="outlined"
+                  size="small"
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  sx={{ mb: 2 }}
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Başlık (Opsiyonel)"
+                  variant="outlined"
+                  size="small"
+                  value={newLinkTitle}
+                  onChange={(e) => setNewLinkTitle(e.target.value)}
+                  placeholder="Kısa link başlığı"
+                  sx={{ mb: 2 }}
+                />
+                <Alert severity="info" sx={{ fontSize: '12px', mb: 1 }}>
+                  Kısa linkiniz <strong>urlci.com</strong> adresi üzerinden oluşturulacak ve IP tabanlı istatistikler takip edilecektir.
+                </Alert>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ px: 2, pb: 1.5 }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setCreateDialogOpen(false);
+                  setNewLinkUrl('');
+                  setNewLinkTitle('');
+                }}
+                sx={{ fontSize: '12px' }}
+              >
+                İptal
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleCreateShortLink}
+                disabled={creating || !newLinkUrl}
+                sx={{ fontSize: '12px' }}
+              >
+                {creating ? 'Oluşturuluyor...' : 'Oluştur'}
               </Button>
             </DialogActions>
           </Dialog>
