@@ -76,6 +76,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [cleanupLoading, setCleanupLoading] = useState(false);
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [creditAmount, setCreditAmount] = useState<number>(0);
@@ -300,6 +301,32 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleCleanupDemoData = async () => {
+    if (!confirm('Demo verileri temizlemek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+      return;
+    }
+
+    setCleanupLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.post('/admin/cleanup-demo-data');
+      if (response.data.success) {
+        setSuccess(`Demo veriler başarıyla temizlendi! ${response.data.results.deletedUsers} kullanıcı, ${response.data.results.deletedSms} mesaj, ${response.data.results.deletedContacts} kişi, ${response.data.results.deletedTemplates} şablon silindi.`);
+        // Kullanıcı listesini yenile
+        loadUsers();
+        loadStats();
+      } else {
+        setError(response.data.error || 'Demo veriler temizlenirken hata oluştu');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Demo veriler temizlenirken hata oluştu');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const handleBulkCreditSubmit = async () => {
     if (selectedUsers.length === 0 || creditAmount <= 0) {
       setError('Lütfen geçerli bir kredi miktarı girin ve en az bir kullanıcı seçin');
@@ -475,16 +502,31 @@ export default function AdminDashboardPage() {
               Admin Paneli
             </Typography>
 
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{ 
-                mb: 2,
-                fontSize: '14px',
-              }}
-            >
-              Sistem istatistiklerini görüntüleyin ve kullanıcıları yönetin.
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  fontSize: '14px',
+                }}
+              >
+                Sistem istatistiklerini görüntüleyin ve kullanıcıları yönetin.
+              </Typography>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={handleCleanupDemoData}
+                disabled={cleanupLoading}
+                startIcon={<DeleteSweep />}
+                sx={{
+                  fontSize: '12px',
+                  textTransform: 'none',
+                }}
+              >
+                {cleanupLoading ? 'Temizleniyor...' : 'Demo Verileri Temizle'}
+              </Button>
+            </Box>
 
             {error && (
               <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
