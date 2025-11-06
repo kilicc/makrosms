@@ -1,10 +1,10 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Avatar, Card, CardContent, alpha, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Avatar, Card, CardContent, alpha, CircularProgress, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, InputAdornment, FormControl, InputLabel, Select, MenuItem, Pagination } from '@mui/material';
 import { useEffect, useState } from 'react';
 import ClientDate from '@/components/ClientDate';
 import { gradients } from '@/lib/theme';
-import { AttachMoney, Send, Person, Warning, Visibility } from '@mui/icons-material';
+import { AttachMoney, Send, Person, Warning, Visibility, Search, FilterList } from '@mui/icons-material';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
@@ -62,6 +62,12 @@ export default function DashboardPage() {
   const [bulkSmsReports, setBulkSmsReports] = useState<BulkSmsReport[]>([]);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<BulkSmsReport | null>(null);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     if (user) {
@@ -557,129 +563,197 @@ export default function DashboardPage() {
                   }}
                 />
               </Box>
-              {bulkSmsReports.length > 0 ? (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlem</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {bulkSmsReports.map((report, index) => {
-                        const getStatusColor = (status: string) => {
-                          switch (status) {
-                            case 'sent':
-                              return 'success';
-                            case 'failed':
-                              return 'error';
-                            case 'partial':
-                              return 'warning';
-                            default:
-                              return 'default';
-                          }
-                        };
+              
+              {/* Search and Filter */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  size="small"
+                  placeholder="Mesaj içeriğinde ara..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ fontSize: 18, color: 'text.secondary' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ flex: 1, minWidth: 200 }}
+                />
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>Durum Filtresi</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    label="Durum Filtresi"
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <MenuItem value="all">Tümü</MenuItem>
+                    <MenuItem value="sent">Başarılı</MenuItem>
+                    <MenuItem value="failed">Başarısız</MenuItem>
+                    <MenuItem value="partial">Kısmen Başarılı</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
 
-                        const getStatusLabel = (status: string) => {
-                          switch (status) {
-                            case 'sent':
-                              return 'Başarılı';
-                            case 'failed':
-                              return 'Başarısız';
-                            case 'partial':
-                              return 'Kısmen Başarılı';
-                            default:
-                              return status;
-                          }
-                        };
+              {(() => {
+                // Filter reports
+                let filteredReports = bulkSmsReports.filter((report) => {
+                  const matchesSearch = searchQuery === '' || 
+                    report.message.toLowerCase().includes(searchQuery.toLowerCase());
+                  const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
+                  return matchesSearch && matchesStatus;
+                });
 
-                        return (
-                          <TableRow 
-                            key={index}
-                            sx={{
-                              '&:hover': {
-                                backgroundColor: alpha('#1976d2', 0.05),
-                              },
-                            }}
-                          >
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              {report.message}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              {report.recipients} kişi
-                              {report.successCount > 0 && report.failedCount > 0 && (
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block' }}>
-                                  {report.successCount} başarılı, {report.failedCount} başarısız
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              <Chip
-                                label={getStatusLabel(report.status)}
-                                color={getStatusColor(report.status)}
-                                size="small"
+                // Pagination
+                const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const paginatedReports = filteredReports.slice(startIndex, startIndex + itemsPerPage);
+
+                return filteredReports.length > 0 ? (
+                  <>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlem</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {paginatedReports.map((report, index) => {
+                            const getStatusColor = (status: string) => {
+                              switch (status) {
+                                case 'sent':
+                                  return 'success';
+                                case 'failed':
+                                  return 'error';
+                                case 'partial':
+                                  return 'warning';
+                                default:
+                                  return 'default';
+                              }
+                            };
+
+                            const getStatusLabel = (status: string) => {
+                              switch (status) {
+                                case 'sent':
+                                  return 'Başarılı';
+                                case 'failed':
+                                  return 'Başarısız';
+                                case 'partial':
+                                  return 'Kısmen Başarılı';
+                                default:
+                                  return status;
+                              }
+                            };
+
+                            return (
+                              <TableRow 
+                                key={index}
                                 sx={{
-                                  fontSize: '0.65rem',
-                                  fontWeight: 500,
-                                  height: 20,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              <ClientDate date={report.sentAt} />
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              <Button
-                                variant="contained"
-                                size="small"
-                                startIcon={<Visibility />}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedReport(report);
-                                  setDetailDialogOpen(true);
-                                }}
-                                sx={{
-                                  background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
-                                  borderRadius: 1.5,
-                                  padding: '4px 12px',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  textTransform: 'none',
-                                  minWidth: 'auto',
                                   '&:hover': {
-                                    boxShadow: '0 4px 16px rgba(25, 118, 210, 0.4)',
-                                    transform: 'translateY(-1px)',
+                                    backgroundColor: alpha('#1976d2', 0.05),
                                   },
-                                  transition: 'all 0.3s',
                                 }}
                               >
-                                Detay
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
-                  sx={{ 
-                    textAlign: 'center', 
-                    py: 1.5,
-                    fontSize: '13px',
-                  }}
-                >
-                  Henüz toplu SMS raporu yok
-                </Typography>
-              )}
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {report.message}
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {report.recipients} kişi
+                                  {report.successCount > 0 && report.failedCount > 0 && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block' }}>
+                                      {report.successCount} başarılı, {report.failedCount} başarısız
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Chip
+                                    label={getStatusLabel(report.status)}
+                                    color={getStatusColor(report.status)}
+                                    size="small"
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      fontWeight: 500,
+                                      height: 20,
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <ClientDate date={report.sentAt} />
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<Visibility />}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedReport(report);
+                                      setDetailDialogOpen(true);
+                                    }}
+                                    sx={{
+                                      background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                                      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                                      borderRadius: 1.5,
+                                      padding: '4px 12px',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      textTransform: 'none',
+                                      minWidth: 'auto',
+                                      '&:hover': {
+                                        boxShadow: '0 4px 16px rgba(25, 118, 210, 0.4)',
+                                        transform: 'translateY(-1px)',
+                                      },
+                                      transition: 'all 0.3s',
+                                    }}
+                                  >
+                                    Detay
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    {totalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        <Pagination
+                          count={totalPages}
+                          page={currentPage}
+                          onChange={(e, page) => setCurrentPage(page)}
+                          color="primary"
+                          size="small"
+                        />
+                      </Box>
+                    )}
+                  </>
+                ) : (
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      textAlign: 'center', 
+                      py: 1.5,
+                      fontSize: '13px',
+                    }}
+                  >
+                    {bulkSmsReports.length === 0
+                      ? 'Henüz toplu SMS raporu bulunmuyor'
+                      : 'Arama kriterlerinize uygun rapor bulunamadı'}
+                  </Typography>
+                );
+              })()}
             </Card>
           )}
 
