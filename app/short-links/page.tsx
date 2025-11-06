@@ -74,7 +74,7 @@ export default function ShortLinksPage() {
     setError('');
 
     try {
-      const response = await api.get(`/short-links/${link.id}/stats`);
+      const response = await api.get(`/short-links/stats/${link.id}`);
       if (response.data.success) {
         setLinkStats(response.data.data.stats);
       } else {
