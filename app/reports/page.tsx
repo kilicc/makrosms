@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Card, CardContent } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
@@ -93,36 +93,6 @@ export default function SMSReportsPage() {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (tabValue === 0) {
-      loadHistory();
-    } else if (tabValue === 1) {
-      loadBulkReports();
-    } else if (tabValue === 2 && isAdmin) {
-      loadStats();
-    } else if (tabValue === 3 && isAdmin) {
-      loadPaymentRequests();
-    }
-  }, [tabValue, isAdmin]);
-
-  useEffect(() => {
-    if (tabValue === 1) {
-      loadBulkReports();
-    }
-  }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch]);
-
-  useEffect(() => {
-    if (tabValue === 2 && isAdmin) {
-      loadStats();
-    }
-  }, [statsFilters.startDate, statsFilters.endDate]);
-
-  useEffect(() => {
-    if (tabValue === 3 && isAdmin) {
-      loadPaymentRequests();
-    }
-  }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId]);
-
-  useEffect(() => {
     // URL'den today parametresini oku ve bugünkü tarihi filtrele
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -139,12 +109,6 @@ export default function SMSReportsPage() {
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (tabValue === 0) {
-      loadHistory();
-    }
-  }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch]);
 
   const loadUsers = async () => {
     try {
@@ -427,6 +391,44 @@ export default function SMSReportsPage() {
         return 'default';
     }
   };
+
+  // Main tab change effect - loads data when tab changes
+  useEffect(() => {
+    if (tabValue === 0) {
+      loadHistory();
+    } else if (tabValue === 1) {
+      loadBulkReports();
+    } else if (tabValue === 2 && isAdmin) {
+      loadStats();
+    } else if (tabValue === 3 && isAdmin) {
+      loadPaymentRequests();
+    }
+  }, [tabValue, isAdmin]);
+
+  // Filter change effects
+  useEffect(() => {
+    if (tabValue === 0) {
+      loadHistory();
+    }
+  }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch, tabValue]);
+
+  useEffect(() => {
+    if (tabValue === 1) {
+      loadBulkReports();
+    }
+  }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch, tabValue]);
+
+  useEffect(() => {
+    if (tabValue === 2 && isAdmin) {
+      loadStats();
+    }
+  }, [statsFilters.startDate, statsFilters.endDate, tabValue, isAdmin]);
+
+  useEffect(() => {
+    if (tabValue === 3 && isAdmin) {
+      loadPaymentRequests();
+    }
+  }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId, tabValue, isAdmin]);
 
   return (
     <ProtectedRoute>
