@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase-server';
+import { supabaseServer } from '@/lib/supabase-server';
 
 // GET /api/short-links/[shortCode] - Kısa linke tıklama ve yönlendirme
 export async function GET(
@@ -8,7 +8,6 @@ export async function GET(
 ) {
   try {
     const { shortCode } = await params;
-    const supabaseServer = getSupabaseServer();
 
     // Kısa linki bul
     const { data: shortLink, error } = await supabaseServer
@@ -19,8 +18,9 @@ export async function GET(
       .single();
 
     if (error || !shortLink) {
+      console.error('Short link find Supabase error:', error);
       return NextResponse.json(
-        { success: false, message: 'Kısa link bulunamadı' },
+        { success: false, message: error?.message || 'Kısa link bulunamadı', error: error },
         { status: 404 }
       );
     }
@@ -78,7 +78,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Short link redirect error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Yönlendirme hatası' },
+      { success: false, message: error.message || 'Yönlendirme hatası', error: error.toString() },
       { status: 500 }
     );
   }

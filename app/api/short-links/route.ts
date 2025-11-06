@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase-server';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
 // GET /api/short-links - Kullanıcının kısa linklerini listele
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
     }
 
 
-    const supabaseServer = getSupabaseServer();
     const { data: shortLinks, error } = await supabaseServer
       .from('short_links')
       .select('*')
@@ -24,8 +23,9 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('Short links get Supabase error:', error);
       return NextResponse.json(
-        { success: false, message: error.message || 'Kısa linkler alınamadı' },
+        { success: false, message: error.message || 'Kısa linkler alınamadı', error: error },
         { status: 500 }
       );
     }
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Short links get error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Kısa linkler alınamadı' },
+      { success: false, message: error.message || 'Kısa linkler alınamadı', error: error.toString() },
       { status: 500 }
     );
   }
@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
     let attempts = 0;
     const maxAttempts = 10;
 
-    const supabaseServer = getSupabaseServer();
     // Benzersiz kod bul
     while (attempts < maxAttempts) {
       const { data: existing } = await supabaseServer
@@ -131,8 +130,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !shortLink) {
+      console.error('Short link create Supabase error:', error);
       return NextResponse.json(
-        { success: false, message: error?.message || 'Kısa link oluşturulamadı' },
+        { success: false, message: error?.message || 'Kısa link oluşturulamadı', error: error },
         { status: 500 }
       );
     }
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Short link create error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Kısa link oluşturulamadı' },
+      { success: false, message: error.message || 'Kısa link oluşturulamadı', error: error.toString() },
       { status: 500 }
     );
   }

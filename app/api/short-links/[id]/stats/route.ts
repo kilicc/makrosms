@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase-server';
+import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
 // GET /api/short-links/[id]/stats - Kısa link istatistiklerini getir
@@ -19,7 +19,6 @@ export async function GET(
 
     const { id } = await params;
     const shortLinkId = id;
-    const supabaseServer = getSupabaseServer();
 
     // Kısa linkin kullanıcıya ait olduğunu kontrol et
     const { data: shortLink, error: linkError } = await supabaseServer
@@ -30,8 +29,9 @@ export async function GET(
       .single();
 
     if (linkError || !shortLink) {
+      console.error('Short link stats find Supabase error:', linkError);
       return NextResponse.json(
-        { success: false, message: 'Kısa link bulunamadı' },
+        { success: false, message: linkError?.message || 'Kısa link bulunamadı', error: linkError },
         { status: 404 }
       );
     }
@@ -44,14 +44,15 @@ export async function GET(
       .order('clicked_at', { ascending: false });
 
     if (clicksError) {
+      console.error('Short link stats clicks Supabase error:', clicksError);
       return NextResponse.json(
-        { success: false, message: clicksError.message || 'İstatistikler alınamadı' },
+        { success: false, message: clicksError.message || 'İstatistikler alınamadı', error: clicksError },
         { status: 500 }
       );
     }
 
     // IP bazlı benzersiz tıklamalar
-    const uniqueIPs = new Set(clicks?.map(c => c.ip_address) || []);
+    const uniqueIPs = new Set(clicks?.map((c: any) => c.ip_address) || []);
     const uniqueClickCount = uniqueIPs.size;
 
     return NextResponse.json({
@@ -68,7 +69,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Short link stats error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'İstatistikler alınamadı' },
+      { success: false, message: error.message || 'İstatistikler alınamadı', error: error.toString() },
       { status: 500 }
     );
   }
