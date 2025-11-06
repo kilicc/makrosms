@@ -32,6 +32,7 @@ export default function SMSInterfacePage() {
   const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [shortLinkDialogOpen, setShortLinkDialogOpen] = useState(false);
   const [shortLinkStats, setShortLinkStats] = useState<any>(null);
+  const [createdShortLink, setCreatedShortLink] = useState<{ shortCode: string; originalUrl: string; shortLink: string } | null>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -286,16 +287,17 @@ export default function SMSInterfacePage() {
                                       });
                                       if (response.data.success) {
                                         const shortCode = response.data.data.shortLink.short_code;
-                                        const shortLink = `${window.location.origin}/s/${shortCode}`;
-                                        const newMessage = formData.message + ' ' + shortLink;
-                                        // 180 karakter limiti kontrolü
-                                        if (newMessage.length <= MAX_CHARACTERS) {
-                                          setFormData({ ...formData, message: newMessage });
-                                          setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
-                                          setShortLinkUrl('');
-                                        } else {
-                                          setError('Kısa link eklendiğinde mesaj 180 karakteri aşıyor!');
-                                        }
+                                        const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'urlci.com';
+                                        const shortLink = `https://${shortLinkDomain}/${shortCode}`;
+                                        
+                                        // Dialog'u aç ve oluşturulan linki göster
+                                        setCreatedShortLink({
+                                          shortCode,
+                                          originalUrl: shortLinkUrl,
+                                          shortLink,
+                                        });
+                                        setShortLinkDialogOpen(true);
+                                        setShortLinkUrl('');
                                       }
                                     } catch (err: any) {
                                       setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
@@ -400,6 +402,143 @@ export default function SMSInterfacePage() {
               </Box>
             </Paper>
         </Box>
+
+        {/* Kısa Link Oluşturuldu Dialog */}
+        <Dialog
+          open={shortLinkDialogOpen}
+          onClose={() => {
+            setShortLinkDialogOpen(false);
+            setCreatedShortLink(null);
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ pb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Link sx={{ color: 'primary.main' }} />
+              <Typography variant="h6">Short link successfully created</Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            {createdShortLink && (
+              <Box>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '13px', fontWeight: 600 }}>
+                    Long URL:
+                  </Typography>
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                      borderRadius: 1,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace' }}>
+                      {createdShortLink.originalUrl}
+                    </Typography>
+                  </Paper>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '13px', fontWeight: 600 }}>
+                    Generated Link:
+                  </Typography>
+                  <Paper
+                    sx={{
+                      p: 1.5,
+                      bgcolor: mode === 'dark' ? 'rgba(25, 118, 210, 0.1)' : 'rgba(25, 118, 210, 0.05)',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'primary.main',
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontSize: '18px',
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                        color: 'primary.main',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {createdShortLink.shortLink}
+                    </Typography>
+                  </Paper>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<ContentCopy />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdShortLink.shortLink);
+                      setSuccess('Kısa link kopyalandı!');
+                      setTimeout(() => setSuccess(''), 3000);
+                    }}
+                    sx={{ flex: 1, minWidth: '120px' }}
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<OpenInNew />}
+                    onClick={() => {
+                      window.open(createdShortLink.originalUrl, '_blank');
+                    }}
+                    sx={{ flex: 1, minWidth: '120px' }}
+                  >
+                    Go
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<BarChart />}
+                    onClick={() => {
+                      window.open(`/short-links`, '_blank');
+                    }}
+                    sx={{ flex: 1, minWidth: '120px' }}
+                  >
+                    Statistics
+                  </Button>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => {
+                      const newMessage = formData.message + ' ' + createdShortLink.shortLink;
+                      // 180 karakter limiti kontrolü
+                      if (newMessage.length <= MAX_CHARACTERS) {
+                        setFormData({ ...formData, message: newMessage });
+                        setSuccess('Kısa link mesaja eklendi!');
+                        setShortLinkDialogOpen(false);
+                        setCreatedShortLink(null);
+                      } else {
+                        setError('Kısa link eklendiğinde mesaj 180 karakteri aşıyor!');
+                      }
+                    }}
+                  >
+                    Mesaja Ekle
+                  </Button>
+                </Box>
+
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', fontSize: '11px', fontStyle: 'italic', textAlign: 'center' }}>
+                  Your links will be shortened via <strong>urlci.com</strong> address.
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setShortLinkDialogOpen(false);
+              setCreatedShortLink(null);
+            }}>
+              Kapat
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </ProtectedRoute>
   );
