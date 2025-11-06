@@ -1,16 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NEXT_TELEMETRY_DISABLED": "1"
+  "crons": [
+    {
+      "path": "/api/sms/check-status",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/refunds/process-auto",
+      "schedule": "0 * * * *"
     }
-  }
+  ]
 }
-
