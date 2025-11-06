@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
-import { Assessment, FilterList, BarChart, People, Payment, MoneyOff, Send } from '@mui/icons-material';
+import { Assessment, FilterList, BarChart, People, Payment, MoneyOff, Send, AccountBalanceWallet } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import ClientDate from '@/components/ClientDate';
 
@@ -35,11 +35,41 @@ export default function SMSReportsPage() {
   const [error, setError] = useState('');
   const [users, setUsers] = useState<Array<{ id: string; username: string; email: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  // SMS Reports filters
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
     status: '',
     userId: '',
+    phoneNumber: '',
+    messageSearch: '',
+  });
+  
+  // Bulk SMS Reports filters
+  const [bulkFilters, setBulkFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: '',
+    userId: '',
+    messageSearch: '',
+  });
+  
+  // Statistics filters
+  const [statsFilters, setStatsFilters] = useState({
+    startDate: '',
+    endDate: '',
+  });
+  
+  // Payment Reports filters
+  const [paymentFilters, setPaymentFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: '',
+    userId: '',
+    paymentMethod: '',
+    minAmount: '',
+    maxAmount: '',
+    transactionId: '',
   });
   
   // Statistics states
@@ -58,6 +88,9 @@ export default function SMSReportsPage() {
     if (isAdmin) {
       loadUsers();
     }
+  }, [isAdmin]);
+
+  useEffect(() => {
     if (tabValue === 0) {
       loadHistory();
     } else if (tabValue === 1) {
@@ -67,7 +100,25 @@ export default function SMSReportsPage() {
     } else if (tabValue === 3 && isAdmin) {
       loadPaymentRequests();
     }
-  }, [isAdmin, tabValue]);
+  }, [tabValue, isAdmin]);
+
+  useEffect(() => {
+    if (tabValue === 1) {
+      loadBulkReports();
+    }
+  }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch]);
+
+  useEffect(() => {
+    if (tabValue === 2 && isAdmin) {
+      loadStats();
+    }
+  }, [statsFilters.startDate, statsFilters.endDate]);
+
+  useEffect(() => {
+    if (tabValue === 3 && isAdmin) {
+      loadPaymentRequests();
+    }
+  }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId]);
 
   useEffect(() => {
     // URL'den today parametresini oku ve bugünkü tarihi filtrele
@@ -91,7 +142,7 @@ export default function SMSReportsPage() {
     if (tabValue === 0) {
       loadHistory();
     }
-  }, [filters.userId, filters.startDate, filters.endDate]);
+  }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch]);
 
   const loadUsers = async () => {
     try {
@@ -116,12 +167,28 @@ export default function SMSReportsPage() {
       if (filters.endDate) params.endDate = filters.endDate;
       if (filters.status) params.status = filters.status;
       if (isAdmin && filters.userId) params.userId = filters.userId;
+      if (filters.phoneNumber) params.phoneNumber = filters.phoneNumber;
+      if (filters.messageSearch) params.messageSearch = filters.messageSearch;
 
       // Admin ise admin endpoint, değilse kullanıcı endpoint
       const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
       const response = await api.get(endpoint, { params });
       if (response.data.success) {
-        setMessages(response.data.data.messages || []);
+        let messages = response.data.data.messages || [];
+        
+        // Client-side filtering for phone and message if API doesn't support it
+        if (filters.phoneNumber && !params.phoneNumber) {
+          messages = messages.filter((msg: SmsMessage) => 
+            msg.phoneNumber.includes(filters.phoneNumber)
+          );
+        }
+        if (filters.messageSearch && !params.messageSearch) {
+          messages = messages.filter((msg: SmsMessage) => 
+            msg.message.toLowerCase().includes(filters.messageSearch.toLowerCase())
+          );
+        }
+        
+        setMessages(messages);
       } else {
         setError(response.data.message || 'Veri yüklenirken bir hata oluştu');
       }
@@ -137,11 +204,42 @@ export default function SMSReportsPage() {
   const loadBulkReports = async () => {
     try {
       setLoadingBulkReports(true);
-      const endpoint = isAdmin ? '/admin/sms-history?limit=100' : '/bulk-sms/history?limit=100';
-      const response = await api.get(endpoint);
+      const params: any = { limit: 100 };
+      if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
+      if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
+      if (bulkFilters.status) params.status = bulkFilters.status;
+      if (isAdmin && bulkFilters.userId) params.userId = bulkFilters.userId;
+      if (bulkFilters.messageSearch) params.messageSearch = bulkFilters.messageSearch;
+
+      const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
+      const response = await api.get(endpoint, { params });
       
       if (response.data.success) {
-        const messages = response.data.data.messages || [];
+        let messages = response.data.data.messages || [];
+        
+        // Client-side filtering
+        if (bulkFilters.messageSearch && !params.messageSearch) {
+          messages = messages.filter((msg: any) => 
+            (msg.message || '').toLowerCase().includes(bulkFilters.messageSearch.toLowerCase())
+          );
+        }
+        if (bulkFilters.userId && !params.userId && isAdmin) {
+          messages = messages.filter((msg: any) => 
+            msg.user?.id === bulkFilters.userId
+          );
+        }
+        if (bulkFilters.startDate) {
+          messages = messages.filter((msg: any) => 
+            new Date(msg.sentAt) >= new Date(bulkFilters.startDate)
+          );
+        }
+        if (bulkFilters.endDate) {
+          const endDate = new Date(bulkFilters.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          messages = messages.filter((msg: any) => 
+            new Date(msg.sentAt) <= endDate
+          );
+        }
         
         // Mesajları grupla (aynı mesaj içeriğine sahip olanları)
         const groupedMessages = new Map<string, {
@@ -187,7 +285,7 @@ export default function SMSReportsPage() {
           }
         });
 
-        const reports = Array.from(groupedMessages.values())
+        let reports = Array.from(groupedMessages.values())
           .map((group) => ({
             message: group.message.length > 50 ? group.message.substring(0, 50) + '...' : group.message,
             fullMessage: group.message,
@@ -198,6 +296,11 @@ export default function SMSReportsPage() {
             failedCount: group.failedCount,
           }))
           .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+
+        // Status filter
+        if (bulkFilters.status) {
+          reports = reports.filter((report) => report.status === bulkFilters.status);
+        }
 
         setBulkSmsReports(reports);
       }
@@ -213,7 +316,11 @@ export default function SMSReportsPage() {
     
     try {
       setLoadingStats(true);
-      const response = await api.get('/admin/stats');
+      const params: any = {};
+      if (statsFilters.startDate) params.startDate = statsFilters.startDate;
+      if (statsFilters.endDate) params.endDate = statsFilters.endDate;
+      
+      const response = await api.get('/admin/stats', { params });
       if (response.data.success) {
         setStats(response.data.data);
       }
@@ -229,9 +336,65 @@ export default function SMSReportsPage() {
     
     try {
       setLoadingPaymentRequests(true);
-      const response = await api.get('/admin/payment-requests');
+      const params: any = {};
+      if (paymentFilters.startDate) params.startDate = paymentFilters.startDate;
+      if (paymentFilters.endDate) params.endDate = paymentFilters.endDate;
+      if (paymentFilters.status) params.status = paymentFilters.status;
+      if (paymentFilters.userId) params.userId = paymentFilters.userId;
+      if (paymentFilters.paymentMethod) params.paymentMethod = paymentFilters.paymentMethod;
+      if (paymentFilters.minAmount) params.minAmount = paymentFilters.minAmount;
+      if (paymentFilters.maxAmount) params.maxAmount = paymentFilters.maxAmount;
+      if (paymentFilters.transactionId) params.transactionId = paymentFilters.transactionId;
+      
+      const response = await api.get('/admin/payment-requests', { params });
       if (response.data.success) {
-        setPaymentRequests(response.data.data.requests || []);
+        let requests = response.data.data.requests || [];
+        
+        // Client-side filtering if API doesn't support all filters
+        if (paymentFilters.transactionId && !params.transactionId) {
+          requests = requests.filter((req: any) => 
+            req.transactionId?.toLowerCase().includes(paymentFilters.transactionId.toLowerCase())
+          );
+        }
+        if (paymentFilters.minAmount && !params.minAmount) {
+          requests = requests.filter((req: any) => 
+            Number(req.amount) >= Number(paymentFilters.minAmount)
+          );
+        }
+        if (paymentFilters.maxAmount && !params.maxAmount) {
+          requests = requests.filter((req: any) => 
+            Number(req.amount) <= Number(paymentFilters.maxAmount)
+          );
+        }
+        if (paymentFilters.paymentMethod && !params.paymentMethod) {
+          requests = requests.filter((req: any) => 
+            req.paymentMethod?.toLowerCase().includes(paymentFilters.paymentMethod.toLowerCase())
+          );
+        }
+        if (paymentFilters.userId && !params.userId) {
+          requests = requests.filter((req: any) => 
+            req.user?.id === paymentFilters.userId
+          );
+        }
+        if (paymentFilters.startDate) {
+          requests = requests.filter((req: any) => 
+            new Date(req.createdAt) >= new Date(paymentFilters.startDate)
+          );
+        }
+        if (paymentFilters.endDate) {
+          const endDate = new Date(paymentFilters.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          requests = requests.filter((req: any) => 
+            new Date(req.createdAt) <= endDate
+          );
+        }
+        if (paymentFilters.status && !params.status) {
+          requests = requests.filter((req: any) => 
+            req.status === paymentFilters.status
+          );
+        }
+        
+        setPaymentRequests(requests);
       }
     } catch (error) {
       console.error('Payment requests load error:', error);
@@ -338,15 +501,19 @@ export default function SMSReportsPage() {
 
             {/* Filters */}
             <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <Grid container spacing={2} alignItems="center">
+              <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '13px', fontWeight: 600, color: 'text.secondary' }}>
+                Filtreleme Seçenekleri
+              </Typography>
+              <Grid container spacing={1.5} alignItems="center">
                 {isAdmin && (
-                  <Grid size={{ xs: 12, md: 3 }}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel sx={{ fontSize: '12px' }}>Kullanıcı</InputLabel>
                       <Select
                         value={filters.userId}
                         onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
                         label="Kullanıcı"
+                        title="Kullanıcı filtresi"
                         sx={{
                           fontSize: '12px',
                           borderRadius: 1.5,
@@ -362,7 +529,7 @@ export default function SMSReportsPage() {
                     </FormControl>
                   </Grid>
                 )}
-                <Grid size={{ xs: 12, md: isAdmin ? 2.25 : 3 }}>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -379,7 +546,7 @@ export default function SMSReportsPage() {
                     }}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: isAdmin ? 2.25 : 3 }}>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -396,7 +563,7 @@ export default function SMSReportsPage() {
                     }}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: isAdmin ? 2.25 : 3 }}>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -413,6 +580,7 @@ export default function SMSReportsPage() {
                     }}
                     inputProps={{
                       'aria-label': 'SMS durumu filtresi',
+                      title: 'SMS durumu filtresi',
                     }}
                   >
                     <option value="">Tümü</option>
@@ -421,7 +589,39 @@ export default function SMSReportsPage() {
                     <option value="failed">Başarısız</option>
                   </TextField>
                 </Grid>
-                <Grid size={{ xs: 12, md: isAdmin ? 2.25 : 3 }}>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Telefon Numarası"
+                    value={filters.phoneNumber}
+                    onChange={(e) => setFilters({ ...filters, phoneNumber: e.target.value })}
+                    placeholder="Ara..."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                        fontSize: '12px',
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Mesaj İçeriği"
+                    value={filters.messageSearch}
+                    onChange={(e) => setFilters({ ...filters, messageSearch: e.target.value })}
+                    placeholder="Ara..."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                        fontSize: '12px',
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: isAdmin ? 2.4 : 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -540,6 +740,116 @@ export default function SMSReportsPage() {
                 >
                   Toplu SMS Raporları
                 </Typography>
+
+                {/* Bulk SMS Filters */}
+                {isAdmin && (
+                  <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '13px', fontWeight: 600, color: 'text.secondary' }}>
+                      Filtreleme Seçenekleri
+                    </Typography>
+                    <Grid container spacing={1.5} alignItems="center">
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel sx={{ fontSize: '12px' }}>Kullanıcı</InputLabel>
+                          <Select
+                            value={bulkFilters.userId}
+                            onChange={(e) => setBulkFilters({ ...bulkFilters, userId: e.target.value })}
+                            label="Kullanıcı"
+                            title="Toplu SMS kullanıcı filtresi"
+                            sx={{
+                              fontSize: '12px',
+                              borderRadius: 1.5,
+                            }}
+                          >
+                            <MenuItem value="" sx={{ fontSize: '12px' }}>Tüm Kullanıcılar</MenuItem>
+                            {users.map((u) => (
+                              <MenuItem key={u.id} value={u.id} sx={{ fontSize: '12px' }}>
+                                {u.username} ({u.email})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Başlangıç Tarihi"
+                          type="date"
+                          value={bulkFilters.startDate}
+                          onChange={(e) => setBulkFilters({ ...bulkFilters, startDate: e.target.value })}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Bitiş Tarihi"
+                          type="date"
+                          value={bulkFilters.endDate}
+                          onChange={(e) => setBulkFilters({ ...bulkFilters, endDate: e.target.value })}
+                          InputLabelProps={{ shrink: true }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Durum"
+                          select
+                          SelectProps={{ native: true }}
+                          value={bulkFilters.status}
+                          onChange={(e) => setBulkFilters({ ...bulkFilters, status: e.target.value })}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                          inputProps={{
+                            'aria-label': 'Toplu SMS durumu filtresi',
+                            title: 'Toplu SMS durumu filtresi',
+                          }}
+                        >
+                          <option value="">Tümü</option>
+                          <option value="sent">Başarılı</option>
+                          <option value="failed">Başarısız</option>
+                          <option value="partial">Kısmen Başarılı</option>
+                        </TextField>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Mesaj İçeriği"
+                          value={bulkFilters.messageSearch}
+                          onChange={(e) => setBulkFilters({ ...bulkFilters, messageSearch: e.target.value })}
+                          placeholder="Ara..."
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
+
                 {loadingBulkReports ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                     <CircularProgress />
@@ -645,6 +955,75 @@ export default function SMSReportsPage() {
                 >
                   Sistem İstatistikleri
                 </Typography>
+
+                {/* Statistics Filters */}
+                <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '13px', fontWeight: 600, color: 'text.secondary' }}>
+                    Tarih Aralığı Filtreleme
+                  </Typography>
+                  <Grid container spacing={1.5} alignItems="center">
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Başlangıç Tarihi"
+                        type="date"
+                        value={statsFilters.startDate}
+                        onChange={(e) => setStatsFilters({ ...statsFilters, startDate: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Bitiş Tarihi"
+                        type="date"
+                        value={statsFilters.endDate}
+                        onChange={(e) => setStatsFilters({ ...statsFilters, endDate: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<FilterList />}
+                        onClick={loadStats}
+                        disabled={loadingStats}
+                        sx={{
+                          background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                          boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
+                          borderRadius: 2,
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          '&:hover': {
+                            boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                            transform: 'translateY(-1px)',
+                          },
+                          transition: 'all 0.3s',
+                        }}
+                      >
+                        Filtrele
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Paper>
+
                 {loadingStats ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                     <CircularProgress />
@@ -652,11 +1031,24 @@ export default function SMSReportsPage() {
                 ) : stats ? (
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
+                        border: '1px solid rgba(25, 118, 210, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Toplam Kullanıcı
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <People sx={{ color: 'primary.main', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Toplam Kullanıcı
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: 'primary.main' }}>
                             {stats.totalUsers || 0}
                           </Typography>
@@ -664,11 +1056,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(25, 118, 210, 0.05) 100%)',
+                        border: '1px solid rgba(33, 150, 243, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Toplam Rehber
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <People sx={{ color: '#2196f3', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Toplam Rehber
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#2196f3' }}>
                             {stats.totalContacts || 0}
                           </Typography>
@@ -676,11 +1081,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(56, 142, 60, 0.05) 100%)',
+                        border: '1px solid rgba(76, 175, 80, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Toplam SMS
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Assessment sx={{ color: '#4caf50', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Toplam SMS
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
                             {stats.totalSMS || 0}
                           </Typography>
@@ -688,11 +1106,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                        border: '1px solid rgba(255, 152, 0, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Bu Ay SMS
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <BarChart sx={{ color: '#ff9800', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Bu Ay SMS
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#ff9800' }}>
                             {stats.smsThisMonth || 0}
                           </Typography>
@@ -700,11 +1131,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.05) 0%, rgba(123, 31, 162, 0.05) 100%)',
+                        border: '1px solid rgba(156, 39, 176, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Toplam Ödeme
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Payment sx={{ color: '#9c27b0', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Toplam Ödeme
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#9c27b0' }}>
                             {stats.totalPayments || 0}
                           </Typography>
@@ -712,11 +1156,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(56, 142, 60, 0.05) 100%)',
+                        border: '1px solid rgba(76, 175, 80, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Toplam Gelir
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <AccountBalanceWallet sx={{ color: '#4caf50', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Toplam Gelir
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
                             {Number(stats.totalRevenue || 0).toLocaleString('tr-TR')} TRY
                           </Typography>
@@ -724,11 +1181,24 @@ export default function SMSReportsPage() {
                       </Card>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, rgba(211, 47, 47, 0.05) 100%)',
+                        border: '1px solid rgba(244, 67, 54, 0.1)',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                      }}>
                         <CardContent>
-                          <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary', mb: 1 }}>
-                            Bekleyen Ödeme
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <MoneyOff sx={{ color: '#f44336', fontSize: 20 }} />
+                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
+                              Bekleyen Ödeme
+                            </Typography>
+                          </Box>
                           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#f44336' }}>
                             {stats.pendingPaymentRequests || 0}
                           </Typography>
@@ -759,6 +1229,189 @@ export default function SMSReportsPage() {
                 >
                   Ödeme Raporları
                 </Typography>
+
+                {/* Payment Reports Filters */}
+                <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '13px', fontWeight: 600, color: 'text.secondary' }}>
+                    Filtreleme Seçenekleri
+                  </Typography>
+                  <Grid container spacing={1.5} alignItems="center">
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel sx={{ fontSize: '12px' }}>Kullanıcı</InputLabel>
+                        <Select
+                          value={paymentFilters.userId}
+                          onChange={(e) => setPaymentFilters({ ...paymentFilters, userId: e.target.value })}
+                          label="Kullanıcı"
+                          title="Ödeme raporları kullanıcı filtresi"
+                          sx={{
+                            fontSize: '12px',
+                            borderRadius: 1.5,
+                          }}
+                        >
+                          <MenuItem value="" sx={{ fontSize: '12px' }}>Tüm Kullanıcılar</MenuItem>
+                          {users.map((u) => (
+                            <MenuItem key={u.id} value={u.id} sx={{ fontSize: '12px' }}>
+                              {u.username} ({u.email})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Başlangıç Tarihi"
+                        type="date"
+                        value={paymentFilters.startDate}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, startDate: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Bitiş Tarihi"
+                        type="date"
+                        value={paymentFilters.endDate}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, endDate: e.target.value })}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Durum"
+                        select
+                        SelectProps={{ native: true }}
+                        value={paymentFilters.status}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, status: e.target.value })}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                        inputProps={{
+                          'aria-label': 'Ödeme durumu filtresi',
+                          title: 'Ödeme durumu filtresi',
+                        }}
+                      >
+                        <option value="">Tümü</option>
+                        <option value="pending">Beklemede</option>
+                        <option value="approved">Onaylandı</option>
+                        <option value="rejected">Reddedildi</option>
+                      </TextField>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Ödeme Yöntemi"
+                        value={paymentFilters.paymentMethod}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, paymentMethod: e.target.value })}
+                        placeholder="Ara..."
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Min Tutar"
+                        type="number"
+                        value={paymentFilters.minAmount}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, minAmount: e.target.value })}
+                        placeholder="0"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Max Tutar"
+                        type="number"
+                        value={paymentFilters.maxAmount}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, maxAmount: e.target.value })}
+                        placeholder="0"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Transaction ID"
+                        value={paymentFilters.transactionId}
+                        onChange={(e) => setPaymentFilters({ ...paymentFilters, transactionId: e.target.value })}
+                        placeholder="Ara..."
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5,
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<FilterList />}
+                        onClick={loadPaymentRequests}
+                        disabled={loadingPaymentRequests}
+                        sx={{
+                          background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                          boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
+                          borderRadius: 2,
+                          padding: '6px 16px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          '&:hover': {
+                            boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                            transform: 'translateY(-1px)',
+                          },
+                          transition: 'all 0.3s',
+                        }}
+                      >
+                        Filtrele
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Paper>
+
                 {loadingPaymentRequests ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                     <CircularProgress />
@@ -778,12 +1431,13 @@ export default function SMSReportsPage() {
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {paymentRequests.slice(0, 20).map((request) => {
+                        {paymentRequests.map((request) => {
                           const getStatusColor = (status: string) => {
                             switch (status) {
                               case 'approved':
@@ -811,18 +1465,36 @@ export default function SMSReportsPage() {
                           };
 
                           return (
-                            <TableRow key={request.id}>
+                            <TableRow key={request.id} sx={{ '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }}>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                {request.user?.username || '-'}
+                                <Box>
+                                  <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
+                                    {request.user?.username || '-'}
+                                  </Typography>
+                                  {request.user?.email && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                      {request.user.email}
+                                    </Typography>
+                                  )}
+                                </Box>
                               </TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                {Number(request.amount)} {request.currency || 'TRY'}
+                                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
+                                  {Number(request.amount)} {request.currency || 'TRY'}
+                                </Typography>
                               </TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 {request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}
                               </TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 {request.paymentMethod || '-'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {request.transactionId ? (
+                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {request.transactionId}
+                                  </Typography>
+                                ) : '-'}
                               </TableCell>
                               <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                 <Chip
