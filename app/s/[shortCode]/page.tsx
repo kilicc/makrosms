@@ -29,25 +29,31 @@ export default function ShortLinkRedirectPage({ params }: { params: Promise<{ sh
         
         const response = await fetch(`/api/short-links/${shortCode}`, {
           method: 'GET',
-          redirect: 'follow',
+          redirect: 'manual', // Manual redirect handling
         });
 
-        if (response.redirected) {
-          // Yönlendirme başarılı
-          window.location.href = response.url;
-          return;
+        // Redirect response (302, 301, etc.)
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('location');
+          if (location) {
+            window.location.href = location;
+            return;
+          }
         }
 
+        // Success response (200)
+        if (response.ok) {
+          // Try to get redirect location from response
+          const location = response.headers.get('location');
+          if (location) {
+            window.location.href = location;
+            return;
+          }
+        }
+
+        // Error response
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          setError(data.message || 'Kısa link bulunamadı');
-          setLoading(false);
-          return;
-        }
-
-        // JSON response ise (hata durumu)
-        const data = await response.json().catch(() => null);
-        if (data && !data.success) {
           setError(data.message || 'Kısa link bulunamadı');
           setLoading(false);
           return;
