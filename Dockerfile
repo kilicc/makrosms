@@ -36,10 +36,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install OpenSSL for Prisma
+# Install OpenSSL for Prisma and curl for cron jobs
 # Alpine 3.22+ için openssl paketi yeterli (OpenSSL 3 ile uyumlu)
 # Prisma binaryTargets ile linux-musl için derlenmiş engine kullanılacak
-RUN apk add --no-cache openssl libc6-compat
+# curl, cron job'lar için gerekli
+RUN apk add --no-cache openssl libc6-compat curl
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

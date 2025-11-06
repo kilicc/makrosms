@@ -1,12 +1,12 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, alpha, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Alert, alpha, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { MoneyOff, Send, Info } from '@mui/icons-material';
+import { Info } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import ClientDate from '@/components/ClientDate';
 
@@ -35,11 +35,6 @@ export default function RefundsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [refundForm, setRefundForm] = useState({
-    smsId: '',
-    reason: '',
-  });
 
   useEffect(() => {
     loadRefunds();
@@ -64,34 +59,6 @@ export default function RefundsPage() {
     }
   };
 
-  const handleRefundSubmit = async () => {
-    if (!refundForm.smsId || !refundForm.reason) {
-      setError('SMS ID ve sebep gerekli');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await api.post('/refunds/process', {
-        smsId: refundForm.smsId,
-        reason: refundForm.reason,
-      });
-
-      if (response.data.success) {
-        setSuccess('İade talebi oluşturuldu');
-        setRefundDialogOpen(false);
-        setRefundForm({ smsId: '', reason: '' });
-        loadRefunds();
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'İade talebi hatası');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -198,36 +165,10 @@ export default function RefundsPage() {
               </Typography>
             </Alert>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Box />
-              <Button
-                variant="contained"
-                startIcon={<MoneyOff />}
-                onClick={() => setRefundDialogOpen(true)}
-                sx={{
-                  background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.3)',
-                  borderRadius: 2,
-                  padding: '8px 20px',
-                    fontSize: '14px',
-                    size: 'small',
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  '&:hover': {
-                    boxShadow: '0 8px 25px rgba(25, 118, 210, 0.4)',
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'all 0.3s',
-                }}
-              >
-                İade Talebi Oluştur
-              </Button>
-            </Box>
-
             {refunds.length === 0 && (
               <Box sx={{ textAlign: 'center', py: 2, mb: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '14px' }}>
-                  Henüz iade talebi bulunmuyor. İade talebi oluşturmak için "İade Talebi Oluştur" butonuna tıklayın.
+                  Henüz iade talebi bulunmuyor. İletilmeyen SMS'ler için iadeler otomatik olarak oluşturulacaktır.
                 </Typography>
               </Box>
             )}
@@ -253,7 +194,7 @@ export default function RefundsPage() {
               ) : refunds.length === 0 ? (
                 <Box sx={{ p: 2, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
-                    Henüz iade talebi bulunmuyor. Yeni iade talebi oluşturmak için "İade Talebi Oluştur" butonuna tıklayın.
+                    Henüz iade talebi bulunmuyor. İletilmeyen SMS'ler için iadeler otomatik olarak oluşturulacaktır.
                   </Typography>
                 </Box>
               ) : (
@@ -337,50 +278,6 @@ export default function RefundsPage() {
               )}
             </Paper>
 
-          {/* Refund Dialog */}
-          <Dialog open={refundDialogOpen} onClose={() => setRefundDialogOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600, pb: 1 }}>İade Talebi Oluştur</DialogTitle>
-            <DialogContent sx={{ pt: 1.5 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="SMS ID"
-                value={refundForm.smsId}
-                onChange={(e) => setRefundForm({ ...refundForm, smsId: e.target.value })}
-                margin="dense"
-                required
-                placeholder="UUID"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '12px',
-                  },
-                }}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label="Sebep"
-                multiline
-                rows={3}
-                value={refundForm.reason}
-                onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
-                margin="dense"
-                required
-                placeholder="İade sebebini açıklayın"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '12px',
-                  },
-                }}
-              />
-            </DialogContent>
-            <DialogActions sx={{ px: 2, pb: 1.5 }}>
-              <Button size="small" onClick={() => setRefundDialogOpen(false)} sx={{ fontSize: '12px' }}>İptal</Button>
-              <Button size="small" onClick={handleRefundSubmit} variant="contained" disabled={loading} sx={{ fontSize: '12px' }}>
-                {loading ? 'Oluşturuluyor...' : 'Oluştur'}
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Box>
       </Box>
     </ProtectedRoute>

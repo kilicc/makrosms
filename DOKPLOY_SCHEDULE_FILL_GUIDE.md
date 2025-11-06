@@ -20,11 +20,11 @@ Dokploy'daki "Create Schedule" modalını nasıl dolduracağınızı adım adım
    *(Her 5 dakikada bir çalışır)*
 
 3. **Shell Type:**
-   - Dropdown'dan **"Bash"** seçin
+   - Dropdown'dan **"Sh"** seçin (Alpine Linux'ta bash yok, sh kullanılır)
 
 4. **Command:**
    Aşağıdaki komutu tam olarak kopyalayıp yapıştırın:
-   ```bash
+   ```sh
    curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/sms/check-status
    ```
    
@@ -58,11 +58,11 @@ Dokploy'daki "Create Schedule" modalını nasıl dolduracağınızı adım adım
    *(Her saat başı çalışır - 10:00, 11:00, 12:00, ...)*
 
 3. **Shell Type:**
-   - Dropdown'dan **"Bash"** seçin
+   - Dropdown'dan **"Sh"** seçin (Alpine Linux'ta bash yok, sh kullanılır)
 
 4. **Command:**
    Aşağıdaki komutu tam olarak kopyalayıp yapıştırın:
-   ```bash
+   ```sh
    curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/refunds/process-auto
    ```
    
@@ -188,14 +188,14 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
 **SMS Durum Kontrolü:**
 - Task Name: `SMS Durum Kontrolü`
 - Schedule: `*/5 * * * *`
-- Shell Type: `Bash`
+- Shell Type: `Sh` (Alpine Linux'ta bash yok)
 - Command: `curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/sms/check-status`
 - Enabled: `ON`
 
 **Otomatik İade İşleme:**
 - Task Name: `Otomatik İade İşleme`
 - Schedule: `0 * * * *`
-- Shell Type: `Bash`
+- Shell Type: `Sh` (Alpine Linux'ta bash yok)
 - Command: `curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/refunds/process-auto`
 - Enabled: `ON`
 

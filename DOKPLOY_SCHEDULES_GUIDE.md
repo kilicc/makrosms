@@ -51,10 +51,12 @@ openssl rand -hex 32
   - `*/5 * * * *` = Her 5 dakikada bir
   - Örnek çalışma zamanları: 10:00, 10:05, 10:10, 10:15, ...
 
-**Command (Bash):**
-```bash
+**Command (Sh):**
+```sh
 curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/sms/check-status
 ```
+
+**Not:** Alpine Linux container'ında `bash` yok, `sh` kullanılır. Shell Type olarak **"Sh"** seçin.
 
 **Not:** 
 - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
@@ -77,10 +79,12 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
   - Cron formatı: `dakika saat gün ay hafta-günü`
   - `0 * * * *` = Her saat başı (00:00, 01:00, 02:00, ...)
 
-**Command (Bash):**
-```bash
+**Command (Sh):**
+```sh
 curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/refunds/process-auto
 ```
+
+**Not:** Alpine Linux container'ında `bash` yok, `sh` kullanılır. Shell Type olarak **"Sh"** seçin.
 
 **Not:** 
 - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
