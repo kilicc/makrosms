@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
@@ -535,28 +535,79 @@ export default function SMSReportsPage() {
               Sistem raporlarını ve istatistiklerini görüntüleyin.
             </Typography>
 
-            {/* Tabs */}
-            <Tabs 
-              value={tabValue} 
-              onChange={(e, newValue) => {
-                console.log('Tab değişimi:', { oldValue: tabValue, newValue, isAdmin, userRole, user, newValueType: typeof newValue });
-                if (newValue !== null && newValue !== undefined) {
-                  setTabValue(newValue as ReportsTab);
-                }
-              }}
-              sx={{ mb: 2 }}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab label="SMS Raporları" icon={<Assessment />} value="sms" />
-              <Tab label="Toplu SMS" icon={<Send />} value="bulk" />
+            {/* Navigation Buttons */}
+            <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                variant={tabValue === 'sms' ? 'contained' : 'outlined'}
+                startIcon={<Assessment />}
+                onClick={() => setTabValue('sms')}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 1,
+                }}
+              >
+                SMS Raporları
+              </Button>
+              <Button
+                variant={tabValue === 'bulk' ? 'contained' : 'outlined'}
+                startIcon={<Send />}
+                onClick={() => setTabValue('bulk')}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 1,
+                }}
+              >
+                Toplu SMS
+              </Button>
               {isAdmin && (
                 <>
-                  <Tab label="İstatistikler" icon={<BarChart />} value="stats" />
-                  <Tab label="Ödeme Raporları" icon={<Payment />} value="payments" />
+                  <Button
+                    variant={tabValue === 'stats' ? 'contained' : 'outlined'}
+                    startIcon={<BarChart />}
+                    onClick={() => {
+                      console.log('İstatistikler butonu tıklandı');
+                      setTabValue('stats');
+                    }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 1,
+                    }}
+                  >
+                    İstatistikler
+                  </Button>
+                  <Button
+                    variant={tabValue === 'payments' ? 'contained' : 'outlined'}
+                    startIcon={<Payment />}
+                    onClick={() => {
+                      console.log('Ödeme Raporları butonu tıklandı');
+                      setTabValue('payments');
+                    }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 1,
+                    }}
+                  >
+                    Ödeme Raporları
+                  </Button>
                 </>
               )}
-            </Tabs>
+            </Box>
 
             {/* SMS Reports Tab */}
             {tabValue === 'sms' && (
