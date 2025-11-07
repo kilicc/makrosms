@@ -1,7 +1,7 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Collapse } from '@mui/material';
+import { Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -84,8 +84,7 @@ export default function SMSReportsPage() {
   const [shortLinksStats, setShortLinksStats] = useState<any>(null);
   const [loadingShortLinksStats, setLoadingShortLinksStats] = useState(false);
   const [shortLinksStatsError, setShortLinksStatsError] = useState('');
-  const [selectedShortLink, setSelectedShortLink] = useState<any | null>(null);
-  const [shortLinkDetailDialogOpen, setShortLinkDetailDialogOpen] = useState(false);
+  const [expandedShortLinkId, setExpandedShortLinkId] = useState<string | null>(null);
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
   const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
   const [paymentRequestsError, setPaymentRequestsError] = useState('');
@@ -1722,77 +1721,345 @@ export default function SMSReportsPage() {
                             shortLinksStats.shortLinks.map((link: any) => {
                               const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
                               const shortLink = `https://${shortLinkDomain}/${link.short_code}`;
+                              const isExpanded = expandedShortLinkId === link.id;
                               return (
-                                <TableRow 
-                                  key={link.id}
-                                  sx={{ 
-                                    '&:hover': { 
-                                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                                      cursor: 'pointer',
-                                    } 
-                                  }}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    setSelectedShortLink(link);
-                                    setShortLinkDetailDialogOpen(true);
-                                  }}
-                                >
-                                  <TableCell sx={{ fontSize: '12px' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <Link sx={{ fontSize: 16, color: 'primary.main' }} />
-                                      <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
-                                        {shortLink}
+                                <>
+                                  <TableRow 
+                                    key={link.id}
+                                    sx={{ 
+                                      '&:hover': { 
+                                        bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                                        cursor: 'pointer',
+                                      } 
+                                    }}
+                                    onClick={() => {
+                                      setExpandedShortLinkId(isExpanded ? null : link.id);
+                                    }}
+                                  >
+                                    <TableCell sx={{ fontSize: '12px' }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedShortLinkId(isExpanded ? null : link.id);
+                                          }}
+                                          sx={{ p: 0.5 }}
+                                        >
+                                          {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                        </IconButton>
+                                        <Link sx={{ fontSize: 16, color: 'primary.main' }} />
+                                        <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                                          {shortLink}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell sx={{ fontSize: '12px' }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          fontSize: '11px', 
+                                          maxWidth: 200, 
+                                          overflow: 'hidden', 
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                        title={link.original_url}
+                                      >
+                                        {link.original_url}
                                       </Typography>
-                                    </Box>
-                                  </TableCell>
-                                  <TableCell sx={{ fontSize: '12px' }}>
-                                    <Typography 
-                                      variant="body2" 
-                                      sx={{ 
-                                        fontSize: '11px', 
-                                        maxWidth: 200, 
-                                        overflow: 'hidden', 
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                      }}
-                                      title={link.original_url}
-                                    >
-                                      {link.original_url}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>
-                                    {link.stats?.totalClicks || 0}
-                                  </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600, color: '#2196f3' }}>
-                                    {link.stats?.uniqueClicks || 0}
-                                  </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600, color: '#ff9800' }}>
-                                    {link.stats?.ipAddresses?.length || 0}
-                                  </TableCell>
-                                  <TableCell align="center" sx={{ fontSize: '11px' }}>
-                                    <ClientDate date={link.created_at} />
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      startIcon={<Visibility />}
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setSelectedShortLink(link);
-                                        setShortLinkDetailDialogOpen(true);
-                                      }}
-                                      sx={{
-                                        fontSize: '11px',
-                                        textTransform: 'none',
-                                        borderRadius: 1.5,
-                                      }}
-                                    >
-                                      Detay
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
+                                    </TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                      {link.stats?.totalClicks || 0}
+                                    </TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600, color: '#2196f3' }}>
+                                      {link.stats?.uniqueClicks || 0}
+                                    </TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '12px', fontWeight: 600, color: '#ff9800' }}>
+                                      {link.stats?.ipAddresses?.length || 0}
+                                    </TableCell>
+                                    <TableCell align="center" sx={{ fontSize: '11px' }}>
+                                      <ClientDate date={link.created_at} />
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setExpandedShortLinkId(isExpanded ? null : link.id);
+                                        }}
+                                        sx={{
+                                          fontSize: '11px',
+                                          textTransform: 'none',
+                                          borderRadius: 1.5,
+                                        }}
+                                      >
+                                        {isExpanded ? 'Gizle' : 'Detay'}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell colSpan={7} sx={{ py: 0, border: 0 }}>
+                                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                        <Box sx={{ p: 2, bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)' }}>
+                                          {/* Link Bilgileri */}
+                                          <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
+                                            <Grid container spacing={2}>
+                                              <Grid size={{ xs: 12, md: 6 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
+                                                  Kısa Link
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: 600 }}>
+                                                  {shortLink}
+                                                </Typography>
+                                              </Grid>
+                                              <Grid size={{ xs: 12, md: 6 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
+                                                  Orijinal URL
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontSize: '12px', wordBreak: 'break-all' }}>
+                                                  {link.original_url}
+                                                </Typography>
+                                              </Grid>
+                                              <Grid size={{ xs: 12, md: 4 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
+                                                  Toplam Tıklama
+                                                </Typography>
+                                                <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#4caf50' }}>
+                                                  {link.stats?.totalClicks || 0}
+                                                </Typography>
+                                              </Grid>
+                                              <Grid size={{ xs: 12, md: 4 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
+                                                  Benzersiz Tıklama
+                                                </Typography>
+                                                <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#2196f3' }}>
+                                                  {link.stats?.uniqueClicks || 0}
+                                                </Typography>
+                                              </Grid>
+                                              <Grid size={{ xs: 12, md: 4 }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
+                                                  Benzersiz IP
+                                                </Typography>
+                                                <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#ff9800' }}>
+                                                  {link.stats?.ipAddresses?.length || 0}
+                                                </Typography>
+                                              </Grid>
+                                            </Grid>
+                                          </Paper>
+
+                                          {/* IP Adresleri */}
+                                          {link.stats?.ipAddresses && link.stats.ipAddresses.length > 0 && (
+                                            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+                                              <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
+                                                <Public sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                                                IP Adresleri ({link.stats.ipAddresses.length})
+                                              </Typography>
+                                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                {link.stats.ipAddresses.map((ip: string, index: number) => (
+                                                  <Chip
+                                                    key={index}
+                                                    label={`${ip} (${link.stats?.ipClickCounts?.[ip] || 0} tıklama)`}
+                                                    size="small"
+                                                    sx={{ fontSize: '11px' }}
+                                                  />
+                                                ))}
+                                              </Box>
+                                            </Paper>
+                                          )}
+
+                                          {/* Ülkeler ve Şehirler */}
+                                          {(link.stats?.countries?.length > 0 || link.stats?.cities?.length > 0) && (
+                                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                              {link.stats?.countries && link.stats.countries.length > 0 && (
+                                                <Grid size={{ xs: 12, md: 6 }}>
+                                                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
+                                                      <LocationOn sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                                                      Ülkeler ({link.stats.countries.length})
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                      {link.stats.countries.map((country: string, index: number) => (
+                                                        <Chip
+                                                          key={index}
+                                                          label={country}
+                                                          size="small"
+                                                          sx={{ fontSize: '11px' }}
+                                                        />
+                                                      ))}
+                                                    </Box>
+                                                  </Paper>
+                                                </Grid>
+                                              )}
+                                              {link.stats?.cities && link.stats.cities.length > 0 && (
+                                                <Grid size={{ xs: 12, md: 6 }}>
+                                                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
+                                                      <LocationOn sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                                                      Şehirler ({link.stats.cities.length})
+                                                    </Typography>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                      {link.stats.cities.map((city: string, index: number) => (
+                                                        <Chip
+                                                          key={index}
+                                                          label={city}
+                                                          size="small"
+                                                          sx={{ fontSize: '11px' }}
+                                                        />
+                                                      ))}
+                                                    </Box>
+                                                  </Paper>
+                                                </Grid>
+                                              )}
+                                            </Grid>
+                                          )}
+
+                                          {/* User Agent ve Referer İstatistikleri */}
+                                          {(link.stats?.userAgents?.length > 0 || link.stats?.referers?.length > 0) && (
+                                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                              {link.stats?.userAgents && link.stats.userAgents.length > 0 && (
+                                                <Grid size={{ xs: 12, md: 6 }}>
+                                                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
+                                                      <Language sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                                                      User Agent'lar ({link.stats.userAgents.length})
+                                                    </Typography>
+                                                    <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                                                      {link.stats.userAgents.slice(0, 10).map((ua: string, index: number) => (
+                                                        <Chip
+                                                          key={index}
+                                                          label={ua.length > 50 ? ua.substring(0, 50) + '...' : ua}
+                                                          size="small"
+                                                          sx={{ fontSize: '10px', mb: 0.5, mr: 0.5, display: 'inline-block' }}
+                                                          title={ua}
+                                                        />
+                                                      ))}
+                                                      {link.stats.userAgents.length > 10 && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
+                                                          +{link.stats.userAgents.length - 10} daha fazla
+                                                        </Typography>
+                                                      )}
+                                                    </Box>
+                                                  </Paper>
+                                                </Grid>
+                                              )}
+                                              {link.stats?.referers && link.stats.referers.length > 0 && (
+                                                <Grid size={{ xs: 12, md: 6 }}>
+                                                  <Paper sx={{ p: 2, borderRadius: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
+                                                      <Link sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                                                      Referer'lar ({link.stats.referers.length})
+                                                    </Typography>
+                                                    <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                                                      {link.stats.referers.slice(0, 10).map((ref: string, index: number) => (
+                                                        <Chip
+                                                          key={index}
+                                                          label={ref.length > 50 ? ref.substring(0, 50) + '...' : ref}
+                                                          size="small"
+                                                          sx={{ fontSize: '10px', mb: 0.5, mr: 0.5, display: 'inline-block' }}
+                                                          title={ref}
+                                                        />
+                                                      ))}
+                                                      {link.stats.referers.length > 10 && (
+                                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
+                                                          +{link.stats.referers.length - 10} daha fazla
+                                                        </Typography>
+                                                      )}
+                                                    </Box>
+                                                  </Paper>
+                                                </Grid>
+                                              )}
+                                            </Grid>
+                                          )}
+
+                                          {/* Tıklama Detayları */}
+                                          {link.stats?.clicks && link.stats.clicks.length > 0 && (
+                                            <Paper sx={{ borderRadius: 2 }}>
+                                              <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5, p: 2, pb: 1 }}>
+                                                Tıklama Detayları ({link.stats.clicks.length})
+                                              </Typography>
+                                              <TableContainer>
+                                                <Table size="small">
+                                                  <TableHead>
+                                                    <TableRow>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>IP Adresi</TableCell>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Ülke</TableCell>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Şehir</TableCell>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>User Agent</TableCell>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Referer</TableCell>
+                                                      <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Tarih</TableCell>
+                                                    </TableRow>
+                                                  </TableHead>
+                                                  <TableBody>
+                                                    {link.stats.clicks.slice(0, 100).map((click: any) => (
+                                                      <TableRow key={click.id}>
+                                                        <TableCell sx={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                                                          {click.ip_address}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '11px' }}>
+                                                          {click.country ? (
+                                                            <Chip
+                                                              label={click.country}
+                                                              size="small"
+                                                              sx={{ fontSize: '10px', height: 20 }}
+                                                            />
+                                                          ) : (
+                                                            '-'
+                                                          )}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '11px' }}>
+                                                          {click.city ? (
+                                                            <Chip
+                                                              label={click.city}
+                                                              size="small"
+                                                              sx={{ fontSize: '10px', height: 20 }}
+                                                            />
+                                                          ) : (
+                                                            '-'
+                                                          )}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '11px', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis' }} title={click.user_agent || ''}>
+                                                          {click.user_agent ? (
+                                                            <Typography variant="caption" sx={{ fontSize: '10px' }}>
+                                                              {click.user_agent.length > 40 ? click.user_agent.substring(0, 40) + '...' : click.user_agent}
+                                                            </Typography>
+                                                          ) : (
+                                                            '-'
+                                                          )}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '11px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }} title={click.referer || ''}>
+                                                          {click.referer ? (
+                                                            <Typography variant="caption" sx={{ fontSize: '10px', color: 'primary.main' }}>
+                                                              {click.referer.length > 30 ? click.referer.substring(0, 30) + '...' : click.referer}
+                                                            </Typography>
+                                                          ) : (
+                                                            '-'
+                                                          )}
+                                                        </TableCell>
+                                                        <TableCell sx={{ fontSize: '11px' }}>
+                                                          <ClientDate date={click.clicked_at} />
+                                                        </TableCell>
+                                                      </TableRow>
+                                                    ))}
+                                                  </TableBody>
+                                                </Table>
+                                              </TableContainer>
+                                              {link.stats.clicks.length > 100 && (
+                                                <Box sx={{ p: 2, textAlign: 'center' }}>
+                                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                    Toplam {link.stats.clicks.length} tıklama var. İlk 100 tanesi gösteriliyor.
+                                                  </Typography>
+                                                </Box>
+                                              )}
+                                            </Paper>
+                                          )}
+                                        </Box>
+                                      </Collapse>
+                                    </TableCell>
+                                  </TableRow>
+                                </>
                               );
                             })
                           ) : (
@@ -2415,316 +2682,6 @@ export default function SMSReportsPage() {
                       </DialogActions>
                     </Dialog>
 
-        {/* Kısa Link Detay Dialog */}
-        <Dialog
-          open={shortLinkDetailDialogOpen}
-          onClose={() => {
-            setShortLinkDetailDialogOpen(false);
-            setSelectedShortLink(null);
-          }}
-          maxWidth="lg"
-          fullWidth
-        >
-          <DialogTitle sx={{ pb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Link sx={{ color: 'primary.main' }} />
-                <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
-                  Kısa Link Detayları
-                </Typography>
-              </Box>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  setShortLinkDetailDialogOpen(false);
-                  setSelectedShortLink(null);
-                }}
-              >
-                <Close />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            {selectedShortLink ? (
-              <Box>
-                {/* Link Bilgileri */}
-                <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
-                        Kısa Link
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: 600 }}>
-                        {(() => {
-                          const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
-                          return `https://${shortLinkDomain}/${selectedShortLink.short_code}`;
-                        })()}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
-                        Orijinal URL
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: '12px', wordBreak: 'break-all' }}>
-                        {selectedShortLink.original_url}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
-                        Toplam Tıklama
-                      </Typography>
-                      <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#4caf50' }}>
-                        {selectedShortLink.stats?.totalClicks || 0}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
-                        Benzersiz Tıklama
-                      </Typography>
-                      <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#2196f3' }}>
-                        {selectedShortLink.stats?.uniqueClicks || 0}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mb: 0.5 }}>
-                        Benzersiz IP
-                      </Typography>
-                      <Typography variant="h6" sx={{ fontSize: '20px', fontWeight: 700, color: '#ff9800' }}>
-                        {selectedShortLink.stats?.ipAddresses?.length || 0}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-
-                {/* IP Adresleri */}
-                {selectedShortLink.stats?.ipAddresses && selectedShortLink.stats.ipAddresses.length > 0 && (
-                  <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
-                      <Public sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-                      IP Adresleri ({selectedShortLink.stats.ipAddresses.length})
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {selectedShortLink.stats.ipAddresses.map((ip: string, index: number) => (
-                        <Chip
-                          key={index}
-                          label={`${ip} (${selectedShortLink.stats?.ipClickCounts?.[ip] || 0} tıklama)`}
-                          size="small"
-                          sx={{ fontSize: '11px' }}
-                        />
-                      ))}
-                    </Box>
-                  </Paper>
-                )}
-
-                {/* Ülkeler ve Şehirler */}
-                {(selectedShortLink.stats?.countries?.length > 0 || selectedShortLink.stats?.cities?.length > 0) && (
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    {selectedShortLink.stats?.countries && selectedShortLink.stats.countries.length > 0 && (
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
-                            <LocationOn sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-                            Ülkeler ({selectedShortLink.stats.countries.length})
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {selectedShortLink.stats.countries.map((country: string, index: number) => (
-                              <Chip
-                                key={index}
-                                label={country}
-                                size="small"
-                                sx={{ fontSize: '11px' }}
-                              />
-                            ))}
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                    {selectedShortLink.stats?.cities && selectedShortLink.stats.cities.length > 0 && (
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
-                            <LocationOn sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-                            Şehirler ({selectedShortLink.stats.cities.length})
-                          </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {selectedShortLink.stats.cities.map((city: string, index: number) => (
-                              <Chip
-                                key={index}
-                                label={city}
-                                size="small"
-                                sx={{ fontSize: '11px' }}
-                              />
-                            ))}
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                  </Grid>
-                )}
-
-                {/* User Agent ve Referer İstatistikleri */}
-                {(selectedShortLink.stats?.userAgents?.length > 0 || selectedShortLink.stats?.referers?.length > 0) && (
-                  <Grid container spacing={2} sx={{ mb: 2 }}>
-                    {selectedShortLink.stats?.userAgents && selectedShortLink.stats.userAgents.length > 0 && (
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
-                            <Language sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-                            User Agent'lar ({selectedShortLink.stats.userAgents.length})
-                          </Typography>
-                          <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
-                            {selectedShortLink.stats.userAgents.slice(0, 10).map((ua: string, index: number) => (
-                              <Chip
-                                key={index}
-                                label={ua.length > 50 ? ua.substring(0, 50) + '...' : ua}
-                                size="small"
-                                sx={{ fontSize: '10px', mb: 0.5, mr: 0.5, display: 'inline-block' }}
-                                title={ua}
-                              />
-                            ))}
-                            {selectedShortLink.stats.userAgents.length > 10 && (
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
-                                +{selectedShortLink.stats.userAgents.length - 10} daha fazla
-                              </Typography>
-                            )}
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                    {selectedShortLink.stats?.referers && selectedShortLink.stats.referers.length > 0 && (
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper sx={{ p: 2, borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5 }}>
-                            <Link sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
-                            Referer'lar ({selectedShortLink.stats.referers.length})
-                          </Typography>
-                          <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
-                            {selectedShortLink.stats.referers.slice(0, 10).map((ref: string, index: number) => (
-                              <Chip
-                                key={index}
-                                label={ref.length > 50 ? ref.substring(0, 50) + '...' : ref}
-                                size="small"
-                                sx={{ fontSize: '10px', mb: 0.5, mr: 0.5, display: 'inline-block' }}
-                                title={ref}
-                              />
-                            ))}
-                            {selectedShortLink.stats.referers.length > 10 && (
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px', display: 'block', mt: 1 }}>
-                                +{selectedShortLink.stats.referers.length - 10} daha fazla
-                              </Typography>
-                            )}
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    )}
-                  </Grid>
-                )}
-
-                {/* Tıklama Detayları */}
-                {selectedShortLink.stats?.clicks && selectedShortLink.stats.clicks.length > 0 && (
-                  <Paper sx={{ borderRadius: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontSize: '13px', fontWeight: 600, mb: 1.5, p: 2, pb: 1 }}>
-                      Tıklama Detayları ({selectedShortLink.stats.clicks.length})
-                    </Typography>
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>IP Adresi</TableCell>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Ülke</TableCell>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Şehir</TableCell>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>User Agent</TableCell>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Referer</TableCell>
-                            <TableCell sx={{ fontSize: '11px', fontWeight: 600 }}>Tarih</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {selectedShortLink.stats.clicks.slice(0, 100).map((click: any) => (
-                            <TableRow key={click.id}>
-                              <TableCell sx={{ fontSize: '11px', fontFamily: 'monospace' }}>
-                                {click.ip_address}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '11px' }}>
-                                {click.country ? (
-                                  <Chip
-                                    label={click.country}
-                                    size="small"
-                                    sx={{ fontSize: '10px', height: 20 }}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '11px' }}>
-                                {click.city ? (
-                                  <Chip
-                                    label={click.city}
-                                    size="small"
-                                    sx={{ fontSize: '10px', height: 20 }}
-                                  />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '11px', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis' }} title={click.user_agent || ''}>
-                                {click.user_agent ? (
-                                  <Typography variant="caption" sx={{ fontSize: '10px' }}>
-                                    {click.user_agent.length > 40 ? click.user_agent.substring(0, 40) + '...' : click.user_agent}
-                                  </Typography>
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '11px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }} title={click.referer || ''}>
-                                {click.referer ? (
-                                  <Typography variant="caption" sx={{ fontSize: '10px', color: 'primary.main' }}>
-                                    {click.referer.length > 30 ? click.referer.substring(0, 30) + '...' : click.referer}
-                                  </Typography>
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '11px' }}>
-                                <ClientDate date={click.clicked_at} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    {selectedShortLink.stats.clicks.length > 100 && (
-                      <Box sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                          Toplam {selectedShortLink.stats.clicks.length} tıklama var. İlk 100 tanesi gösteriliyor.
-                        </Typography>
-                      </Box>
-                    )}
-                  </Paper>
-                )}
-              </Box>
-            ) : (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <CircularProgress />
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontSize: '12px' }}>
-                  Detaylar yükleniyor...
-                </Typography>
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ px: 2, pb: 1.5 }}>
-            <Button
-              onClick={() => {
-                setShortLinkDetailDialogOpen(false);
-                setSelectedShortLink(null);
-              }}
-              variant="outlined"
-              size="small"
-              sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '12px' }}
-            >
-              Kapat
-            </Button>
-          </DialogActions>
-        </Dialog>
                   </Box>
                 )}
               </Box>
