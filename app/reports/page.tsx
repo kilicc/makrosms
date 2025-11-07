@@ -539,10 +539,14 @@ export default function SMSReportsPage() {
             <Tabs 
               value={tabValue} 
               onChange={(e, newValue) => {
-                console.log('Tab değişimi:', { oldValue: tabValue, newValue, isAdmin, userRole });
-                setTabValue(newValue as ReportsTab);
+                console.log('Tab değişimi:', { oldValue: tabValue, newValue, isAdmin, userRole, user, newValueType: typeof newValue });
+                if (newValue !== null && newValue !== undefined) {
+                  setTabValue(newValue as ReportsTab);
+                }
               }}
               sx={{ mb: 2 }}
+              variant="scrollable"
+              scrollButtons="auto"
             >
               <Tab label="SMS Raporları" icon={<Assessment />} value="sms" />
               <Tab label="Toplu SMS" icon={<Send />} value="bulk" />
