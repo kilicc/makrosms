@@ -1731,7 +1731,8 @@ export default function SMSReportsPage() {
                                       cursor: 'pointer',
                                     } 
                                   }}
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.preventDefault();
                                     setSelectedShortLink(link);
                                     setShortLinkDetailDialogOpen(true);
                                   }}
@@ -1777,6 +1778,7 @@ export default function SMSReportsPage() {
                                       variant="outlined"
                                       startIcon={<Visibility />}
                                       onClick={(e) => {
+                                        e.preventDefault();
                                         e.stopPropagation();
                                         setSelectedShortLink(link);
                                         setShortLinkDetailDialogOpen(true);
