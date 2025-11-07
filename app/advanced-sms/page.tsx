@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Send, Group, Person, Add, Delete, Edit, Description, Message, People, CheckCircle, Info, Warning, Star, AutoAwesome, ContentCopy, Search, FilterList, Link, BarChart } from '@mui/icons-material';
+import { Send, Group, Person, Add, Delete, Edit, Description, Message, People, CheckCircle, Info, Warning, Star, AutoAwesome, ContentCopy, Search, FilterList, Link, BarChart, Close } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 
 interface Contact {
@@ -51,6 +51,10 @@ export default function AdvancedSMSPage() {
   const [shortLinkUrl, setShortLinkUrl] = useState('');
   const [shortLinkDialogOpen, setShortLinkDialogOpen] = useState(false);
   const [shortLinkStats, setShortLinkStats] = useState<any>(null);
+  const [shortLinks, setShortLinks] = useState<any[]>([]);
+  const [loadingShortLinks, setLoadingShortLinks] = useState(false);
+  const [selectedShortLinkId, setSelectedShortLinkId] = useState<string>('');
+  const [shortLinkSelectDialogOpen, setShortLinkSelectDialogOpen] = useState(false);
   
   // Template Dialog States
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
@@ -66,6 +70,7 @@ export default function AdvancedSMSPage() {
     loadContacts();
     loadGroups();
     loadTemplates();
+    loadShortLinks();
   }, []);
 
   const loadContacts = async () => {
@@ -98,6 +103,20 @@ export default function AdvancedSMSPage() {
       }
     } catch (error) {
       console.error('Templates load error:', error);
+    }
+  };
+
+  const loadShortLinks = async () => {
+    try {
+      setLoadingShortLinks(true);
+      const response = await api.get('/short-links');
+      if (response.data.success) {
+        setShortLinks(response.data.data.shortLinks || []);
+      }
+    } catch (error) {
+      console.error('Short links load error:', error);
+    } finally {
+      setLoadingShortLinks(false);
     }
   };
 
@@ -709,49 +728,78 @@ export default function AdvancedSMSPage() {
                           </Box>
                           {shortLinkEnabled && (
                             <Box sx={{ mt: 1.5 }}>
-                              <TextField
-                                fullWidth
-                                size="small"
-                                label="URL"
-                                value={shortLinkUrl}
-                                onChange={(e) => setShortLinkUrl(e.target.value)}
-                                placeholder="https://example.com"
-                                sx={{
-                                  '& .MuiOutlinedInput-root': {
-                                    borderRadius: 1.5,
-                                    fontSize: '14px',
-                                  },
-                                }}
-                                InputProps={{
-                                  endAdornment: shortLinkUrl && (
-                                    <IconButton
-                                      size="small"
-                                      onClick={async () => {
-                                        try {
-                                          const response = await api.post('/short-links', {
-                                            originalUrl: shortLinkUrl,
-                                            title: 'SMS Kısa Link',
-                                          });
-                                          if (response.data.success) {
-                                            const shortCode = response.data.data.shortLink.short_code;
-                                            const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
-                                            const shortLink = `https://${shortLinkDomain}/${shortCode}`;
-                                            setMessage(message + ' ' + shortLink);
-                                            setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
-                                            setShortLinkUrl('');
+                              <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                                <FormControl fullWidth size="small">
+                                  <InputLabel>Mevcut Kısa Link Seç</InputLabel>
+                                  <Select
+                                    value={selectedShortLinkId}
+                                    onChange={(e) => {
+                                      const linkId = e.target.value as string;
+                                      setSelectedShortLinkId(linkId);
+                                      if (linkId) {
+                                        const link = shortLinks.find(l => l.id === linkId);
+                                        if (link) {
+                                          const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
+                                          const shortLink = `https://${shortLinkDomain}/${link.short_code}`;
+                                          const newMessage = message + ' ' + shortLink;
+                                          // 180 karakter limiti kontrolü
+                                          if (newMessage.length <= MAX_CHARACTERS) {
+                                            setMessage(newMessage);
+                                            setSelectedShortLinkId('');
+                                            setSuccess('Kısa link mesaja eklendi!');
+                                            setTimeout(() => setSuccess(''), 3000);
+                                          } else {
+                                            setError('Kısa link eklendiğinde mesaj 180 karakteri aşıyor!');
+                                            setSelectedShortLinkId('');
                                           }
-                                        } catch (err: any) {
-                                          setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
                                         }
-                                      }}
-                                    >
-                                      <ContentCopy fontSize="small" />
-                                    </IconButton>
-                                  ),
-                                }}
-                              />
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', mt: 0.5, display: 'block' }}>
-                                Mesajınıza eklenecek kısa link oluşturun
+                                      }
+                                    }}
+                                    label="Mevcut Kısa Link Seç"
+                                    sx={{
+                                      borderRadius: 1.5,
+                                      fontSize: '14px',
+                                    }}
+                                  >
+                                    <MenuItem value="">
+                                      <em>Kısa link seçin</em>
+                                    </MenuItem>
+                                    {shortLinks.map((link) => {
+                                      const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
+                                      const shortLink = `https://${shortLinkDomain}/${link.short_code}`;
+                                      return (
+                                        <MenuItem key={link.id} value={link.id}>
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                            <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 600 }}>
+                                              {shortLink}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                              {link.original_url.length > 50 ? link.original_url.substring(0, 50) + '...' : link.original_url}
+                                            </Typography>
+                                          </Box>
+                                        </MenuItem>
+                                      );
+                                    })}
+                                  </Select>
+                                </FormControl>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<Add />}
+                                  onClick={() => setShortLinkSelectDialogOpen(true)}
+                                  sx={{
+                                    borderRadius: 1.5,
+                                    textTransform: 'none',
+                                    fontSize: '13px',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 'auto',
+                                  }}
+                                >
+                                  Yeni Oluştur
+                                </Button>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block' }}>
+                                Mevcut kısa linklerinizden seçin veya yeni bir kısa link oluşturun
                               </Typography>
                             </Box>
                           )}
@@ -1198,6 +1246,110 @@ export default function AdvancedSMSPage() {
             }}
           >
             {editingTemplate ? 'Güncelle' : 'Oluştur'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Kısa Link Seçimi ve Oluşturma Dialog */}
+      <Dialog
+        open={shortLinkSelectDialogOpen}
+        onClose={() => {
+          setShortLinkSelectDialogOpen(false);
+          setShortLinkUrl('');
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Link sx={{ color: 'primary.main' }} />
+              <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
+                Kısa Link Oluştur
+              </Typography>
+            </Box>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setShortLinkSelectDialogOpen(false);
+                setShortLinkUrl('');
+              }}
+            >
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="URL"
+              value={shortLinkUrl}
+              onChange={(e) => setShortLinkUrl(e.target.value)}
+              placeholder="https://example.com"
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                  fontSize: '14px',
+                },
+              }}
+            />
+            <Alert severity="info" sx={{ fontSize: '12px', mb: 2 }}>
+              Kısa linkiniz <strong>go.finsms.io</strong> adresi üzerinden oluşturulacak ve IP tabanlı istatistikler takip edilecektir.
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 1.5 }}>
+          <Button
+            onClick={() => {
+              setShortLinkSelectDialogOpen(false);
+              setShortLinkUrl('');
+            }}
+            variant="outlined"
+            size="small"
+            sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '12px' }}
+          >
+            İptal
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!shortLinkUrl) {
+                setError('URL gerekli');
+                return;
+              }
+              try {
+                const response = await api.post('/short-links', {
+                  originalUrl: shortLinkUrl,
+                  title: 'SMS Kısa Link',
+                });
+                if (response.data.success) {
+                  const shortCode = response.data.data.shortLink.short_code;
+                  const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
+                  const shortLink = `https://${shortLinkDomain}/${shortCode}`;
+                  const newMessage = message + ' ' + shortLink;
+                  // 180 karakter limiti kontrolü
+                  if (newMessage.length <= MAX_CHARACTERS) {
+                    setMessage(newMessage);
+                    setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
+                    setShortLinkSelectDialogOpen(false);
+                    setShortLinkUrl('');
+                    loadShortLinks(); // Listeyi yenile
+                  } else {
+                    setError('Kısa link eklendiğinde mesaj 180 karakteri aşıyor!');
+                  }
+                }
+              } catch (err: any) {
+                setError(err.response?.data?.message || 'Kısa link oluşturulamadı');
+              }
+            }}
+            variant="contained"
+            size="small"
+            disabled={!shortLinkUrl}
+            sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '12px' }}
+          >
+            Oluştur ve Mesaja Ekle
           </Button>
         </DialogActions>
       </Dialog>
