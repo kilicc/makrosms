@@ -197,26 +197,67 @@ export async function checkSMSStatus(messageId: string, phoneNumber?: string): P
     console.log('[CepSMS] Mesaj durumu kontrol ediliyor:', { messageId, phoneNumber });
 
     // CepSMS API SMS Report endpoint'i
-    // Genellikle /report veya /smsapi/report olabilir
-    const reportUrl = CEPSMS_API_URL.replace('/smsapi', '/report') || `${CEPSMS_API_URL.replace('/smsapi', '')}/report`;
-    
-    const requestData = {
+    // Birden fazla olası endpoint'i sırayla dene
+    const normalizedBaseUrl = CEPSMS_API_URL.replace(/\/$/, '');
+    const candidateEndpoints = Array.from(
+      new Set(
+        [
+          `${normalizedBaseUrl}/report`,
+          normalizedBaseUrl.endsWith('/smsapi')
+            ? `${normalizedBaseUrl.replace('/smsapi', '')}/report`
+            : `${normalizedBaseUrl}/report`,
+          'https://panel4.cepsms.com/smsapi/report',
+          'https://panel4.cepsms.com/report',
+        ].filter(Boolean)
+      )
+    );
+
+    const requestBody = new URLSearchParams({
       User: CEPSMS_USERNAME,
       Pass: CEPSMS_PASSWORD,
       MessageId: messageId,
-    };
+    });
 
-    const response = await axios.post<any>(
-      reportUrl,
-      requestData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        httpsAgent: httpsAgent,
-        timeout: 30000,
+    let response: any = null;
+    let lastError: any = null;
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        console.log('[CepSMS] Rapor API isteği:', { endpoint, messageId });
+        response = await axios.post<any>(endpoint, requestBody.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          httpsAgent,
+          timeout: 30000,
+        });
+
+        if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+          console.warn('[CepSMS] HTML yanıt alındı, bir sonraki endpoint denenecek');
+          lastError = new Error('HTML response received');
+          continue;
+        }
+
+        break; // başarılı yanıt
+      } catch (error: any) {
+        lastError = error;
+        console.warn('[CepSMS] Rapor endpoint denemesi başarısız:', {
+          endpoint,
+          message: error.message,
+          status: error.response?.status,
+          data: typeof error.response?.data === 'string' ? error.response.data.substring(0, 200) : error.response?.data,
+        });
       }
-    );
+    }
+
+    if (!response) {
+      console.error('[CepSMS] Rapor endpoint\'lerine ulaşılamadı');
+      return {
+        success: false,
+        status: 'rapor_bekliyor',
+        error: lastError?.message || 'CepSMS rapor endpoint\'i bulunamadı',
+      };
+    }
 
     console.log('[CepSMS] Rapor API Yanıtı:', JSON.stringify(response.data, null, 2));
 
@@ -316,7 +357,10 @@ export async function checkSMSStatus(messageId: string, phoneNumber?: string): P
       status: 'rapor_bekliyor',
     };
   } catch (error: any) {
-    console.error('[CepSMS] Durum kontrolü hatası:', error);
+    console.error('[CepSMS] Durum kontrolü hatası:', {
+      message: error.message,
+      stack: error.stack,
+    });
 
     // API endpoint bulunamadıysa veya hata varsa, rapor bekliyor döndür
     return {

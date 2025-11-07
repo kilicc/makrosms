@@ -8,15 +8,22 @@ export async function GET(
 ) {
   try {
     const { shortCode } = await params;
+    console.log('🔗 Kısa link yönlendirme isteği:', shortCode);
     const supabaseServer = getSupabaseServer();
 
-    // Kısa linki bul
+    // Kısa linki bul - RLS bypass için service key kullanılıyor
     const { data: shortLink, error } = await supabaseServer
       .from('short_links')
       .select('*')
       .eq('short_code', shortCode)
       .eq('is_active', true)
       .maybeSingle();
+    
+    console.log('🔗 Kısa link sorgusu sonucu:', { 
+      found: !!shortLink, 
+      error: error ? JSON.stringify(error, null, 2) : null,
+      shortCode 
+    });
 
     if (error) {
       console.error('Short link find Supabase error:', JSON.stringify(error, null, 2));
