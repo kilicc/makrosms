@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
 
     console.log('Short links GET - userId:', auth.user.userId);
     
+    const userRole = (auth.user.role || '').toLowerCase();
+    const isAdmin = userRole === 'admin' || userRole === 'moderator' || userRole === 'administrator';
+    
     let supabaseServer;
     try {
       supabaseServer = getSupabaseServer();
@@ -28,12 +31,35 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const { data: shortLinks, error } = await supabaseServer
+    // Admin için tüm linkler, kullanıcı için sadece kendi linkleri
+    let shortLinksQuery = supabaseServer
       .from('short_links')
       .select('*')
-      .eq('user_id', String(auth.user.userId))
-      .eq('is_active', true)
+      .eq('is_active', true);
+    
+    // Admin değilse sadece kendi linklerini getir
+    if (!isAdmin) {
+      shortLinksQuery = shortLinksQuery.eq('user_id', String(auth.user.userId));
+    }
+    
+    const { data: shortLinks, error } = await shortLinksQuery
       .order('created_at', { ascending: false });
+    
+    // Admin için kullanıcı bilgilerini de getir
+    if (isAdmin && shortLinks && shortLinks.length > 0) {
+      const userIds = Array.from(new Set(shortLinks.map((link: any) => link.user_id)));
+      const { data: users, error: usersError } = await supabaseServer
+        .from('users')
+        .select('id, username, email')
+        .in('id', userIds);
+      
+      if (!usersError && users) {
+        const usersMap = new Map(users.map((u: any) => [u.id, { username: u.username, email: u.email }]));
+        shortLinks.forEach((link: any) => {
+          link.user = usersMap.get(link.user_id) || null;
+        });
+      }
+    }
 
     if (error) {
       console.error('Short links get Supabase error:', JSON.stringify(error, null, 2));

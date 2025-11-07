@@ -20,6 +20,10 @@ interface ShortLink {
   created_at: string;
   expires_at: string | null;
   is_active: boolean;
+  user?: {
+    username: string;
+    email: string;
+  } | null;
 }
 
 interface ShortLinkClick {
@@ -33,8 +37,9 @@ interface ShortLinkClick {
 }
 
 export default function ShortLinksPage() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const { mode } = useTheme();
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'moderator' || user?.role?.toLowerCase() === 'administrator';
   const [shortLinks, setShortLinks] = useState<ShortLink[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -191,7 +196,7 @@ export default function ShortLinksPage() {
                   fontWeight: 600,
                 }}
               >
-                Kısa Linklerim
+                {isAdmin ? 'Kısa Linkler' : 'Kısa Linklerim'}
               </Typography>
               <Typography 
                 variant="body2" 
@@ -200,7 +205,10 @@ export default function ShortLinksPage() {
                   fontSize: '12px',
                 }}
               >
-                Oluşturduğunuz kısa linkleri görüntüleyin ve IP tabanlı istatistiklerini kontrol edin.
+                {isAdmin 
+                  ? 'Tüm kullanıcıların kısa linklerini görüntüleyin ve IP tabanlı istatistiklerini kontrol edin.'
+                  : 'Oluşturduğunuz kısa linkleri görüntüleyin ve IP tabanlı istatistiklerini kontrol edin.'
+                }
               </Typography>
             </Box>
             <Button
@@ -254,6 +262,9 @@ export default function ShortLinksPage() {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
+                      {isAdmin && (
+                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
+                      )}
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kısa Link</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Orijinal URL</TableCell>
                       <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Toplam Tıklama</TableCell>
@@ -265,6 +276,24 @@ export default function ShortLinksPage() {
                   <TableBody>
                     {shortLinks.map((link) => (
                       <TableRow key={link.id}>
+                        {isAdmin && (
+                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                            {link.user ? (
+                              <Box>
+                                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
+                                  {link.user.username}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                  {link.user.email}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                                -
+                              </Typography>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace', color: 'primary.main' }}>
