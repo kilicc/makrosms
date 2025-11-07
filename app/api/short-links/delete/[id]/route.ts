@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 
-// DELETE /api/short-links/[id] - Kısa link sil
+// DELETE /api/short-links/delete/[id] - Kısa link sil
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

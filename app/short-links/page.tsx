@@ -137,7 +137,7 @@ export default function ShortLinksPage() {
       setLoading(true);
       setError('');
       setSuccess('');
-      const response = await api.delete(`/short-links/${linkId}`);
+      const response = await api.delete(`/short-links/delete/${linkId}`);
       if (response.data.success) {
         setSuccess('Kısa link başarıyla silindi!');
         loadShortLinks();
