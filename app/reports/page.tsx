@@ -83,6 +83,8 @@ export default function SMSReportsPage() {
   const [paymentRequests, setPaymentRequests] = useState<any[]>([]);
   const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
   const [paymentRequestsError, setPaymentRequestsError] = useState('');
+  const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<any | null>(null);
+  const [paymentDetailDialogOpen, setPaymentDetailDialogOpen] = useState(false);
   
   // Bulk SMS Reports states
   const [bulkSmsReports, setBulkSmsReports] = useState<any[]>([]);
@@ -1317,183 +1319,271 @@ export default function SMSReportsPage() {
                     <CircularProgress />
                   </Box>
                 ) : stats ? (
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
-                        border: '1px solid rgba(25, 118, 210, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <People sx={{ color: 'primary.main', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Toplam Kullanıcı
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: 'primary.main' }}>
+                  <Box>
+                    {/* İstatistik Özeti */}
+                    <Paper sx={{ 
+                      p: 2, 
+                      mb: 2, 
+                      borderRadius: 2, 
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      background: mode === 'dark' 
+                        ? 'linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(220, 0, 78, 0.1) 100%)'
+                        : 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
+                      border: '1px solid rgba(25, 118, 210, 0.2)',
+                    }}>
+                      <Typography variant="h6" sx={{ fontSize: '15px', fontWeight: 600, mb: 1 }}>
+                        📊 Sistem Özeti
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                            Toplam Kullanıcı
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700 }}>
                             {stats.totalUsers || 0}
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(25, 118, 210, 0.05) 100%)',
-                        border: '1px solid rgba(33, 150, 243, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <People sx={{ color: '#2196f3', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Toplam Rehber
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#2196f3' }}>
-                            {stats.totalContacts || 0}
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                            Toplam SMS
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(56, 142, 60, 0.05) 100%)',
-                        border: '1px solid rgba(76, 175, 80, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Assessment sx={{ color: '#4caf50', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Toplam SMS
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
+                          <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700 }}>
                             {stats.totalSMS || 0}
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
-                        border: '1px solid rgba(255, 152, 0, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <BarChart sx={{ color: '#ff9800', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Bu Ay SMS
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#ff9800' }}>
-                            {stats.smsThisMonth || 0}
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                            Toplam Gelir
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.05) 0%, rgba(123, 31, 162, 0.05) 100%)',
-                        border: '1px solid rgba(156, 39, 176, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <Payment sx={{ color: '#9c27b0', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Toplam Ödeme
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#9c27b0' }}>
-                            {stats.totalPayments || 0}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(56, 142, 60, 0.05) 100%)',
-                        border: '1px solid rgba(76, 175, 80, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <AccountBalanceWallet sx={{ color: '#4caf50', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Toplam Gelir
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50' }}>
+                          <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#4caf50' }}>
                             {Number(stats.totalRevenue || 0).toLocaleString('tr-TR')} TRY
                           </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card sx={{ 
-                        borderRadius: 2, 
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, rgba(211, 47, 47, 0.05) 100%)',
-                        border: '1px solid rgba(244, 67, 54, 0.1)',
-                        transition: 'all 0.3s',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        },
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <MoneyOff sx={{ color: '#f44336', fontSize: 20 }} />
-                            <Typography variant="subtitle2" sx={{ fontSize: '12px', color: 'text.secondary' }}>
-                              Bekleyen Ödeme
-                            </Typography>
-                          </Box>
-                          <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#f44336' }}>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                            Bekleyen Ödemeler
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#f44336' }}>
                             {stats.pendingPaymentRequests || 0}
                           </Typography>
-                        </CardContent>
-                      </Card>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+
+                    {/* Detaylı İstatistik Kartları */}
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(25, 118, 210, 0.15) 0%, rgba(220, 0, 78, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(220, 0, 78, 0.1) 100%)',
+                          border: '1px solid rgba(25, 118, 210, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(25, 118, 210, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <People sx={{ color: 'primary.main', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(25, 118, 210, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Kullanıcılar
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: 'primary.main', mb: 0.5 }}>
+                              {stats.totalUsers || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Sistemdeki toplam kullanıcı sayısı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(25, 118, 210, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(25, 118, 210, 0.1) 100%)',
+                          border: '1px solid rgba(33, 150, 243, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(33, 150, 243, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <People sx={{ color: '#2196f3', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(33, 150, 243, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Rehber
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: '#2196f3', mb: 0.5 }}>
+                              {stats.totalContacts || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Tüm kullanıcıların toplam rehber sayısı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(56, 142, 60, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%)',
+                          border: '1px solid rgba(76, 175, 80, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(76, 175, 80, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <Assessment sx={{ color: '#4caf50', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(76, 175, 80, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                SMS
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: '#4caf50', mb: 0.5 }}>
+                              {stats.totalSMS || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Sistemde gönderilen toplam SMS sayısı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 193, 7, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%)',
+                          border: '1px solid rgba(255, 152, 0, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(255, 152, 0, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <BarChart sx={{ color: '#ff9800', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(255, 152, 0, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Bu Ay
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: '#ff9800', mb: 0.5 }}>
+                              {stats.smsThisMonth || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Bu ay gönderilen SMS sayısı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(123, 31, 162, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(156, 39, 176, 0.1) 0%, rgba(123, 31, 162, 0.1) 100%)',
+                          border: '1px solid rgba(156, 39, 176, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(156, 39, 176, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <Payment sx={{ color: '#9c27b0', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(156, 39, 176, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Ödemeler
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: '#9c27b0', mb: 0.5 }}>
+                              {stats.totalPayments || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Tamamlanan toplam ödeme sayısı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(56, 142, 60, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%)',
+                          border: '1px solid rgba(76, 175, 80, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(76, 175, 80, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <AccountBalanceWallet sx={{ color: '#4caf50', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(76, 175, 80, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Gelir
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 700, color: '#4caf50', mb: 0.5 }}>
+                              {Number(stats.totalRevenue || 0).toLocaleString('tr-TR')} TRY
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Toplam gelir miktarı
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card sx={{ 
+                          borderRadius: 2, 
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(211, 47, 47, 0.15) 100%)'
+                            : 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(211, 47, 47, 0.1) 100%)',
+                          border: '1px solid rgba(244, 67, 54, 0.2)',
+                          transition: 'all 0.3s',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 8px 20px rgba(244, 67, 54, 0.25)',
+                          },
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <MoneyOff sx={{ color: '#f44336', fontSize: 28 }} />
+                              <Typography variant="caption" sx={{ fontSize: '10px', color: 'text.secondary', bgcolor: 'rgba(244, 67, 54, 0.1)', px: 1, py: 0.5, borderRadius: 1 }}>
+                                Beklemede
+                              </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: '#f44336', mb: 0.5 }}>
+                              {stats.pendingPaymentRequests || 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                              Onay bekleyen ödeme talepleri
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
                     </Grid>
-                  </Grid>
+                  </Box>
                 ) : (
                   <Paper sx={{ p: 2, borderRadius: 2, textAlign: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
@@ -1717,100 +1807,390 @@ export default function SMSReportsPage() {
                     </Typography>
                   </Paper>
                 ) : (
-                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {paymentRequests.map((request) => {
-                          const getStatusColor = (status: string) => {
-                            switch (status) {
-                              case 'approved':
-                                return 'success';
-                              case 'rejected':
-                                return 'error';
-                              case 'pending':
-                                return 'warning';
-                              default:
-                                return 'default';
-                            }
-                          };
+                  <Box>
+                    {/* Ödeme Özeti */}
+                    {(() => {
+                      const totalAmount = paymentRequests.reduce((sum, req) => sum + Number(req.amount || 0), 0);
+                      const approvedAmount = paymentRequests.filter(r => r.status === 'approved').reduce((sum, req) => sum + Number(req.amount || 0), 0);
+                      const pendingCount = paymentRequests.filter(r => r.status === 'pending').length;
+                      const approvedCount = paymentRequests.filter(r => r.status === 'approved').length;
+                      const rejectedCount = paymentRequests.filter(r => r.status === 'rejected').length;
+                      
+                      return (
+                        <Paper sx={{ 
+                          p: 2, 
+                          mb: 2, 
+                          borderRadius: 2, 
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          background: mode === 'dark' 
+                            ? 'linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(220, 0, 78, 0.1) 100%)'
+                            : 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
+                          border: '1px solid rgba(25, 118, 210, 0.2)',
+                        }}>
+                          <Typography variant="h6" sx={{ fontSize: '15px', fontWeight: 600, mb: 1.5 }}>
+                            💰 Ödeme Özeti
+                          </Typography>
+                          <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Toplam Tutar
+                              </Typography>
+                              <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700 }}>
+                                {Number(totalAmount).toLocaleString('tr-TR')} TRY
+                              </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Onaylanan Tutar
+                              </Typography>
+                              <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#4caf50' }}>
+                                {Number(approvedAmount).toLocaleString('tr-TR')} TRY
+                              </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Beklemede
+                              </Typography>
+                              <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#ff9800' }}>
+                                {pendingCount}
+                              </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Onaylandı
+                              </Typography>
+                              <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#4caf50' }}>
+                                {approvedCount}
+                              </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Reddedildi
+                              </Typography>
+                              <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, color: '#f44336' }}>
+                                {rejectedCount}
+                              </Typography>
+                            </Grid>
+                          </Grid>
+                        </Paper>
+                      );
+                    })()}
 
-                          const getStatusLabel = (status: string) => {
-                            switch (status) {
-                              case 'approved':
-                                return 'Onaylandı';
-                              case 'rejected':
-                                return 'Reddedildi';
-                              case 'pending':
-                                return 'Beklemede';
-                              default:
-                                return status;
-                            }
-                          };
+                    {/* Ödeme Tablosu */}
+                    <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tutar</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kredi</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Ödeme Yöntemi</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Transaction ID</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>İşlem</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {paymentRequests.map((request) => {
+                            const getStatusColor = (status: string) => {
+                              switch (status) {
+                                case 'approved':
+                                  return 'success';
+                                case 'rejected':
+                                  return 'error';
+                                case 'pending':
+                                  return 'warning';
+                                default:
+                                  return 'default';
+                              }
+                            };
 
-                          return (
-                            <TableRow key={request.id} sx={{ '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }}>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <Box>
+                            const getStatusLabel = (status: string) => {
+                              switch (status) {
+                                case 'approved':
+                                  return 'Onaylandı';
+                                case 'rejected':
+                                  return 'Reddedildi';
+                                case 'pending':
+                                  return 'Beklemede';
+                                default:
+                                  return status;
+                              }
+                            };
+
+                            return (
+                              <TableRow 
+                                key={request.id} 
+                                sx={{ 
+                                  '&:hover': { bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => {
+                                  setSelectedPaymentRequest(request);
+                                  setPaymentDetailDialogOpen(true);
+                                }}
+                              >
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
+                                      {request.user?.username || '-'}
+                                    </Typography>
+                                    {request.user?.email && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                        {request.user.email}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
                                   <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
-                                    {request.user?.username || '-'}
+                                    {Number(request.amount).toLocaleString('tr-TR')} {request.currency || 'TRY'}
                                   </Typography>
-                                  {request.user?.email && (
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {request.paymentMethod || '-'}
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  {request.transactionId ? (
+                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {request.transactionId}
+                                    </Typography>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Chip
+                                    label={getStatusLabel(request.status)}
+                                    color={getStatusColor(request.status)}
+                                    size="small"
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      fontWeight: 500,
+                                      height: 20,
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <ClientDate date={request.createdAt} />
+                                </TableCell>
+                                <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPaymentRequest(request);
+                                      setPaymentDetailDialogOpen(true);
+                                    }}
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      textTransform: 'none',
+                                      py: 0.25,
+                                      px: 1,
+                                    }}
+                                  >
+                                    Detay
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    {/* Ödeme Detayları Dialog */}
+                    <Dialog
+                      open={paymentDetailDialogOpen}
+                      onClose={() => {
+                        setPaymentDetailDialogOpen(false);
+                        setSelectedPaymentRequest(null);
+                      }}
+                      maxWidth="md"
+                      fullWidth
+                    >
+                      <DialogTitle sx={{ pb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
+                            💳 Ödeme Detayları
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setPaymentDetailDialogOpen(false);
+                              setSelectedPaymentRequest(null);
+                            }}
+                          >
+                            <Close />
+                          </IconButton>
+                        </Box>
+                      </DialogTitle>
+                      <DialogContent>
+                        {selectedPaymentRequest && (
+                          <Box>
+                            <Grid container spacing={2}>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Kullanıcı
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                    {selectedPaymentRequest.user?.username || '-'}
+                                  </Typography>
+                                  {selectedPaymentRequest.user?.email && (
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
-                                      {request.user.email}
+                                      {selectedPaymentRequest.user.email}
                                     </Typography>
                                   )}
-                                </Box>
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <Typography variant="body2" sx={{ fontSize: '12px', fontWeight: 500 }}>
-                                  {Number(request.amount)} {request.currency || 'TRY'}
-                                </Typography>
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                {request.credits} SMS {request.bonus > 0 ? `+ ${request.bonus} bonus` : ''}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                {request.paymentMethod || '-'}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                {request.transactionId ? (
-                                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.65rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {request.transactionId}
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Durum
                                   </Typography>
-                                ) : '-'}
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <Chip
-                                  label={getStatusLabel(request.status)}
-                                  color={getStatusColor(request.status)}
-                                  size="small"
-                                  sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: 500,
-                                    height: 20,
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                                <ClientDate date={request.createdAt} />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                                  <Box sx={{ mt: 0.5 }}>
+                                    <Chip
+                                      label={selectedPaymentRequest.status === 'approved' ? 'Onaylandı' : selectedPaymentRequest.status === 'rejected' ? 'Reddedildi' : 'Beklemede'}
+                                      color={selectedPaymentRequest.status === 'approved' ? 'success' : selectedPaymentRequest.status === 'rejected' ? 'error' : 'warning'}
+                                      size="small"
+                                      sx={{ fontSize: '0.7rem', height: 22 }}
+                                    />
+                                  </Box>
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Tutar
+                                  </Typography>
+                                  <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 700, mt: 0.5, color: '#4caf50' }}>
+                                    {Number(selectedPaymentRequest.amount).toLocaleString('tr-TR')} {selectedPaymentRequest.currency || 'TRY'}
+                                  </Typography>
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Kredi
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                    {selectedPaymentRequest.credits} SMS {selectedPaymentRequest.bonus > 0 ? `+ ${selectedPaymentRequest.bonus} bonus` : ''}
+                                  </Typography>
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Ödeme Yöntemi
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                    {selectedPaymentRequest.paymentMethod || '-'}
+                                  </Typography>
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Transaction ID
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace', mt: 0.5, wordBreak: 'break-all' }}>
+                                    {selectedPaymentRequest.transactionId || '-'}
+                                  </Typography>
+                                </Paper>
+                              </Grid>
+                              <Grid size={{ xs: 12, sm: 6 }}>
+                                <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    Oluşturulma Tarihi
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                    <ClientDate date={selectedPaymentRequest.createdAt} />
+                                  </Typography>
+                                </Paper>
+                              </Grid>
+                              {selectedPaymentRequest.approvedAt && (
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                  <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                      Onaylanma Tarihi
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                      <ClientDate date={selectedPaymentRequest.approvedAt} />
+                                    </Typography>
+                                  </Paper>
+                                </Grid>
+                              )}
+                              {selectedPaymentRequest.rejectedAt && (
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                  <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                      Reddedilme Tarihi
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 500, mt: 0.5 }}>
+                                      <ClientDate date={selectedPaymentRequest.rejectedAt} />
+                                    </Typography>
+                                  </Paper>
+                                </Grid>
+                              )}
+                              {selectedPaymentRequest.description && (
+                                <Grid size={{ xs: 12 }}>
+                                  <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                      Açıklama
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', mt: 0.5 }}>
+                                      {selectedPaymentRequest.description}
+                                    </Typography>
+                                  </Paper>
+                                </Grid>
+                              )}
+                              {selectedPaymentRequest.adminNotes && (
+                                <Grid size={{ xs: 12 }}>
+                                  <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(25, 118, 210, 0.1)' : 'rgba(25, 118, 210, 0.05)' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                      Admin Notları
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', mt: 0.5 }}>
+                                      {selectedPaymentRequest.adminNotes}
+                                    </Typography>
+                                  </Paper>
+                                </Grid>
+                              )}
+                              {selectedPaymentRequest.rejectionReason && (
+                                <Grid size={{ xs: 12 }}>
+                                  <Paper sx={{ p: 1.5, borderRadius: 1.5, bgcolor: mode === 'dark' ? 'rgba(244, 67, 54, 0.1)' : 'rgba(244, 67, 54, 0.05)' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                      Red Nedeni
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', mt: 0.5, color: '#f44336' }}>
+                                      {selectedPaymentRequest.rejectionReason}
+                                    </Typography>
+                                  </Paper>
+                                </Grid>
+                              )}
+                            </Grid>
+                          </Box>
+                        )}
+                      </DialogContent>
+                      <DialogActions sx={{ p: 1.5 }}>
+                        <Button
+                          onClick={() => {
+                            setPaymentDetailDialogOpen(false);
+                            setSelectedPaymentRequest(null);
+                          }}
+                          variant="outlined"
+                          size="small"
+                          sx={{ borderRadius: 1.5, textTransform: 'none', fontSize: '12px' }}
+                        >
+                          Kapat
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+                  </Box>
                 )}
               </Box>
             )}
