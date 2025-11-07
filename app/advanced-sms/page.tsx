@@ -734,7 +734,8 @@ export default function AdvancedSMSPage() {
                                           });
                                           if (response.data.success) {
                                             const shortCode = response.data.data.shortLink.short_code;
-                                            const shortLink = `${window.location.origin}/s/${shortCode}`;
+                                            const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
+                                            const shortLink = `https://${shortLinkDomain}/${shortCode}`;
                                             setMessage(message + ' ' + shortLink);
                                             setSuccess('Kısa link oluşturuldu ve mesaja eklendi!');
                                             setShortLinkUrl('');

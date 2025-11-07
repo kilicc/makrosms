@@ -77,6 +77,32 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
+  // Kısa link subdomain (go.finsms.io)
+  if (subdomain === 'go') {
+    // API route'ları ve Next.js internal route'ları hariç tut
+    if (url.pathname.startsWith('/api') || url.pathname.startsWith('/_next')) {
+      return NextResponse.next();
+    }
+    
+    // Root path'e gidiyorsa ana sayfaya yönlendir
+    if (url.pathname === '/') {
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+    
+    // Kısa kod path'i (/[shortCode]) - API'ye yönlendir
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    if (pathParts.length === 1 && pathParts[0] && !pathParts[0].includes('.')) {
+      // Kısa kod gibi görünüyor, API'ye yönlendir
+      const shortCode = pathParts[0];
+      url.pathname = `/api/short-links/${shortCode}`;
+      return NextResponse.rewrite(url);
+    }
+    
+    // Diğer path'ler için normal çalış
+    return NextResponse.next();
+  }
+  
   // Localhost geliştirme için (subdomain yoksa)
   if (subdomain === 'localhost' || subdomain === '127.0.0.1') {
     // Geliştirme ortamında normal çalış

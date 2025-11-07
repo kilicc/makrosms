@@ -96,11 +96,11 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // Benzersiz kısa kod oluştur
+    // Benzersiz kısa kod oluştur (4 karakter - daha kısa linkler için)
     const generateShortCode = (): string => {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let code = '';
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 4; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return code;

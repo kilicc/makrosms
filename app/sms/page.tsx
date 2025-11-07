@@ -287,14 +287,14 @@ export default function SMSInterfacePage() {
                                       });
                                       if (response.data.success) {
                                         const shortCode = response.data.data.shortLink.short_code;
-                                        const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || window.location.origin;
+                                        const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
                                         const normalizedDomain = shortLinkDomain.startsWith('http')
                                           ? shortLinkDomain
                                           : `https://${shortLinkDomain}`;
                                         const normalizedBase = normalizedDomain.endsWith('/')
                                           ? normalizedDomain.slice(0, -1)
                                           : normalizedDomain;
-                                        const shortLink = `${normalizedBase}/s/${shortCode}`;
+                                        const shortLink = `${normalizedBase}/${shortCode}`;
                                         
                                         // Dialog'u aç ve oluşturulan linki göster
                                         setCreatedShortLink({
@@ -531,7 +531,7 @@ export default function SMSInterfacePage() {
                 </Box>
 
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', fontSize: '11px', fontStyle: 'italic', textAlign: 'center' }}>
-                  Your links will be shortened via <strong>urlci.com</strong> address.
+                  Your links will be shortened via <strong>go.finsms.io</strong> address.
                 </Typography>
               </Box>
             )}
