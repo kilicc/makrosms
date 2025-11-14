@@ -1978,22 +1978,61 @@ export default function AdminDashboardPage() {
                 <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
                   API Kullanıcıları
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setCreateApiKeyDialogOpen(true)}
-                  sx={{
-                    background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
-                    borderRadius: 1.5,
-                    padding: '6px 16px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    textTransform: 'none',
-                  }}
-                >
-                  Yeni API Key Oluştur
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Assessment />}
+                    onClick={async () => {
+                      try {
+                        setLoadingApiKeys(true);
+                        setError('');
+                        const response = await api.post('/admin/test-api');
+                        if (response.data.success) {
+                          const testData = response.data.data;
+                          setSuccess(
+                            `API testleri tamamlandı! ${testData.summary.success}/${testData.summary.total} test başarılı (${testData.summary.successRate}%)`
+                          );
+                          // Test sonuçlarını göster
+                          console.log('Test Results:', testData.tests);
+                          // API key listesini yenile
+                          loadApiKeys();
+                        } else {
+                          setError(response.data.message || 'API testleri çalıştırılamadı');
+                        }
+                      } catch (err: any) {
+                        setError(err.response?.data?.message || 'API testleri çalıştırılırken bir hata oluştu');
+                      } finally {
+                        setLoadingApiKeys(false);
+                      }
+                    }}
+                    disabled={loadingApiKeys}
+                    sx={{
+                      borderRadius: 1.5,
+                      padding: '6px 16px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'none',
+                    }}
+                  >
+                    API Testleri Çalıştır
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setCreateApiKeyDialogOpen(true)}
+                    sx={{
+                      background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+                      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                      borderRadius: 1.5,
+                      padding: '6px 16px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'none',
+                    }}
+                  >
+                    Yeni API Key Oluştur
+                  </Button>
+                </Box>
               </Box>
 
               {loadingApiKeys ? (
