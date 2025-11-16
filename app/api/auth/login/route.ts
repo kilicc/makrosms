@@ -23,7 +23,26 @@ export async function POST(request: NextRequest) {
       .or(`username.eq.${login},email.eq.${login}`)
       .limit(1);
 
-    if (findError || !users || users.length === 0) {
+    if (findError) {
+      console.error('Login - Kullanıcı arama hatası:', {
+        error: findError.message,
+        code: findError.code,
+        details: findError.details,
+        hint: findError.hint,
+      });
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Giriş hatası. Lütfen daha sonra tekrar deneyin.',
+          error: process.env.NODE_ENV === 'development' ? findError.message : undefined,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!users || users.length === 0) {
+      // Güvenlik için aynı mesajı döndür (kullanıcı adı veya şifre hatalı)
       return NextResponse.json(
         { success: false, message: 'Kullanıcı adı veya şifre hatalı' },
         { status: 401 }
@@ -32,10 +51,28 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
 
+    // Password hash kontrolü
+    if (!user.password_hash) {
+      console.error('Login - Kullanıcının password_hash alanı boş:', {
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+      });
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Kullanıcı hesabında sorun var. Lütfen yönetici ile iletişime geçin.',
+        },
+        { status: 500 }
+      );
+    }
+
     // Verify password
     const isValidPassword = await verifyPassword(password, user.password_hash);
 
     if (!isValidPassword) {
+      // Güvenlik için aynı mesajı döndür (kullanıcı adı veya şifre hatalı)
       return NextResponse.json(
         { success: false, message: 'Kullanıcı adı veya şifre hatalı' },
         { status: 401 }
@@ -87,9 +124,19 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('Login error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
+    // Güvenlik için generic hata mesajı döndür
     return NextResponse.json(
-      { success: false, message: error.message || 'Giriş hatası' },
+      { 
+        success: false, 
+        message: 'Giriş hatası. Lütfen daha sonra tekrar deneyin.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      },
       { status: 500 }
     );
   }

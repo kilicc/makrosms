@@ -20,6 +20,7 @@
     "docs:pdf": "node scripts/generate-pdf.js",
     "test:db": "tsx scripts/test-db-connection.ts",
     "test:supabase": "tsx scripts/test-supabase-connection.ts",
+    "test:login": "tsx scripts/test-login.ts",
     "setup:supabase": "tsx scripts/setup-supabase-tables.ts",
     "create:supabase": "tsx scripts/create-supabase-tables.ts",
     "create:admin": "tsx scripts/create-admin-user-supabase.ts",
