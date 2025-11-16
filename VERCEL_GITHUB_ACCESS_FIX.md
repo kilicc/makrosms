@@ -13,7 +13,7 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
 ### Yöntem 1: GitHub Repository'yi Public Yapmak (En Kolay)
 
 1. **GitHub Repository'ye gidin:**
-   - https://github.com/kilicc/finsms2
+   - https://github.com/kilicc/makrosms2
    
 2. **Settings** → **General** → **Danger Zone**
    
@@ -52,7 +52,7 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
 
 ### Yöntem 4: GitHub Repository'ye Erişim İzni Vermek
 
-1. **GitHub Repository** → https://github.com/kilicc/finsms2
+1. **GitHub Repository** → https://github.com/kilicc/makrosms2
    
 2. **Settings** → **Collaborators** (veya **Access**)
    
@@ -76,7 +76,7 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
 
 3. **Proje klasöründe deploy edin:**
    ```bash
-   cd /Users/pro/Desktop/finsms
+   cd /Users/pro/Desktop/makrosms
    vercel
    ```
 
@@ -84,7 +84,7 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
    - **Set up and deploy?** → `Y`
    - **Which scope?** → Hesabınızı seçin
    - **Link to existing project?** → `N`
-   - **Project name?** → `finsms2` veya istediğiniz isim
+   - **Project name?** → `makrosms2` veya istediğiniz isim
    - **Directory?** → `./` (kök dizin)
    - **Override settings?** → `N`
 
@@ -106,7 +106,7 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
    
 2. **Mevcut projeyi yeni repository'ye push edin:**
    ```bash
-   git remote set-url origin https://github.com/YOUR_USERNAME/finsms2.git
+   git remote set-url origin https://github.com/YOUR_USERNAME/makrosms2.git
    git push -u origin main
    ```
 
@@ -138,5 +138,5 @@ Bu hata, Vercel'in GitHub repository'nize erişim izni olmadığını veya GitHu
 
 - [Vercel Dashboard](https://vercel.com/dashboard)
 - [Vercel CLI Docs](https://vercel.com/docs/cli)
-- [GitHub Repository Settings](https://github.com/kilicc/finsms2/settings)
+- [GitHub Repository Settings](https://github.com/kilicc/makrosms2/settings)
 

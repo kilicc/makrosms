@@ -1,10 +1,10 @@
 # Nginx Configuration for VPS Deployment
-# Dosya adı: /etc/nginx/sites-available/finsms
+# Dosya adı: /etc/nginx/sites-available/makrosms
 
-# Admin Panel - panel.finsms.io
+# Admin Panel - makrosms.com
 server {
     listen 80;
-    server_name panel.finsms.io;
+    server_name makrosms.com;
 
     # Let's Encrypt için geçici
     location /.well-known/acme-challenge/ {
@@ -29,10 +29,10 @@ server {
     }
 }
 
-# User Platform - platform.finsms.io
+# User Platform - makrosms.com
 server {
     listen 80;
-    server_name platform.finsms.io;
+    server_name makrosms.com;
 
     # Let's Encrypt için geçici
     location /.well-known/acme-challenge/ {

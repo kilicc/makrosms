@@ -12,7 +12,7 @@ ssh root@YOUR_VPS_IP
 
 ```bash
 # Tüm gerekli yazılımları kur
-curl -fsSL https://raw.githubusercontent.com/kilicc/finsms2/main/vps-setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kilicc/makrosms2/main/vps-setup.sh | bash
 ```
 
 **Manuel kurulum için:**
@@ -36,12 +36,12 @@ sudo apt install git -y
 
 ```bash
 # Proje klasörü
-sudo mkdir -p /var/www/finsms
-sudo chown -R $USER:$USER /var/www/finsms
-cd /var/www/finsms
+sudo mkdir -p /var/www/makrosms
+sudo chown -R $USER:$USER /var/www/makrosms
+cd /var/www/makrosms
 
 # Repository'den clone
-git clone https://github.com/kilicc/finsms2.git .
+git clone https://github.com/kilicc/makrosms2.git .
 
 # .env dosyası oluştur
 nano .env
@@ -57,11 +57,11 @@ npm run build
 
 ```bash
 # PM2 ecosystem dosyasını kopyala
-cp ecosystem.config.js /var/www/finsms/
+cp ecosystem.config.js /var/www/makrosms/
 
 # Log klasörü
-sudo mkdir -p /var/log/finsms
-sudo chown -R $USER:$USER /var/log/finsms
+sudo mkdir -p /var/log/makrosms
+sudo chown -R $USER:$USER /var/log/makrosms
 
 # PM2 başlat
 pm2 start ecosystem.config.js
@@ -73,11 +73,11 @@ pm2 startup
 
 ```bash
 # Nginx config dosyasını oluştur
-sudo nano /etc/nginx/sites-available/finsms
+sudo nano /etc/nginx/sites-available/makrosms
 # (nginx.conf.example içeriğini kopyala)
 
 # Aktif et
-sudo ln -s /etc/nginx/sites-available/finsms /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/makrosms /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -105,7 +105,7 @@ TTL: 3600
 sudo apt install certbot python3-certbot-nginx -y
 
 # SSL oluştur
-sudo certbot --nginx -d panel.finsms.io -d platform.finsms.io
+sudo certbot --nginx -d makrosms.com -d makrosms.com
 ```
 
 ### 8. Firewall
@@ -120,7 +120,7 @@ sudo ufw enable
 ## 🔄 Güncelleme
 
 ```bash
-cd /var/www/finsms
+cd /var/www/makrosms
 ./deploy.sh
 ```
 
@@ -136,13 +136,13 @@ curl http://localhost:3000/api/health
 
 ```bash
 # Loglar
-pm2 logs finsms
+pm2 logs makrosms
 sudo tail -f /var/log/nginx/error.log
 
 # Nginx test
 sudo nginx -t
 
 # PM2 restart
-pm2 restart finsms
+pm2 restart makrosms
 ```
 

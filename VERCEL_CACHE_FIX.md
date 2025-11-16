@@ -8,7 +8,7 @@ Vercel'de redeploy yaptığınızda değişiklikler görünmüyor.
 ### 1️⃣ Vercel Dashboard'dan (En Kolay)
 
 1. **Vercel Dashboard** → https://vercel.com/dashboard
-2. **Projenizi seçin** → `finsms2`
+2. **Projenizi seçin** → `makrosms2`
 3. **Deployments** sekmesine gidin
 4. **Son deployment'ın yanındaki ⋮ (3 nokta)** butonuna tıklayın
 5. **"Redeploy" değil, "Clear Cache and Redeploy" seçin**

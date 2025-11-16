@@ -8,7 +8,7 @@ set -e
 echo "🚀 FinsMS Deployment Başlatılıyor..."
 
 # Proje dizini
-PROJECT_DIR="/var/www/finsms"
+PROJECT_DIR="/var/www/makrosms"
 cd $PROJECT_DIR
 
 echo "📦 Git'ten güncelleme çekiliyor..."
@@ -24,12 +24,12 @@ echo "🏗️ Production build oluşturuluyor..."
 npm run build
 
 echo "🔄 PM2 restart ediliyor..."
-pm2 restart finsms
+pm2 restart makrosms
 
 echo "✅ Deployment tamamlandı!"
 echo "📊 PM2 durumu:"
 pm2 status
 
 echo "📝 Son loglar:"
-pm2 logs finsms --lines 20 --nostream
+pm2 logs makrosms --lines 20 --nostream
 

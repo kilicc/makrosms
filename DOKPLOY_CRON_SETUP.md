@@ -9,7 +9,7 @@ Dokploy'da **"Schedules"** sekmesi ile cron job'ları kurabilirsiniz!
 Dokploy'un kendi cron job özelliğini kullanın:
 
 1. **Dokploy Dashboard'a gidin**
-2. **Projenizi seçin** (`finsms` → `production` → `v1`)
+2. **Projenizi seçin** (`makrosms` → `production` → `v1`)
 3. **"Schedules"** sekmesine tıklayın
 4. **"Add Schedule"** butonuna tıklayın
 
@@ -20,7 +20,7 @@ Dokploy'un kendi cron job özelliğini kullanın:
 - **Description**: `Gönderilen SMS'lerin durumunu CepSMS API'den kontrol eder`
 - **Schedule**: `*/5 * * * *` (Her 5 dakikada bir)
 - **Method**: `POST`
-- **URL**: `https://panel.finsms.io/api/sms/check-status`
+- **URL**: `https://makrosms.com/api/sms/check-status`
 - **Headers**:
   ```
   x-secret-key: YOUR_CRON_SECRET_KEY
@@ -35,7 +35,7 @@ Dokploy'un kendi cron job özelliğini kullanın:
 - **Description**: `48 saat önce oluşturulan beklemede iadeleri işler`
 - **Schedule**: `0 * * * *` (Her saat başı)
 - **Method**: `POST`
-- **URL**: `https://panel.finsms.io/api/refunds/process-auto`
+- **URL**: `https://makrosms.com/api/refunds/process-auto`
 - **Headers**:
   ```
   x-secret-key: YOUR_CRON_SECRET_KEY
@@ -51,7 +51,7 @@ Sunucuya SSH ile bağlanın ve şu komutu çalıştırın:
 
 ```bash
 # Proje dizinine git
-cd /var/www/finsms
+cd /var/www/makrosms
 
 # Cron job kurulum script'ini çalıştır
 bash scripts/setup-dokploy-cron.sh
@@ -69,7 +69,7 @@ Sunucuya SSH ile bağlanın:
 
 ```bash
 # Proje dizinine git
-cd /var/www/finsms
+cd /var/www/makrosms
 
 # .env dosyasına CRON_SECRET_KEY ekle (yoksa)
 if ! grep -q "CRON_SECRET_KEY" .env; then
@@ -80,8 +80,8 @@ fi
 CRON_SECRET_KEY=$(grep "CRON_SECRET_KEY" .env | cut -d '=' -f2 | tr -d ' ' | tr -d '"')
 
 # Log klasörü oluştur
-sudo mkdir -p /var/log/finsms
-sudo chown -R $USER:$USER /var/log/finsms
+sudo mkdir -p /var/log/makrosms
+sudo chown -R $USER:$USER /var/log/makrosms
 
 # Cron job'ları ekle
 crontab -e
@@ -91,10 +91,10 @@ Aşağıdaki satırları ekleyin:
 
 ```cron
 # SMS Durum Kontrolü (Her 5 dakikada bir)
-*/5 * * * * curl -X POST https://panel.finsms.io/api/sms/check-status -H "x-secret-key: YOUR_CRON_SECRET_KEY" -H "Content-Type: application/json" -s -o /dev/null
+*/5 * * * * curl -X POST https://makrosms.com/api/sms/check-status -H "x-secret-key: YOUR_CRON_SECRET_KEY" -H "Content-Type: application/json" -s -o /dev/null
 
 # Otomatik İade İşleme (Her saat başı)
-0 * * * * curl -X POST https://panel.finsms.io/api/refunds/process-auto -H "x-secret-key: YOUR_CRON_SECRET_KEY" -H "Content-Type: application/json" -s -o /dev/null
+0 * * * * curl -X POST https://makrosms.com/api/refunds/process-auto -H "x-secret-key: YOUR_CRON_SECRET_KEY" -H "Content-Type: application/json" -s -o /dev/null
 ```
 
 **Not:** `YOUR_CRON_SECRET_KEY` yerine `.env` dosyasındaki `CRON_SECRET_KEY` değerini kullanın.
@@ -111,7 +111,7 @@ Dokploy'da cron job özelliği yoksa, harici bir cron servisi kullanabilirsiniz:
 
 **SMS Durum Kontrolü:**
 - **Title**: SMS Durum Kontrolü
-- **Address**: `https://panel.finsms.io/api/sms/check-status`
+- **Address**: `https://makrosms.com/api/sms/check-status`
 - **Schedule**: Her 5 dakikada bir
 - **Request Method**: POST
 - **Request Headers**:
@@ -122,7 +122,7 @@ Dokploy'da cron job özelliği yoksa, harici bir cron servisi kullanabilirsiniz:
 
 **Otomatik İade:**
 - **Title**: Otomatik İade İşleme
-- **Address**: `https://panel.finsms.io/api/refunds/process-auto`
+- **Address**: `https://makrosms.com/api/refunds/process-auto`
 - **Schedule**: Her saat başı
 - **Request Method**: POST
 - **Request Headers**:
@@ -164,20 +164,20 @@ crontab -l
 Çıktı şöyle olmalı:
 
 ```
-*/5 * * * * curl -X POST https://panel.finsms.io/api/sms/check-status -H "x-secret-key: ..." ...
-0 * * * * curl -X POST https://panel.finsms.io/api/refunds/process-auto -H "x-secret-key: ..." ...
+*/5 * * * * curl -X POST https://makrosms.com/api/sms/check-status -H "x-secret-key: ..." ...
+0 * * * * curl -X POST https://makrosms.com/api/refunds/process-auto -H "x-secret-key: ..." ...
 ```
 
 ### 2. Manuel Test
 
 ```bash
 # SMS durum kontrolü test
-curl -X POST https://panel.finsms.io/api/sms/check-status \
+curl -X POST https://makrosms.com/api/sms/check-status \
   -H "x-secret-key: YOUR_CRON_SECRET_KEY" \
   -H "Content-Type: application/json"
 
 # Otomatik iade test
-curl -X POST https://panel.finsms.io/api/refunds/process-auto \
+curl -X POST https://makrosms.com/api/refunds/process-auto \
   -H "x-secret-key: YOUR_CRON_SECRET_KEY" \
   -H "Content-Type: application/json"
 ```
@@ -202,10 +202,10 @@ Başarılı yanıt:
 
 ```bash
 # Log dosyasını izle
-tail -f /var/log/finsms/cron.log
+tail -f /var/log/makrosms/cron.log
 
 # Son 50 satırı göster
-tail -n 50 /var/log/finsms/cron.log
+tail -n 50 /var/log/makrosms/cron.log
 ```
 
 ## 📊 Cron Job Çalışma Zamanları
@@ -240,12 +240,12 @@ tail -n 50 /var/log/finsms/cron.log
 
 3. **Log dosyasını kontrol edin:**
    ```bash
-   tail -f /var/log/finsms/cron.log
+   tail -f /var/log/makrosms/cron.log
    ```
 
 4. **Manuel test yapın:**
    ```bash
-   curl -X POST https://panel.finsms.io/api/sms/check-status \
+   curl -X POST https://makrosms.com/api/sms/check-status \
      -H "x-secret-key: YOUR_CRON_SECRET_KEY" \
      -H "Content-Type: application/json"
    ```
@@ -258,7 +258,7 @@ tail -n 50 /var/log/finsms/cron.log
 
 ### Endpoint Bulunamadı Hatası
 
-- Domain doğru mu kontrol edin (`https://panel.finsms.io`)
+- Domain doğru mu kontrol edin (`https://makrosms.com`)
 - API route'ları deploy edildi mi kontrol edin
 - Health check endpoint'ini test edin: `/api/health`
 
@@ -279,7 +279,7 @@ sudo yum install curl
 - Cron job'lar opsiyonel olarak `CRON_SECRET_KEY` ile korunabilir
 - Eğer `CRON_SECRET_KEY` tanımlı değilse, cron job'lar çalışmaya devam eder (güvenlik riski)
 - Production'da mutlaka `CRON_SECRET_KEY` kullanın
-- Log dosyaları `/var/log/finsms/cron.log` konumunda saklanır
+- Log dosyaları `/var/log/makrosms/cron.log` konumunda saklanır
 - Cron job'lar Docker container içinde çalışmıyorsa, host sunucuda kurulmalıdır
 
 ## 🐳 Docker Container İçinde Cron Job

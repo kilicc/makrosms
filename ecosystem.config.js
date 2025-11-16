@@ -1,17 +1,17 @@
 module.exports = {
   apps: [{
-    name: 'finsms',
+    name: 'makrosms',
     script: 'npm',
     args: 'start',
-    cwd: '/var/www/finsms',
+    cwd: '/var/www/makrosms',
     instances: 2,
     exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
       PORT: 3000
     },
-    error_file: '/var/log/finsms/error.log',
-    out_file: '/var/log/finsms/out.log',
+    error_file: '/var/log/makrosms/error.log',
+    out_file: '/var/log/makrosms/out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     autorestart: true,

@@ -27,7 +27,7 @@ Gelişmiş SMS Doğrulama Sistemi - Next.js 16, React 19, TypeScript, Prisma, Su
 
 ```bash
 git clone <repository-url>
-cd finsms
+cd makrosms
 ```
 
 ### 2. Bağımlılıkları yükleyin
@@ -95,7 +95,7 @@ Uygulama [http://localhost:3000](http://localhost:3000) adresinde çalışacakt�
 ## 📁 Proje Yapısı
 
 ```
-finsms/
+makrosms/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API Routes
 │   │   ├── auth/          # Authentication endpoints
@@ -208,7 +208,7 @@ Proje Vercel'e deploy edilmeye hazırdır. Detaylı bilgi için `VERCEL_DEPLOY.m
 ### Hızlı Deploy
 
 1. [Vercel Dashboard](https://vercel.com/dashboard) açın
-2. GitHub repository'yi import edin: `https://github.com/kilicc/finsms2.git`
+2. GitHub repository'yi import edin: `https://github.com/kilicc/makrosms2.git`
 3. Environment variables'ları ekleyin (`.env.example` dosyasına bakın)
 4. Deploy butonuna tıklayın
 

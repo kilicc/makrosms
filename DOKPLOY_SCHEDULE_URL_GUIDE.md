@@ -16,7 +16,7 @@ Dokploy Schedule'larda hangi URL'yi kullanmalısınız?
 curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/json" http://localhost:3000/api/sms/check-status
 ```
 
-## ❌ Yanlış: `https://panel.finsms.io` (Önerilmez)
+## ❌ Yanlış: `https://makrosms.com` (Önerilmez)
 
 **Neden kullanılmamalı?**
 - Dışarıdan çağrı yapılır (gereksiz network trafiği)
@@ -54,7 +54,7 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
 
 ## 📊 Karşılaştırma
 
-| Özellik | `localhost:3000` | `https://panel.finsms.io` |
+| Özellik | `localhost:3000` | `https://makrosms.com` |
 |---------|------------------|--------------------------|
 | **Hız** | ⚡ Çok hızlı (local) | 🐌 Yavaş (network) |
 | **Güvenlik** | 🔒 Güvenli (local) | ⚠️ Dışarıdan erişim |
@@ -92,18 +92,18 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
 
 3. **Alternatif (sadece gerekirse):**
    - Container network'ünde service name kullanın
-   - Örnek: `http://finsms:3000` (Dokploy service name)
+   - Örnek: `http://makrosms:3000` (Dokploy service name)
 
 ### Harici Cron Servisi Kullanıyorsanız:
 
 Eğer Dokploy Schedule değil, harici bir servis (cron-job.org) kullanıyorsanız:
-- ✅ `https://panel.finsms.io` kullanın
+- ✅ `https://makrosms.com` kullanın
 - ✅ SSL sertifikası gerekli
 - ✅ Dışarıdan erişim yapılır
 
 ## 📝 Özet
 
 - ✅ **Dokploy Schedule**: `http://localhost:3000`
-- ❌ **Dokploy Schedule**: `https://panel.finsms.io` (kullanmayın)
-- ✅ **Harici Cron Servisi**: `https://panel.finsms.io`
+- ❌ **Dokploy Schedule**: `https://makrosms.com` (kullanmayın)
+- ✅ **Harici Cron Servisi**: `https://makrosms.com`
 

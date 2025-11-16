@@ -9,7 +9,7 @@ Vercel'de environment variables'ları **manuel olarak** eklemeniz gerekir.
 ### 1. Vercel Dashboard'a Gidin
 
 1. https://vercel.com/dashboard adresine gidin
-2. Projenizi seçin: `finsms2`
+2. Projenizi seçin: `makrosms2`
 3. **Settings** (⚙️) sekmesine tıklayın
 4. Sol menüden **Environment Variables** seçin
 

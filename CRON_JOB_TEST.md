@@ -28,7 +28,7 @@ Container'a bağlanıp manuel olarak test edin:
 
 ```bash
 # Container ID'yi bulun
-docker ps | grep finsms
+docker ps | grep makrosms
 
 # Container'a bağlanın
 docker exec -it CONTAINER_ID sh
@@ -55,13 +55,13 @@ CRON_SECRET_KEY="your-secret-key-here"
 curl -X POST \
   -H "x-secret-key: $CRON_SECRET_KEY" \
   -H "Content-Type: application/json" \
-  https://panel.finsms.io/api/sms/check-status
+  https://makrosms.com/api/sms/check-status
 
 # Otomatik iade test
 curl -X POST \
   -H "x-secret-key: $CRON_SECRET_KEY" \
   -H "Content-Type: application/json" \
-  https://panel.finsms.io/api/refunds/process-auto
+  https://makrosms.com/api/refunds/process-auto
 ```
 
 ## 📊 Başarılı Yanıt Örnekleri

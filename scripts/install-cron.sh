@@ -12,7 +12,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 # Domain kontrolü
-DOMAIN="${DOMAIN:-https://panel.finsms.io}"
+DOMAIN="${DOMAIN:-https://makrosms.com}"
 
 # .env dosyasından CRON_SECRET_KEY oku veya oluştur
 if [ -f ".env" ]; then

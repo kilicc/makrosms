@@ -13,7 +13,7 @@ Tüm API route'ları Supabase client'a geçirildi:
 ### 1. Vercel Dashboard Deployment
 
 1. **Vercel Dashboard'a git**: https://vercel.com/dashboard
-2. **Projeyi seç**: `finsms2` veya `kilicc/finsms2`
+2. **Projeyi seç**: `makrosms2` veya `kilicc/makrosms2`
 3. **Deployments sekmesine git**
 4. **"Redeploy" butonuna tıkla**
 5. **Veya otomatik deploy zaten başlamış olabilir** (GitHub entegrasyonu varsa)

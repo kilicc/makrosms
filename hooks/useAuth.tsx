@@ -232,16 +232,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('User set edildi, yönlendiriliyor...');
         
         // Subdomain'e göre yönlendirme
-        const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-        const subdomain = hostname.split('.')[0];
+        // Kullanıcı rolüne göre yönlendirme
+        const isAdmin = response.data.user.role?.toLowerCase() === 'admin' || 
+                        response.data.user.role?.toLowerCase() === 'moderator' || 
+                        response.data.user.role?.toLowerCase() === 'administrator';
         
-        // Admin subdomain (panel.finsms.io) -> /admin
-        if (subdomain === 'panel') {
+        if (isAdmin) {
           console.log('Admin sayfasına yönlendiriliyor...');
           router.push('/admin');
-        } 
-        // Platform subdomain (platform.finsms.io) veya localhost -> /dashboard
-        else {
+        } else {
           console.log('Dashboard\'a yönlendiriliyor...');
           router.push('/dashboard');
         }

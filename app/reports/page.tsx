@@ -1719,7 +1719,7 @@ export default function SMSReportsPage() {
                         <TableBody>
                           {shortLinksStats.shortLinks && shortLinksStats.shortLinks.length > 0 ? (
                             shortLinksStats.shortLinks.map((link: any) => {
-                              const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'go.finsms.io';
+                              const shortLinkDomain = process.env.NEXT_PUBLIC_SHORT_LINK_DOMAIN || 'support.makrosms.com';
                               const shortLink = `https://${shortLinkDomain}/${link.short_code}`;
                               const isExpanded = expandedShortLinkId === link.id;
                               return (

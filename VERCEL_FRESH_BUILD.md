@@ -11,7 +11,7 @@
 
 1. **Vercel Dashboard** → https://vercel.com/dashboard
 2. **Add New...** → **Project**
-3. **Import Git Repository** → `kilicc/finsms2` seçin
+3. **Import Git Repository** → `kilicc/makrosms2` seçin
 4. **Configure Project** butonuna tıklayın
 
 ### 2. Project Settings

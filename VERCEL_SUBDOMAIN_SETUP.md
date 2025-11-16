@@ -3,8 +3,8 @@
 ## 📋 Genel Bakış
 
 Bu proje iki farklı subdomain ile çalışır:
-- **panel.finsms.io** - Admin paneli için
-- **platform.finsms.io** - Kullanıcı platformu için
+- **makrosms.com** - Admin paneli için
+- **makrosms.com** - Kullanıcı platformu için
 
 ## 🚀 Vercel'de Subdomain Yapılandırması
 
@@ -18,11 +18,11 @@ Bu proje iki farklı subdomain ile çalışır:
 1. Vercel Dashboard → Proje → **Settings** → **Domains**
 2. **Add Domain** butonuna tıkla
 3. Her iki subdomain'i ekle:
-   - `panel.finsms.io`
-   - `platform.finsms.io`
+   - `makrosms.com`
+   - `makrosms.com`
 
 #### Adım 3: DNS Ayarları
-Ana domain'iniz (`finsms.io`) için DNS kayıtlarınızı kontrol edin:
+Ana domain'iniz (`makrosms.com`) için DNS kayıtlarınızı kontrol edin:
 
 **DNS Kayıtları (DNS Provider'ınızda):**
 ```
@@ -45,8 +45,8 @@ Value: cname.vercel-dns.com
 Proje zaten `middleware.ts` dosyası ile yapılandırılmıştır:
 
 **Özellikler:**
-- `panel.finsms.io` → Admin sayfalarına yönlendirme
-- `platform.finsms.io` → Kullanıcı sayfalarına yönlendirme
+- `makrosms.com` → Admin sayfalarına yönlendirme
+- `makrosms.com` → Kullanıcı sayfalarına yönlendirme
 - Root path (`/`) subdomain'e göre otomatik yönlendirme
 - Admin sayfalarına erişim kontrolü
 
@@ -56,9 +56,9 @@ Vercel Dashboard → Settings → Environment Variables:
 
 **Production için:**
 ```
-NEXT_PUBLIC_API_URL=https://panel.finsms.io/api
+NEXT_PUBLIC_API_URL=https://makrosms.com/api
 # veya
-NEXT_PUBLIC_API_URL=https://platform.finsms.io/api
+NEXT_PUBLIC_API_URL=https://makrosms.com/api
 ```
 
 **Not:** API URL'ini subdomain'e göre dinamik yapabilirsiniz:
@@ -81,13 +81,13 @@ const API_BASE_URL = typeof window !== 'undefined'
 
 ### 5. Routing Mantığı
 
-**Admin Subdomain (panel.finsms.io):**
+**Admin Subdomain (makrosms.com):**
 - `/` → `/admin` (redirect)
 - `/admin` → Admin Dashboard
 - `/login` → Login (admin için)
 - Diğer sayfalar → `/admin` (redirect)
 
-**Platform Subdomain (platform.finsms.io):**
+**Platform Subdomain (makrosms.com):**
 - `/` → `/dashboard` (redirect)
 - `/dashboard` → Dashboard
 - `/sms` → SMS Gönder

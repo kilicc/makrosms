@@ -8,9 +8,9 @@ set -e
 echo "🔄 Cron Job Kurulumu Başlatılıyor..."
 
 # Proje dizini
-PROJECT_DIR="/var/www/finsms"
+PROJECT_DIR="/var/www/makrosms"
 CRON_SECRET_KEY="${CRON_SECRET_KEY:-$(openssl rand -hex 32)}"
-DOMAIN="${DOMAIN:-https://panel.finsms.io}"
+DOMAIN="${DOMAIN:-https://makrosms.com}"
 
 # .env dosyasına CRON_SECRET_KEY ekle (yoksa)
 if [ ! -f "$PROJECT_DIR/.env" ]; then
@@ -28,17 +28,17 @@ else
 fi
 
 # Cron job komutu
-CRON_CMD="*/5 * * * * curl -X POST $DOMAIN/api/sms/check-status -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"SMS durum kontrolü hatası: \$(date)\" >> /var/log/finsms/cron.log 2>&1"
+CRON_CMD="*/5 * * * * curl -X POST $DOMAIN/api/sms/check-status -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"SMS durum kontrolü hatası: \$(date)\" >> /var/log/makrosms/cron.log 2>&1"
 
 # Otomatik iade cron job komutu (her saat başı)
-REFUND_CRON_CMD="0 * * * * curl -X POST $DOMAIN/api/refunds/process-auto -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"Otomatik iade işleme hatası: \$(date)\" >> /var/log/finsms/cron.log 2>&1"
+REFUND_CRON_CMD="0 * * * * curl -X POST $DOMAIN/api/refunds/process-auto -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"Otomatik iade işleme hatası: \$(date)\" >> /var/log/makrosms/cron.log 2>&1"
 
 # Log klasörü oluştur
-sudo mkdir -p /var/log/finsms
-sudo chown -R $USER:$USER /var/log/finsms
+sudo mkdir -p /var/log/makrosms
+sudo chown -R $USER:$USER /var/log/makrosms
 
 # Mevcut cron job'ları kontrol et
-CRON_FILE="/tmp/finsms_cron_$(date +%s)"
+CRON_FILE="/tmp/makrosms_cron_$(date +%s)"
 
 # Mevcut cron job'ları al
 crontab -l > "$CRON_FILE" 2>/dev/null || touch "$CRON_FILE"
@@ -69,7 +69,7 @@ echo ""
 echo "📋 Kurulu Cron Job'lar:"
 crontab -l | grep -E "(api/sms/check-status|api/refunds/process-auto)" || echo "  (Henüz cron job bulunamadı)"
 echo ""
-echo "📝 Log Dosyası: /var/log/finsms/cron.log"
+echo "📝 Log Dosyası: /var/log/makrosms/cron.log"
 echo "🔑 CRON_SECRET_KEY: $CRON_SECRET_KEY"
 echo ""
 echo "🔍 Cron Job'ları Kontrol Etmek İçin:"

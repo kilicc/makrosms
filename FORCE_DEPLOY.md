@@ -11,7 +11,7 @@
 ### Yöntem 1: Vercel Dashboard (ÖNERİLEN)
 
 1. **Vercel Dashboard** → https://vercel.com/dashboard
-2. **Proje**: `finsms2` seç
+2. **Proje**: `makrosms2` seç
 3. **Deployments** sekmesine git
 4. **Son deployment'ın yanındaki ⋮ (3 nokta)** butonuna tıkla
 5. **"Clear Cache and Redeploy"** seç

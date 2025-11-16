@@ -31,7 +31,7 @@ Dokploy'daki "Create Schedule" modalını nasıl dolduracağınızı adım adım
    **Önemli Notlar:**
    - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
    - Container içinden çağrıldığı için `http://localhost:3000` kullanıyoruz
-   - Eğer dışarıdan çağrılıyorsa `https://panel.finsms.io` kullanabilirsiniz
+   - Eğer dışarıdan çağrılıyorsa `https://makrosms.com` kullanabilirsiniz
 
 5. **Enabled:**
    - Toggle'ı **Açık (ON)** konumuna getirin
@@ -69,7 +69,7 @@ Dokploy'daki "Create Schedule" modalını nasıl dolduracağınızı adım adım
    **Önemli Notlar:**
    - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
    - Container içinden çağrıldığı için `http://localhost:3000` kullanıyoruz
-   - Eğer dışarıdan çağrılıyorsa `https://panel.finsms.io` kullanabilirsiniz
+   - Eğer dışarıdan çağrılıyorsa `https://makrosms.com` kullanabilirsiniz
 
 5. **Enabled:**
    - Toggle'ı **Açık (ON)** konumuna getirin
@@ -130,7 +130,7 @@ Schedule'ları oluşturmadan önce, `CRON_SECRET_KEY` Environment Variable'ını
 
 2. **URL Kontrolü:**
    - Container içindeyse `http://localhost:3000` kullanın
-   - Dışarıdan erişiliyorsa `https://panel.finsms.io` kullanın
+   - Dışarıdan erişiliyorsa `https://makrosms.com` kullanın
    - Port numarasını kontrol edin (varsayılan: 3000)
 
 3. **curl Komutu Kontrolü:**

@@ -11,7 +11,7 @@ Dokploy'un **"Schedules"** özelliği, belirli zamanlarda otomatik olarak HTTP i
 ### 1. Dokploy Dashboard'a Giriş
 
 1. Dokploy Dashboard'a gidin: `http://YOUR_VPS_IP:3000`
-2. Projenizi seçin: **Projects** → **finsms** → **production** → **v1**
+2. Projenizi seçin: **Projects** → **makrosms** → **production** → **v1**
 3. **"Schedules"** sekmesine tıklayın
 
 ### 2. CRON_SECRET_KEY Oluşturma
@@ -61,7 +61,7 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
 **Not:** 
 - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
 - Container içinden çağrıldığı için `http://localhost:3000` kullanıyoruz
-- Eğer dışarıdan çağrılıyorsa `https://panel.finsms.io` kullanabilirsiniz
+- Eğer dışarıdan çağrılıyorsa `https://makrosms.com` kullanabilirsiniz
 
 3. **"Save"** veya **"Create"** butonuna tıklayın
 
@@ -89,7 +89,7 @@ curl -X POST -H "x-secret-key: $CRON_SECRET_KEY" -H "Content-Type: application/j
 **Not:** 
 - `$CRON_SECRET_KEY` - Dokploy Environment Variable'ından otomatik alınır
 - Container içinden çağrıldığı için `http://localhost:3000` kullanıyoruz
-- Eğer dışarıdan çağrılıyorsa `https://panel.finsms.io` kullanabilirsiniz
+- Eğer dışarıdan çağrılıyorsa `https://makrosms.com` kullanabilirsiniz
 
 3. **"Save"** veya **"Create"** butonuna tıklayın
 
@@ -109,12 +109,12 @@ Schedule'ların çalışıp çalışmadığını test etmek için:
 **Terminal'de:**
 ```bash
 # SMS durum kontrolü test
-curl -X POST https://panel.finsms.io/api/sms/check-status \
+curl -X POST https://makrosms.com/api/sms/check-status \
   -H "x-secret-key: YOUR_CRON_SECRET_KEY" \
   -H "Content-Type: application/json"
 
 # Otomatik iade test
-curl -X POST https://panel.finsms.io/api/refunds/process-auto \
+curl -X POST https://makrosms.com/api/refunds/process-auto \
   -H "x-secret-key: YOUR_CRON_SECRET_KEY" \
   -H "Content-Type: application/json"
 ```
@@ -172,7 +172,7 @@ Dokploy'da cron schedule formatı standart cron formatını kullanır:
 
 2. **URL Kontrolü:**
    - Container içindeyse `http://localhost:3000` kullanın
-   - Dışarıdan erişiliyorsa `https://panel.finsms.io` kullanın
+   - Dışarıdan erişiliyorsa `https://makrosms.com` kullanın
 
 3. **Headers Kontrolü:**
    - `x-secret-key` header'ı doğru mu kontrol edin
@@ -197,7 +197,7 @@ Dokploy'da cron schedule formatı standart cron formatını kullanır:
 ### Container İçinde URL Sorunu
 
 Eğer schedule container içinden çağrılıyorsa:
-- `https://panel.finsms.io` yerine `http://localhost:3000` kullanın
+- `https://makrosms.com` yerine `http://localhost:3000` kullanın
 - Veya container network'ünde service name kullanın
 
 ## 📝 Notlar

@@ -7,7 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Finsms - Gelişmiş SMS Doğrulama Sistemi',
+  title: 'MakroSMS - Gelişmiş SMS Doğrulama Sistemi',
   description: 'Gelişmiş SMS Doğrulama Sistemi',
 };
 

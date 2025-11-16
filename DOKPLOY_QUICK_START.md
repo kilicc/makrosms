@@ -57,9 +57,9 @@ TTL: 3600
 **Dokploy Dashboard → Projects → New Project**
 
 **Genel Ayarlar:**
-- **Project Name:** `finsms`
+- **Project Name:** `makrosms`
 - **Source:** `Git Repository`
-- **Repository URL:** `https://github.com/kilicc/finsms2.git`
+- **Repository URL:** `https://github.com/kilicc/makrosms2.git`
 - **Branch:** `main`
 
 **Build Ayarları:**
@@ -72,12 +72,12 @@ TTL: 3600
 - Tüm `.env` değişkenlerini ekle (DATABASE_URL, SUPABASE_URL, vb.)
 
 **Domains:**
-- **Domain 1:** `panel.finsms.io` ✅ SSL
-- **Domain 2:** `platform.finsms.io` ✅ SSL
+- **Domain 1:** `makrosms.com` ✅ SSL
+- **Domain 2:** `makrosms.com` ✅ SSL
 
 ### 7. Deploy!
 
-**Dokploy Dashboard → Projects → finsms → Deploy**
+**Dokploy Dashboard → Projects → makrosms → Deploy**
 
 ✅ **Tamamlandı!**
 
@@ -87,11 +87,11 @@ TTL: 3600
 - GitHub'a push → Otomatik deploy
 
 **Manuel:**
-- Dokploy Dashboard → Projects → finsms → **Redeploy**
+- Dokploy Dashboard → Projects → makrosms → **Redeploy**
 
 ## 📊 Durum Kontrolü
 
-**Dokploy Dashboard → Projects → finsms → Logs**
+**Dokploy Dashboard → Projects → makrosms → Logs**
 
 - Build logları
 - Application logları
@@ -105,7 +105,7 @@ TTL: 3600
 
 **Subdomain çalışmıyor:**
 - DNS propagation bekleyin (24-48 saat)
-- DNS kontrol: `dig panel.finsms.io`
+- DNS kontrol: `dig makrosms.com`
 
 **SSL hatası:**
 - Dokploy Dashboard → Domains → SSL → Renew

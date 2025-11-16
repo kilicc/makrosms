@@ -5,14 +5,14 @@
 ### 1. GitHub Repository'ye Push
 
 Proje zaten GitHub'a push edildi:
-- Repository: https://github.com/kilicc/finsms2.git
+- Repository: https://github.com/kilicc/makrosms2.git
 - Branch: main
 
 ### 2. Vercel'e Import
 
 1. [Vercel Dashboard](https://vercel.com/dashboard) açın
 2. "Add New..." → "Project" tıklayın
-3. GitHub repository'yi seçin: `kilicc/finsms2`
+3. GitHub repository'yi seçin: `kilicc/makrosms2`
 4. "Import" butonuna tıklayın
 
 ### 3. Environment Variables Ayarları

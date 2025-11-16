@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Demo kullanıcı oluştur
     const demoUsername = 'demo_api_user';
-    const demoEmail = 'demo_api@finsms.io';
+    const demoEmail = 'demo_api@makrosms.com';
     const demoPassword = 'Demo123!@#';
 
     // Önce kullanıcıyı kontrol et

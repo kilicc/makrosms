@@ -8,8 +8,8 @@ set -e
 echo "🔄 Dokploy için Cron Job Kurulumu Başlatılıyor..."
 
 # Proje dizini
-PROJECT_DIR="/var/www/finsms"
-DOMAIN="${DOMAIN:-https://panel.finsms.io}"
+PROJECT_DIR="/var/www/makrosms"
+DOMAIN="${DOMAIN:-https://makrosms.com}"
 
 # .env dosyası kontrolü
 if [ ! -f "$PROJECT_DIR/.env" ]; then
@@ -29,15 +29,15 @@ else
 fi
 
 # Log klasörü oluştur
-mkdir -p /var/log/finsms
-chmod 755 /var/log/finsms
+mkdir -p /var/log/makrosms
+chmod 755 /var/log/makrosms
 
 # Mevcut cron job'ları al
-CRON_FILE="/tmp/finsms_cron_$(date +%s)"
+CRON_FILE="/tmp/makrosms_cron_$(date +%s)"
 crontab -l > "$CRON_FILE" 2>/dev/null || touch "$CRON_FILE"
 
 # SMS durum kontrolü cron job'unu ekle (eğer yoksa)
-SMS_CRON_CMD="*/5 * * * * curl -X POST $DOMAIN/api/sms/check-status -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"[SMS Check] \$(date): HTTP Error\" >> /var/log/finsms/cron.log 2>&1"
+SMS_CRON_CMD="*/5 * * * * curl -X POST $DOMAIN/api/sms/check-status -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"[SMS Check] \$(date): HTTP Error\" >> /var/log/makrosms/cron.log 2>&1"
 
 if ! grep -q "api/sms/check-status" "$CRON_FILE"; then
     echo "$SMS_CRON_CMD" >> "$CRON_FILE"
@@ -47,7 +47,7 @@ else
 fi
 
 # Otomatik iade cron job'unu ekle (eğer yoksa)
-REFUND_CRON_CMD="0 * * * * curl -X POST $DOMAIN/api/refunds/process-auto -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"[Refund Process] \$(date): HTTP Error\" >> /var/log/finsms/cron.log 2>&1"
+REFUND_CRON_CMD="0 * * * * curl -X POST $DOMAIN/api/refunds/process-auto -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\" -s -o /dev/null -w \"%{http_code}\" | grep -q \"200\" || echo \"[Refund Process] \$(date): HTTP Error\" >> /var/log/makrosms/cron.log 2>&1"
 
 if ! grep -q "api/refunds/process-auto" "$CRON_FILE"; then
     echo "$REFUND_CRON_CMD" >> "$CRON_FILE"
@@ -66,7 +66,7 @@ echo ""
 echo "📋 Kurulu Cron Job'lar:"
 crontab -l | grep -E "(api/sms/check-status|api/refunds/process-auto)" || echo "  (Henüz cron job bulunamadı)"
 echo ""
-echo "📝 Log Dosyası: /var/log/finsms/cron.log"
+echo "📝 Log Dosyası: /var/log/makrosms/cron.log"
 echo "🔑 CRON_SECRET_KEY: $CRON_SECRET_KEY"
 echo "🌐 Domain: $DOMAIN"
 echo ""
@@ -74,7 +74,7 @@ echo "🔍 Cron Job'ları Kontrol Etmek İçin:"
 echo "   crontab -l"
 echo ""
 echo "📊 Log Dosyasını İzlemek İçin:"
-echo "   tail -f /var/log/finsms/cron.log"
+echo "   tail -f /var/log/makrosms/cron.log"
 echo ""
 echo "🧪 Manuel Test:"
 echo "   curl -X POST $DOMAIN/api/sms/check-status -H \"x-secret-key: $CRON_SECRET_KEY\" -H \"Content-Type: application/json\""

@@ -17,16 +17,24 @@ export default function Home() {
 
     // Subdomain'i al
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-    const subdomain = hostname.split('.')[0];
+    const parts = hostname.split('.');
+    const subdomain = parts.length > 2 ? parts[0] : '';
+    
+    // support.makrosms.com subdomain'i için kısa linkler kullanılır, ana sayfaya yönlendirme yapma
+    if (subdomain === 'support') {
+      return;
+    }
     
     // Eğer kullanıcı giriş yapmışsa
     if (user) {
-      // panel.finsms.io -> /admin
-      if (subdomain === 'panel') {
+      // Admin kullanıcı ise admin paneline yönlendir
+      const isAdmin = user.role?.toLowerCase() === 'admin' || 
+                      user.role?.toLowerCase() === 'moderator' || 
+                      user.role?.toLowerCase() === 'administrator';
+      
+      if (isAdmin) {
         router.push('/admin');
-      } 
-      // platform.finsms.io veya localhost -> /dashboard
-      else {
+      } else {
         router.push('/dashboard');
       }
     } else {

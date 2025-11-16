@@ -3,8 +3,8 @@
 ## 📋 Genel Bakış
 
 Bu rehber, Next.js projesini VPS üzerinde deploy etmek için adım adım talimatlar içerir:
-- **panel.finsms.io** - Admin paneli için
-- **platform.finsms.io** - Kullanıcı platformu için
+- **makrosms.com** - Admin paneli için
+- **makrosms.com** - Kullanıcı platformu için
 
 ## 🚀 VPS Gereksinimleri
 
@@ -75,16 +75,16 @@ sudo apt install git -y
 
 ```bash
 # Proje klasörü oluştur
-sudo mkdir -p /var/www/finsms
-sudo chown -R $USER:$USER /var/www/finsms
-cd /var/www/finsms
+sudo mkdir -p /var/www/makrosms
+sudo chown -R $USER:$USER /var/www/makrosms
+cd /var/www/makrosms
 ```
 
 ### 2.2 Git Repository'den Clone
 
 ```bash
 # GitHub repository'den clone
-git clone https://github.com/kilicc/finsms2.git .
+git clone https://github.com/kilicc/makrosms2.git .
 
 # veya manuel olarak dosyaları yükle
 ```
@@ -116,7 +116,7 @@ CEPSMS_FROM=CepSMS
 
 # Next.js
 NODE_ENV=production
-NEXT_PUBLIC_API_URL=https://panel.finsms.io/api
+NEXT_PUBLIC_API_URL=https://makrosms.com/api
 ```
 
 ### 2.4 Bağımlılıkları Yükleme
@@ -149,18 +149,18 @@ nano ecosystem.config.js
 ```javascript
 module.exports = {
   apps: [{
-    name: 'finsms',
+    name: 'makrosms',
     script: 'npm',
     args: 'start',
-    cwd: '/var/www/finsms',
+    cwd: '/var/www/makrosms',
     instances: 2,
     exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
       PORT: 3000
     },
-    error_file: '/var/log/finsms/error.log',
-    out_file: '/var/log/finsms/out.log',
+    error_file: '/var/log/makrosms/error.log',
+    out_file: '/var/log/makrosms/out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     merge_logs: true,
     autorestart: true,
@@ -173,8 +173,8 @@ module.exports = {
 ### 3.2 Log Klasörü Oluşturma
 
 ```bash
-sudo mkdir -p /var/log/finsms
-sudo chown -R $USER:$USER /var/log/finsms
+sudo mkdir -p /var/log/makrosms
+sudo chown -R $USER:$USER /var/log/makrosms
 ```
 
 ### 3.3 PM2 ile Uygulamayı Başlatma
@@ -190,15 +190,15 @@ pm2 startup
 ### 4.1 Nginx Config Dosyası Oluşturma
 
 ```bash
-sudo nano /etc/nginx/sites-available/finsms
+sudo nano /etc/nginx/sites-available/makrosms
 ```
 
-**Nginx Config (panel.finsms.io için):**
+**Nginx Config (makrosms.com için):**
 ```nginx
-# Admin Panel - panel.finsms.io
+# Admin Panel - makrosms.com
 server {
     listen 80;
-    server_name panel.finsms.io;
+    server_name makrosms.com;
 
     # Let's Encrypt için geçici
     location /.well-known/acme-challenge/ {
@@ -219,12 +219,12 @@ server {
 }
 ```
 
-**Platform için (platform.finsms.io) ekleyin:**
+**Platform için (makrosms.com) ekleyin:**
 ```nginx
-# User Platform - platform.finsms.io
+# User Platform - makrosms.com
 server {
     listen 80;
-    server_name platform.finsms.io;
+    server_name makrosms.com;
 
     # Let's Encrypt için geçici
     location /.well-known/acme-challenge/ {
@@ -248,7 +248,7 @@ server {
 ### 4.2 Nginx Config'i Aktif Etme
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/finsms /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/makrosms /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -265,7 +265,7 @@ sudo apt install certbot python3-certbot-nginx -y
 
 ```bash
 # Her iki subdomain için SSL
-sudo certbot --nginx -d panel.finsms.io -d platform.finsms.io
+sudo certbot --nginx -d makrosms.com -d makrosms.com
 ```
 
 ### 5.3 Otomatik Yenileme
@@ -299,8 +299,8 @@ TTL: 3600
 
 ```bash
 # DNS propagation kontrolü
-dig panel.finsms.io
-dig platform.finsms.io
+dig makrosms.com
+dig makrosms.com
 ```
 
 ## 🔄 Adım 7: Güncelleme ve Bakım
@@ -308,19 +308,19 @@ dig platform.finsms.io
 ### 7.1 Proje Güncelleme
 
 ```bash
-cd /var/www/finsms
+cd /var/www/makrosms
 git pull origin main
 npm install
 npx prisma generate
 npm run build
-pm2 restart finsms
+pm2 restart makrosms
 ```
 
 ### 7.2 Log Kontrolü
 
 ```bash
 # PM2 logları
-pm2 logs finsms
+pm2 logs makrosms
 
 # Nginx logları
 sudo tail -f /var/log/nginx/error.log
@@ -396,10 +396,10 @@ iftop
 ### Proje çalışmıyor
 ```bash
 # PM2 logları kontrol et
-pm2 logs finsms --lines 50
+pm2 logs makrosms --lines 50
 
 # Servisi yeniden başlat
-pm2 restart finsms
+pm2 restart makrosms
 ```
 
 ### Nginx 502 Bad Gateway
@@ -418,7 +418,7 @@ sudo nginx -t
 sudo certbot renew
 
 # Manuel yenileme
-sudo certbot --nginx -d panel.finsms.io -d platform.finsms.io --force-renewal
+sudo certbot --nginx -d makrosms.com -d makrosms.com --force-renewal
 ```
 
 ### Database Bağlantı Hatası
@@ -441,10 +441,10 @@ npx prisma generate
 
 ```bash
 # Proje güncelleme
-cd /var/www/finsms && git pull && npm install && npm run build && pm2 restart finsms
+cd /var/www/makrosms && git pull && npm install && npm run build && pm2 restart makrosms
 
 # Log görüntüleme
-pm2 logs finsms --lines 100
+pm2 logs makrosms --lines 100
 
 # Servis durumu
 pm2 status && sudo systemctl status nginx

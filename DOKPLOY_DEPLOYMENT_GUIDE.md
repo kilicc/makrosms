@@ -3,8 +3,8 @@
 ## 📋 Genel Bakış
 
 Bu rehber, Next.js projesini VPS üzerinde **Dokploy** kullanarak deploy etmek için adım adım talimatlar içerir:
-- **panel.finsms.io** - Admin paneli için
-- **platform.finsms.io** - Kullanıcı platformu için
+- **makrosms.com** - Admin paneli için
+- **makrosms.com** - Kullanıcı platformu için
 
 ## 🎯 Dokploy Nedir?
 
@@ -141,12 +141,12 @@ TTL: 3600
 
 ```bash
 # DNS propagation kontrolü
-dig panel.finsms.io
-dig platform.finsms.io
+dig makrosms.com
+dig makrosms.com
 
 # veya
-nslookup panel.finsms.io
-nslookup platform.finsms.io
+nslookup makrosms.com
+nslookup makrosms.com
 ```
 
 ## 📁 Adım 3: Dokploy'da Proje Oluşturma
@@ -160,9 +160,9 @@ nslookup platform.finsms.io
 
 **Dokploy Dashboard → Projects → New Project**
 
-1. **Project Name:** `finsms`
+1. **Project Name:** `makrosms`
 2. **Source:** `Git Repository`
-3. **Repository URL:** `https://github.com/kilicc/finsms2.git`
+3. **Repository URL:** `https://github.com/kilicc/makrosms2.git`
 4. **Branch:** `main`
 5. **Build Command:** `npm install && npx prisma generate && npm run build`
 6. **Start Command:** `npm start`
@@ -171,7 +171,7 @@ nslookup platform.finsms.io
 
 ### 3.3 Environment Variables Ayarlama
 
-**Dokploy Dashboard → Projects → finsms → Environment Variables**
+**Dokploy Dashboard → Projects → makrosms → Environment Variables**
 
 Aşağıdaki tüm değişkenleri ekleyin:
 
@@ -200,21 +200,21 @@ PORT=3000
 
 ### 3.4 Subdomain Yapılandırması
 
-**Dokploy Dashboard → Projects → finsms → Domains**
+**Dokploy Dashboard → Projects → makrosms → Domains**
 
 **Domain 1:**
-- **Domain:** `panel.finsms.io`
+- **Domain:** `makrosms.com`
 - **SSL:** ✅ Enable (Let's Encrypt)
 - **Redirect HTTP to HTTPS:** ✅ Enable
 
 **Domain 2:**
-- **Domain:** `platform.finsms.io`
+- **Domain:** `makrosms.com`
 - **SSL:** ✅ Enable (Let's Encrypt)
 - **Redirect HTTP to HTTPS:** ✅ Enable
 
 ### 3.5 Dockerfile Yapılandırması
 
-**Dokploy Dashboard → Projects → finsms → Settings**
+**Dokploy Dashboard → Projects → makrosms → Settings**
 
 **Build Settings:**
 - **Dockerfile Path:** `./Dockerfile`
@@ -225,7 +225,7 @@ PORT=3000
 
 ### 4.1 İlk Deployment
 
-**Dokploy Dashboard → Projects → finsms → Deploy**
+**Dokploy Dashboard → Projects → makrosms → Deploy**
 
 1. **Deploy** butonuna tıklayın
 2. Dokploy otomatik olarak:
@@ -237,7 +237,7 @@ PORT=3000
 
 ### 4.2 Deployment Durumu
 
-**Dokploy Dashboard → Projects → finsms → Logs**
+**Dokploy Dashboard → Projects → makrosms → Logs**
 
 Deployment loglarını kontrol edin:
 - Build logları
@@ -248,19 +248,19 @@ Deployment loglarını kontrol edin:
 
 ```bash
 # Health check
-curl https://panel.finsms.io/api/health
-curl https://platform.finsms.io/api/health
+curl https://makrosms.com/api/health
+curl https://makrosms.com/api/health
 
 # Subdomain test
-curl https://panel.finsms.io
-curl https://platform.finsms.io
+curl https://makrosms.com
+curl https://makrosms.com
 ```
 
 ## 🔄 Adım 5: Güncelleme ve Bakım
 
 ### 5.1 Otomatik Güncelleme (Git Hook)
 
-**Dokploy Dashboard → Projects → finsms → Settings → Webhooks**
+**Dokploy Dashboard → Projects → makrosms → Settings → Webhooks**
 
 1. **Enable Webhook** ✅
 2. **Webhook URL:** Dokploy'un otomatik oluşturduğu URL'i kopyalayın
@@ -273,14 +273,14 @@ Artık her `git push` sonrası otomatik deploy başlar!
 
 ### 5.2 Manuel Güncelleme
 
-**Dokploy Dashboard → Projects → finsms → Deploy**
+**Dokploy Dashboard → Projects → makrosms → Deploy**
 
 1. **Redeploy** butonuna tıklayın
 2. Veya **Pull Latest** butonuna tıklayıp sonra **Deploy**
 
 ### 5.3 Log Kontrolü
 
-**Dokploy Dashboard → Projects → finsms → Logs**
+**Dokploy Dashboard → Projects → makrosms → Logs**
 
 - **Build Logs:** Build sürecini gösterir
 - **Application Logs:** Uygulama loglarını gösterir
@@ -290,7 +290,7 @@ Artık her `git push` sonrası otomatik deploy başlar!
 
 ### 6.1 Dokploy Monitoring
 
-**Dokploy Dashboard → Projects → finsms → Monitoring**
+**Dokploy Dashboard → Projects → makrosms → Monitoring**
 
 - CPU kullanımı
 - RAM kullanımı
@@ -299,7 +299,7 @@ Artık her `git push` sonrası otomatik deploy başlar!
 
 ### 6.2 Health Checks
 
-**Dokploy Dashboard → Projects → finsms → Settings → Health Checks**
+**Dokploy Dashboard → Projects → makrosms → Settings → Health Checks**
 
 - **Health Check Path:** `/api/health`
 - **Interval:** `30` seconds
@@ -342,7 +342,7 @@ sudo ufw status
 
 ### Deployment Başarısız
 
-**Dokploy Dashboard → Projects → finsms → Logs**
+**Dokploy Dashboard → Projects → makrosms → Logs**
 
 1. **Build Logs** kontrol edin
 2. **Application Logs** kontrol edin
@@ -373,14 +373,14 @@ Error: Port 3000 is already in use
 1. **DNS Propagation:** 24-48 saat bekleyin
 2. **DNS Kontrolü:**
    ```bash
-   dig panel.finsms.io
-   dig platform.finsms.io
+   dig makrosms.com
+   dig makrosms.com
    ```
 3. **Dokploy Domain Settings:** Domain'lerin doğru yapılandırıldığını kontrol edin
 
 ### SSL Sertifikası Hatası
 
-**Dokploy Dashboard → Projects → finsms → Domains → SSL**
+**Dokploy Dashboard → Projects → makrosms → Domains → SSL**
 
 1. **Renew SSL** butonuna tıklayın
 2. **Let's Encrypt** otomatik yenileme yapıyor
@@ -392,7 +392,7 @@ Error: Port 3000 is already in use
 
 ### Container Çöküyor
 
-**Dokploy Dashboard → Projects → finsms → Logs → Container Logs**
+**Dokploy Dashboard → Projects → makrosms → Logs → Container Logs**
 
 1. **Container Logs** kontrol edin
 2. **Restart Policy:** `unless-stopped` olmalı
@@ -432,7 +432,7 @@ docker logs dokploy -f
 docker restart dokploy
 
 # Container logları (Dokploy üzerinden)
-# Dashboard → Projects → finsms → Logs
+# Dashboard → Projects → makrosms → Logs
 ```
 
 ## 📖 Ek Kaynaklar
@@ -451,6 +451,6 @@ Dokploy ile deployment:
 - ✅ Daha yönetilebilir
 
 **Artık projeniz Dokploy üzerinde çalışıyor!**
-- `https://panel.finsms.io` → Admin paneli
-- `https://platform.finsms.io` → Kullanıcı platformu
+- `https://makrosms.com` → Admin paneli
+- `https://makrosms.com` → Kullanıcı platformu
 
