@@ -208,10 +208,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.post('/auth/login', { login, password });
       
-      if (response.data.success) {
+      console.log('Login response:', {
+        success: response.data?.success,
+        hasData: !!response.data?.data,
+        hasUser: !!response.data?.data?.user,
+        hasTokens: !!response.data?.data?.tokens,
+      });
+      
+      if (response.data?.success && response.data?.data) {
         const { user, tokens } = response.data.data;
         
-        console.log('Login başarılı:', { user: user?.username, tokenExists: !!tokens?.accessToken });
+        if (!user || !tokens) {
+          console.error('Login response eksik:', { user: !!user, tokens: !!tokens });
+          throw new Error(response.data.message || 'Giriş başarısız. Yanıt eksik.');
+        }
+        
+        console.log('Login başarılı:', { 
+          username: user?.username, 
+          role: user?.role,
+          tokenExists: !!tokens?.accessToken 
+        });
         
         if (typeof window !== 'undefined') {
           localStorage.setItem('accessToken', tokens.accessToken);
@@ -231,11 +247,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log('User set edildi, yönlendiriliyor...');
         
-        // Subdomain'e göre yönlendirme
         // Kullanıcı rolüne göre yönlendirme
-        const isAdmin = response.data.user.role?.toLowerCase() === 'admin' || 
-                        response.data.user.role?.toLowerCase() === 'moderator' || 
-                        response.data.user.role?.toLowerCase() === 'administrator';
+        const userRole = user?.role?.toLowerCase() || '';
+        const isAdmin = userRole === 'admin' || 
+                        userRole === 'moderator' || 
+                        userRole === 'administrator';
         
         if (isAdmin) {
           console.log('Admin sayfasına yönlendiriliyor...');
@@ -245,11 +261,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           router.push('/dashboard');
         }
       } else {
-        throw new Error(response.data.message || 'Giriş başarısız');
+        const errorMessage = response.data?.message || 'Giriş başarısız';
+        console.error('Login başarısız:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      throw new Error(error.response?.data?.message || 'Giriş başarısız');
+      console.error('Login error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      
+      // Error response'dan mesaj al
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.';
+      
+      throw new Error(errorMessage);
     }
   }
 
