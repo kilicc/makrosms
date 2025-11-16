@@ -94,9 +94,9 @@ export async function POST(request: NextRequest) {
 
     let { data: existingKey } = await supabaseServer
       .from('api_keys')
-      .select('id, api_key, api_secret, name')
+      .select('id, api_key, api_secret, key_name')
       .eq('user_id', userId)
-      .eq('name', 'Demo API Key - Test')
+      .eq('key_name', 'Demo API Key - Test')
       .single();
 
     let finalApiKey: string;
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           user_id: userId,
           api_key: apiKey,
           api_secret: apiSecret,
-          name: 'Demo API Key - Test',
+          key_name: 'Demo API Key - Test',
           description: 'API testleri için oluşturulan demo API key',
           is_active: true,
         })

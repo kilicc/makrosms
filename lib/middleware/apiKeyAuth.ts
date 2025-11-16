@@ -53,7 +53,7 @@ export async function authenticateApiKey(request: NextRequest): Promise<ApiKeyAu
     // API key'i veritabanından bul
     const { data: apiKeyData, error: apiKeyError } = await supabaseServer
       .from('api_keys')
-      .select('id, user_id, name, is_active, users!api_keys_user_id_fkey(id, username, email, credit, role)')
+      .select('id, user_id, key_name, is_active, users!api_keys_user_id_fkey(id, username, email, credit, role)')
       .eq('api_key', apiKey)
       .eq('is_active', true)
       .single();
@@ -114,7 +114,7 @@ export async function authenticateApiKey(request: NextRequest): Promise<ApiKeyAu
       },
       apiKey: {
         id: apiKeyData.id,
-        name: apiKeyData.name || 'Unnamed',
+        name: apiKeyData.key_name || 'Unnamed',
       },
     };
   } catch (error: any) {

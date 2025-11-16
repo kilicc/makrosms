@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // API key'leri ve kullanıcı bilgilerini getir
     const { data: apiKeys, error } = await supabaseServer
       .from('api_keys')
-      .select('id, user_id, api_key, name, description, is_active, last_used_at, created_at, users!api_keys_user_id_fkey(id, username, email, credit)')
+      .select('id, user_id, api_key, key_name, description, is_active, last_used_at, created_at, users!api_keys_user_id_fkey(id, username, email, credit)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         return {
           id: key.id,
           apiKey: key.api_key.substring(0, 8) + '...', // Sadece ilk 8 karakter göster
-          name: key.name,
+          name: key.key_name,
           description: key.description,
           isActive: key.is_active,
           lastUsedAt: key.last_used_at,
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         api_key: apiKey,
         api_secret: apiSecret,
-        name: name || `${user.username} API Key`,
+        key_name: name || `${user.username} API Key`,
         description: description || null,
         is_active: true,
       })
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         id: apiKeyData.id,
         apiKey: apiKey,
         apiSecret: apiSecret,
-        name: apiKeyData.name,
+        name: apiKeyData.key_name,
         userId: userId,
         username: user.username,
       },
