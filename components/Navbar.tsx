@@ -2,7 +2,6 @@
 
 import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Avatar, Chip, Typography, alpha, Divider, IconButton, Tooltip } from '@mui/material';
 import { gradients } from '@/lib/theme';
-import Image from 'next/image';
 import { 
   Dashboard, 
   Sms, 
@@ -72,11 +71,11 @@ export default function Navbar() {
         },
       }}
     >
-      {/* Logo Header - HTML_TEMPLATES.html'e göre */}
+      {/* Logo Header */}
       <Box
         sx={{
           p: 1.5,
-          background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+          background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
           color: 'white',
           borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
         }}
@@ -88,17 +87,17 @@ export default function Navbar() {
             alignItems: 'center',
           }}
         >
-          <Image
-            src="/logo3.png"
-            alt="Logo"
-            width={120}
-            height={40}
-            style={{
-              objectFit: 'contain',
-              borderRadius: 6,
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.5rem',
+              letterSpacing: '0.5px',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
             }}
-          />
+          >
+            MakroSMS
+          </Typography>
         </Box>
       </Box>
 
@@ -106,7 +105,7 @@ export default function Navbar() {
       <Box
         sx={{
           p: 1.5,
-          background: alpha('#1976d2', 0.05),
+          background: alpha('#8B5CF6', 0.05),
           borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
         }}
       >
@@ -157,7 +156,7 @@ export default function Navbar() {
               sx={{
                 color: 'text.secondary',
                 '&:hover': {
-                  bgcolor: alpha('#1976d2', 0.1),
+                  bgcolor: alpha('#8B5CF6', 0.1),
                 },
               }}
             >
@@ -179,14 +178,14 @@ export default function Navbar() {
               mb: 0.25,
               py: 0.75,
               px: 1,
-              bgcolor: isActive(item.path) ? alpha('#1976d2', 0.1) : 'transparent',
+              bgcolor: isActive(item.path) ? alpha('#8B5CF6', 0.1) : 'transparent',
               '&:hover': {
-                bgcolor: alpha('#1976d2', 0.05),
+                bgcolor: alpha('#8B5CF6', 0.05),
               },
               '&.Mui-selected': {
-                bgcolor: alpha('#1976d2', 0.1),
+                bgcolor: alpha('#8B5CF6', 0.1),
                 '&:hover': {
-                  bgcolor: alpha('#1976d2', 0.15),
+                  bgcolor: alpha('#8B5CF6', 0.15),
                 },
               },
             }}
@@ -229,14 +228,14 @@ export default function Navbar() {
                   mb: 0.25,
                   py: 0.75,
                   px: 1,
-                  bgcolor: isActive(item.path) ? alpha('#dc004e', 0.1) : 'transparent',
+                  bgcolor: isActive(item.path) ? alpha('#EC4899', 0.1) : 'transparent',
                   '&:hover': {
-                    bgcolor: alpha('#dc004e', 0.05),
+                    bgcolor: alpha('#EC4899', 0.05),
                   },
                   '&.Mui-selected': {
-                    bgcolor: alpha('#dc004e', 0.1),
+                    bgcolor: alpha('#EC4899', 0.1),
                     '&:hover': {
-                      bgcolor: alpha('#dc004e', 0.15),
+                      bgcolor: alpha('#EC4899', 0.15),
                     },
                   },
                 }}

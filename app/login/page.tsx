@@ -3,7 +3,6 @@
 import { Box, Paper, TextField, Button, Typography, Alert, Card, CardContent } from '@mui/material';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { gradients } from '@/lib/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -35,16 +34,16 @@ export default function LoginPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 2,
-      }}
-    >
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+        }}
+      >
       <Card
         sx={{
           maxWidth: 480,
@@ -58,42 +57,37 @@ export default function LoginPage() {
           boxShadow: '0 12px 24px rgba(0, 0, 0, 0.2)',
         }}
       >
-        {/* Header with gradient - HTML_TEMPLATES.html'e göre */}
+        {/* Header with gradient */}
         <Box
           sx={{
-            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-            padding: 2,
+            background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+            padding: 3,
             textAlign: 'center',
             color: 'white',
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              mb: 1.5,
-            }}
-          >
-            <Image
-              src="/logo3.png"
-              alt="Logo"
-              width={120}
-              height={120}
-              style={{
-                objectFit: 'contain',
-                borderRadius: 8,
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-              }}
-            />
-          </Box>
           <Typography 
-            variant="h4" 
+            variant="h3" 
             component="h1" 
             sx={{ 
-              mb: 0.5, 
-              fontWeight: 600,
-              fontSize: '20px',
+              mb: 1, 
+              fontWeight: 700,
+              fontSize: '2rem',
               color: 'white',
+              letterSpacing: '1px',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            MakroSMS
+          </Typography>
+          <Typography 
+            variant="h6" 
+            component="h2" 
+            sx={{ 
+              mb: 0.5, 
+              fontWeight: 500,
+              fontSize: '1rem',
+              color: 'rgba(255, 255, 255, 0.9)',
             }}
           >
             Giriş Yap
@@ -170,15 +164,15 @@ export default function LoginPage() {
               sx={{
                 mt: 1.5,
                 mb: 1.5,
-                background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)',
                 borderRadius: 1.5,
                 padding: '8px 20px',
                 fontWeight: 500,
                 fontSize: '13px',
                 textTransform: 'none',
                 '&:hover': {
-                  boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                  boxShadow: '0 6px 16px rgba(139, 92, 246, 0.35)',
                   transform: 'translateY(-1px)',
                 },
                 transition: 'all 0.3s',

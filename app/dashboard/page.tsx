@@ -562,7 +562,7 @@ export default function DashboardPage() {
                   label={`${bulkSmsReports.length} rapor`}
                   size="small"
                   sx={{
-                    bgcolor: alpha('#1976d2', 0.1),
+                    bgcolor: alpha('#8B5CF6', 0.1),
                     color: 'primary.main',
                     fontWeight: 500,
                     fontSize: '0.75rem',
@@ -667,7 +667,7 @@ export default function DashboardPage() {
                                 key={index}
                                 sx={{
                                   '&:hover': {
-                                    backgroundColor: alpha('#1976d2', 0.05),
+                                    backgroundColor: alpha('#8B5CF6', 0.05),
                                   },
                                 }}
                               >
@@ -708,8 +708,8 @@ export default function DashboardPage() {
                                       setDetailDialogOpen(true);
                                     }}
                                     sx={{
-                                      background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                                      boxShadow: '0 4px 12px rgba(25, 118, 210, 0.3)',
+                                      background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+                                      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
                                       borderRadius: 1.5,
                                       padding: '4px 12px',
                                       fontSize: '11px',
@@ -717,7 +717,7 @@ export default function DashboardPage() {
                                       textTransform: 'none',
                                       minWidth: 'auto',
                                       '&:hover': {
-                                        boxShadow: '0 4px 16px rgba(25, 118, 210, 0.4)',
+                                        boxShadow: '0 4px 16px rgba(139, 92, 246, 0.4)',
                                         transform: 'translateY(-1px)',
                                       },
                                       transition: 'all 0.3s',
@@ -790,7 +790,7 @@ export default function DashboardPage() {
                 label={`${recentActivities.length} aktivite`}
                 size="small"
                 sx={{
-                  bgcolor: alpha('#1976d2', 0.1),
+                  bgcolor: alpha('#8B5CF6', 0.1),
                   color: 'primary.main',
                   fontWeight: 500,
                   fontSize: '0.75rem',
@@ -821,13 +821,13 @@ export default function DashboardPage() {
                           ? alpha('#4caf50', 0.08)
                           : isFailed
                           ? alpha('#f44336', 0.08)
-                          : alpha('#1976d2', 0.08),
+                          : alpha('#8B5CF6', 0.08),
                         borderRadius: 1.5,
                         border: `1px solid ${isSuccess
                           ? alpha('#4caf50', 0.2)
                           : isFailed
                           ? alpha('#f44336', 0.2)
-                          : alpha('#1976d2', 0.2)}`,
+                          : alpha('#8B5CF6', 0.2)}`,
                         transition: 'all 0.2s',
                         '&:hover': {
                           transform: 'translateX(2px)',
@@ -912,7 +912,7 @@ export default function DashboardPage() {
             <DialogContent>
               {selectedReport && (
                 <Box sx={{ mt: 1 }}>
-                  <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: alpha('#1976d2', 0.05) }}>
+                  <Paper sx={{ p: 2, mb: 2, borderRadius: 2, bgcolor: alpha('#8B5CF6', 0.05) }}>
                     <Typography variant="subtitle2" sx={{ fontSize: '14px', fontWeight: 600, mb: 1 }}>
                       Mesaj İçeriği
                     </Typography>

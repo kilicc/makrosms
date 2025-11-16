@@ -63,7 +63,7 @@ export async function PUT(
       userId: groupData.user_id,
       name: groupData.name,
       description: groupData.description,
-      color: groupData.color || '#1976d2',
+      color: groupData.color || '#8B5CF6',
       icon: groupData.icon || 'group',
       isDefault: groupData.is_default ?? false,
       isActive: groupData.is_active ?? true,

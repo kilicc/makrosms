@@ -198,17 +198,17 @@ model PaymentRequest {
 }
 
 model PaymentPackage {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  packageId   String    @unique @map("package_id") @db.VarChar(50)
-  name        String    @db.VarChar(100)
-  credits     Int       @default(0)
-  price       Decimal   @db.Decimal(10, 2)
-  currency    String?   @default("TRY") @db.VarChar(10)
-  bonus       Int?      @default(0)
-  isActive    Boolean?  @default(true) @map("is_active")
-  displayOrder Int?     @default(0) @map("display_order")
-  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  packageId    String    @unique @map("package_id") @db.VarChar(50)
+  name         String    @db.VarChar(100)
+  credits      Int       @default(0)
+  price        Decimal   @db.Decimal(10, 2)
+  currency     String?   @default("TRY") @db.VarChar(10)
+  bonus        Int?      @default(0)
+  isActive     Boolean?  @default(true) @map("is_active")
+  displayOrder Int?      @default(0) @map("display_order")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([isActive], map: "idx_payment_packages_is_active")
   @@index([displayOrder], map: "idx_payment_packages_display_order")

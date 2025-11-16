@@ -3,7 +3,6 @@
 import { Box, Typography, Card } from '@mui/material';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // Kayıt özelliği devre dışı bırakıldı
@@ -17,16 +16,16 @@ export default function RegisterPage() {
   }, [router]);
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 2,
-      }}
-    >
+      <Box
+        sx={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+        }}
+      >
       <Card
         sx={{
           maxWidth: 480,
@@ -42,32 +41,18 @@ export default function RegisterPage() {
           textAlign: 'center',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            mb: 2,
-          }}
-        >
-          <Image
-            src="/logo3.png"
-            alt="Logo"
-            width={120}
-            height={120}
-            style={{
-              objectFit: 'contain',
-              borderRadius: 8,
-              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            }}
-          />
-        </Box>
         <Typography 
-          variant="h5" 
+          variant="h3" 
           component="h1" 
           sx={{ 
             mb: 2, 
-            fontWeight: 600,
-            fontSize: '18px',
+            fontWeight: 700,
+            fontSize: '2rem',
+            letterSpacing: '1px',
+            background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
             color: 'primary.main',
           }}
         >

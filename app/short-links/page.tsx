@@ -216,15 +216,15 @@ export default function ShortLinksPage() {
               startIcon={<Add />}
               onClick={() => setCreateDialogOpen(true)}
               sx={{
-                background: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-                boxShadow: '0 4px 12px rgba(25, 118, 210, 0.25)',
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)',
                 borderRadius: 1.5,
                 padding: '8px 20px',
                 fontWeight: 500,
                 fontSize: '13px',
                 textTransform: 'none',
                 '&:hover': {
-                  boxShadow: '0 6px 16px rgba(25, 118, 210, 0.35)',
+                  boxShadow: '0 6px 16px rgba(139, 92, 246, 0.35)',
                   transform: 'translateY(-1px)',
                 },
                 transition: 'all 0.3s',

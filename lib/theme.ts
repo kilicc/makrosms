@@ -5,36 +5,36 @@ export const getTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
     mode,
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#8B5CF6', // Purple/violet
+      light: '#A78BFA',
+      dark: '#7C3AED',
       contrastText: '#fff',
     },
     secondary: {
-      main: '#dc004e',
-      light: '#ff5983',
-      dark: '#9a0036',
+      main: '#EC4899', // Pink
+      light: '#F472B6',
+      dark: '#DB2777',
       contrastText: '#fff',
     },
     success: {
-      main: '#4caf50',
-      light: alpha('#4caf50', 0.2),
+      main: '#10B981', // Emerald green
+      light: alpha('#10B981', 0.2),
     },
     error: {
-      main: '#f44336',
-      light: alpha('#f44336', 0.1),
+      main: '#EF4444', // Red
+      light: alpha('#EF4444', 0.1),
     },
     warning: {
-      main: '#ff9800',
-      light: alpha('#ff9800', 0.2),
+      main: '#F59E0B', // Amber
+      light: alpha('#F59E0B', 0.2),
     },
     info: {
-      main: '#2196f3',
-      light: alpha('#2196f3', 0.2),
+      main: '#3B82F6', // Blue
+      light: alpha('#3B82F6', 0.2),
     },
     background: {
-      default: mode === 'dark' ? '#121212' : '#f5f5f5',
-      paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+      default: mode === 'dark' ? '#0F172A' : '#F8FAFC',
+      paper: mode === 'dark' ? '#1E293B' : '#FFFFFF',
     },
     text: {
       primary: mode === 'dark' ? 'rgba(255, 255, 255, 0.87)' : 'rgba(0, 0, 0, 0.87)',
@@ -353,9 +353,9 @@ export const getTheme = (mode: 'light' | 'dark') => createTheme({
             backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
           },
           '&.Mui-selected': {
-            backgroundColor: mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+            backgroundColor: mode === 'dark' ? 'rgba(139, 92, 246, 0.16)' : 'rgba(139, 92, 246, 0.08)',
             '&:hover': {
-              backgroundColor: mode === 'dark' ? 'rgba(25, 118, 210, 0.24)' : 'rgba(25, 118, 210, 0.12)',
+              backgroundColor: mode === 'dark' ? 'rgba(139, 92, 246, 0.24)' : 'rgba(139, 92, 246, 0.12)',
             },
           },
         },
@@ -437,9 +437,9 @@ export const theme = getTheme('light');
 
 // Gradient renkleri (export için)
 export const gradients = {
-  login: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  navbar: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
-  cardLight: 'linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(220, 0, 78, 0.05) 100%)',
+  login: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+  navbar: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+  cardLight: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%)',
   cardMedium: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
-  button: 'linear-gradient(135deg, #1976d2 0%, #dc004e 100%)',
+  button: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
 };
