@@ -290,8 +290,10 @@ CREATE INDEX IF NOT EXISTS idx_short_link_clicks_ip_address ON short_link_clicks
 CREATE TABLE IF NOT EXISTS api_keys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
-  key_name VARCHAR(100) NOT NULL,
+  key_name VARCHAR(100),
   api_key VARCHAR(255) UNIQUE NOT NULL,
+  api_secret VARCHAR(255) NOT NULL,
+  description TEXT,
   is_active BOOLEAN DEFAULT true,
   last_used_at TIMESTAMPTZ(6),
   created_at TIMESTAMPTZ(6) DEFAULT NOW(),
@@ -328,8 +330,141 @@ ON CONFLICT (symbol) DO NOTHING;
 -- ============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================
--- Note: RLS policies should be set up in Supabase Dashboard
--- or via Supabase SQL Editor after tables are created
+
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sms_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sms_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crypto_currencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE short_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE short_link_clicks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+
+-- Users table policies
+CREATE POLICY "Users can view own profile"
+  ON users FOR SELECT
+  USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Admins can view all users"
+  ON users FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id::text = auth.uid()::text
+      AND users.role IN ('admin', 'moderator', 'administrator')
+    )
+  );
+
+-- Contact Groups policies
+CREATE POLICY "Users can manage own contact groups"
+  ON contact_groups FOR ALL
+  USING (auth.uid()::text = user_id::text)
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- Contacts policies
+CREATE POLICY "Users can manage own contacts"
+  ON contacts FOR ALL
+  USING (auth.uid()::text = user_id::text)
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- SMS Messages policies
+CREATE POLICY "Users can view own SMS messages"
+  ON sms_messages FOR SELECT
+  USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can insert own SMS messages"
+  ON sms_messages FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- SMS Templates policies
+CREATE POLICY "Users can manage own SMS templates"
+  ON sms_templates FOR ALL
+  USING (auth.uid()::text = user_id::text)
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- Refunds policies
+CREATE POLICY "Users can view own refunds"
+  ON refunds FOR SELECT
+  USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can create own refunds"
+  ON refunds FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- Payments policies
+CREATE POLICY "Users can view own payments"
+  ON payments FOR SELECT
+  USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can create own payments"
+  ON payments FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- Payment Requests policies
+CREATE POLICY "Users can view own payment requests"
+  ON payment_requests FOR SELECT
+  USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can create own payment requests"
+  ON payment_requests FOR INSERT
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+-- Payment Packages policies (public read, admin write)
+CREATE POLICY "Anyone can view active payment packages"
+  ON payment_packages FOR SELECT
+  USING (is_active = true);
+
+-- Crypto Currencies policies (public read, admin write)
+CREATE POLICY "Anyone can view active crypto currencies"
+  ON crypto_currencies FOR SELECT
+  USING (is_active = true);
+
+-- Short Links policies
+CREATE POLICY "Users can manage own short links"
+  ON short_links FOR ALL
+  USING (auth.uid()::text = user_id::text OR user_id IS NULL)
+  WITH CHECK (auth.uid()::text = user_id::text OR user_id IS NULL);
+
+CREATE POLICY "Anyone can view active short links by code"
+  ON short_links FOR SELECT
+  USING (is_active = true);
+
+-- Short Link Clicks policies
+CREATE POLICY "Users can view clicks for own short links"
+  ON short_link_clicks FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM short_links
+      WHERE short_links.id = short_link_clicks.short_link_id
+      AND short_links.user_id::text = auth.uid()::text
+    )
+  );
+
+CREATE POLICY "Anyone can insert click records"
+  ON short_link_clicks FOR INSERT
+  WITH CHECK (true);
+
+-- API Keys policies
+CREATE POLICY "Users can manage own API keys"
+  ON api_keys FOR ALL
+  USING (auth.uid()::text = user_id::text)
+  WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Admins can view all API keys"
+  ON api_keys FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id::text = auth.uid()::text
+      AND users.role IN ('admin', 'moderator', 'administrator')
+    )
+  );
 
 -- ============================================
 -- COMPLETED

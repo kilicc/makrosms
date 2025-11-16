@@ -17,7 +17,12 @@
     "prisma:validate": "prisma validate",
     "cron:install": "bash scripts/install-cron.sh",
     "cron:setup": "bash scripts/setup-cron.sh",
-    "docs:pdf": "node scripts/generate-pdf.js"
+    "docs:pdf": "node scripts/generate-pdf.js",
+    "test:db": "tsx scripts/test-db-connection.ts",
+    "test:supabase": "tsx scripts/test-supabase-connection.ts",
+    "setup:supabase": "tsx scripts/setup-supabase-tables.ts",
+    "create:supabase": "tsx scripts/create-supabase-tables.ts",
+    "fix:db-url": "tsx scripts/fix-database-url.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -51,6 +56,7 @@
     "@types/react-dom": "^19.0.0",
     "@types/speakeasy": "^2.0.10",
     "autoprefixer": "^10.4.0",
+    "dotenv": "^17.2.3",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
     "markdown-pdf": "^11.0.0",

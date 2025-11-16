@@ -29,6 +29,8 @@ model User {
   refunds                 Refund[]
   smsMessages             SmsMessage[]
   smsTemplates            SmsTemplate[]
+  apiKeys                 ApiKey[]
+  shortLinks              ShortLink[]
 
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
@@ -232,4 +234,62 @@ model CryptoCurrency {
   @@index([isActive], map: "idx_crypto_currencies_is_active")
   @@index([displayOrder], map: "idx_crypto_currencies_display_order")
   @@map("crypto_currencies")
+}
+
+model ApiKey {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  keyName     String?   @map("key_name") @db.VarChar(100)
+  apiKey      String    @unique @map("api_key") @db.VarChar(255)
+  apiSecret   String    @map("api_secret") @db.VarChar(255)
+  description String?
+  isActive    Boolean?  @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId], map: "idx_api_keys_user_id")
+  @@index([apiKey], map: "idx_api_keys_api_key")
+  @@index([isActive], map: "idx_api_keys_is_active")
+  @@map("api_keys")
+}
+
+model ShortLink {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String?         @map("user_id") @db.Uuid
+  originalUrl     String          @map("original_url")
+  shortCode       String          @unique @map("short_code") @db.VarChar(50)
+  title           String?         @db.VarChar(255)
+  description     String?
+  clickCount      Int?            @default(0) @map("click_count")
+  uniqueClickCount Int?           @default(0) @map("unique_click_count")
+  isActive        Boolean?        @default(true) @map("is_active")
+  expiresAt       DateTime?       @map("expires_at") @db.Timestamptz(6)
+  createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  clicks          ShortLinkClick[]
+
+  @@index([userId], map: "idx_short_links_user_id")
+  @@index([shortCode], map: "idx_short_links_short_code")
+  @@index([isActive], map: "idx_short_links_is_active")
+  @@map("short_links")
+}
+
+model ShortLinkClick {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shortLinkId String     @map("short_link_id") @db.Uuid
+  ipAddress   String?    @map("ip_address") @db.VarChar(45)
+  userAgent   String?    @map("user_agent")
+  referer     String?
+  country     String?    @db.VarChar(100)
+  city        String?    @db.VarChar(100)
+  clickedAt   DateTime?  @default(now()) @map("clicked_at") @db.Timestamptz(6)
+  shortLink   ShortLink  @relation(fields: [shortLinkId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([shortLinkId], map: "idx_short_link_clicks_short_link_id")
+  @@index([clickedAt], map: "idx_short_link_clicks_clicked_at")
+  @@index([ipAddress], map: "idx_short_link_clicks_ip_address")
+  @@map("short_link_clicks")
 }
