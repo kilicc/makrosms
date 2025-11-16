@@ -19,7 +19,9 @@ export default function RegisterPage() {
       <Box
         sx={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+          background: mode === 'dark'
+            ? 'linear-gradient(135deg, #000000 0%, #424242 50%, #000000 100%)'
+            : 'linear-gradient(135deg, #FFFFFF 0%, #E0E0E0 50%, #FFFFFF 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -49,7 +51,9 @@ export default function RegisterPage() {
             fontWeight: 700,
             fontSize: '2rem',
             letterSpacing: '1px',
-            background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+            background: mode === 'dark'
+            ? 'linear-gradient(135deg, #000000 0%, #424242 50%, #000000 100%)'
+            : 'linear-gradient(135deg, #FFFFFF 0%, #E0E0E0 50%, #FFFFFF 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',

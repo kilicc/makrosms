@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Avatar, Chip, Typography, alpha, Divider, IconButton, Tooltip } from '@mui/material';
-import { gradients } from '@/lib/theme';
+import { getGradients } from '@/lib/theme';
 import { 
   Dashboard, 
   Sms, 
@@ -52,6 +52,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { mode, toggleMode } = useTheme();
+  const gradients = getGradients(mode);
 
   // Get user initials
   const initials = user?.username?.charAt(0).toUpperCase() || 'U';
@@ -75,7 +76,9 @@ export default function Navbar() {
       <Box
         sx={{
           p: 1.5,
-          background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+          background: mode === 'dark'
+            ? 'linear-gradient(135deg, #1976D2 0%, #000000 50%, #F44336 100%)'
+            : 'linear-gradient(135deg, #2196F3 0%, #424242 50%, #F44336 100%)',
           color: 'white',
           borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.12)',
         }}

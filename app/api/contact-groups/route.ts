@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       userId: group.user_id,
       name: group.name,
       description: group.description,
-      color: group.color || '#8B5CF6',
+      color: group.color || '#2196F3',
       icon: group.icon || 'group',
       isDefault: group.is_default ?? false,
       isActive: group.is_active ?? true,
