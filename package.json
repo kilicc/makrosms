@@ -22,6 +22,7 @@
     "test:supabase": "tsx scripts/test-supabase-connection.ts",
     "setup:supabase": "tsx scripts/setup-supabase-tables.ts",
     "create:supabase": "tsx scripts/create-supabase-tables.ts",
+    "create:admin": "tsx scripts/create-admin-user-supabase.ts",
     "fix:db-url": "tsx scripts/fix-database-url.ts"
   },
   "dependencies": {
