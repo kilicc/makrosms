@@ -64,14 +64,66 @@ export async function POST(request: NextRequest) {
       const workbook = XLSX.read(fileContent, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      contacts = XLSX.utils.sheet_to_json(worksheet, {
+      // Try with header first (normal case)
+      let contactsWithHeader = XLSX.utils.sheet_to_json(worksheet, {
         raw: false, // Tüm değerleri string olarak al
         defval: '', // Boş hücreler için varsayılan değer
       });
       
-      console.log('[Import] Excel parsed, contacts count:', contacts.length);
+      // If no header or first row doesn't look like headers, try without header
+      if (contactsWithHeader.length === 0 || !Object.keys(contactsWithHeader[0] || {}).length) {
+        // Try without header - treat first row as data
+        contacts = XLSX.utils.sheet_to_json(worksheet, {
+          header: ['numara'], // Sadece numara sütunu varsa, ona "numara" adını ver
+          raw: false,
+          defval: '',
+        });
+        console.log('[Import] Excel parsed without header, contacts count:', contacts.length);
+      } else {
+        contacts = contactsWithHeader;
+        console.log('[Import] Excel parsed with header, contacts count:', contacts.length);
+      }
+      
       console.log('[Import] First contact sample:', contacts[0]);
       console.log('[Import] Available columns:', contacts.length > 0 ? Object.keys(contacts[0]) : []);
+      
+      // If contacts have numeric keys (like { '0': '5075708797' }), convert them
+      if (contacts.length > 0 && Object.keys(contacts[0] || {}).some(key => /^\d+$/.test(key))) {
+        console.log('[Import] Detected numeric column keys, converting...');
+        contacts = contacts.map((contact: any) => {
+          const newContact: any = {};
+          const keys = Object.keys(contact);
+          
+          // If first column looks like phone, name it "numara"
+          // If second column exists and looks like name, name it "isim"
+          keys.forEach((key, index) => {
+            const value = String(contact[key] || '').trim();
+            if (!value) return;
+            
+            const cleanedValue = value.replace(/\D/g, '');
+            
+            if (cleanedValue.length >= 9 && cleanedValue.length <= 13) {
+              // This looks like a phone number
+              newContact['numara'] = value;
+            } else if (index === 0 && keys.length === 1) {
+              // Only one column, assume it's phone
+              newContact['numara'] = value;
+            } else if (index === 0) {
+              // First column, assume it's name
+              newContact['isim'] = value;
+            } else if (index === 1) {
+              // Second column, assume it's phone
+              newContact['numara'] = value;
+            } else {
+              // Other columns
+              newContact[`kolon${index + 1}`] = value;
+            }
+          });
+          
+          return newContact;
+        });
+        console.log('[Import] After conversion, first contact:', contacts[0]);
+      }
     }
 
     if (contacts.length === 0) {
@@ -180,15 +232,34 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // If still no phone, try first column that contains only numbers
+        // If still no phone, try all columns to find phone number
         if (!phoneRaw) {
+          // First, try to find column with numeric values (could be phone numbers)
           for (const key of Object.keys(contactData)) {
             const value = String(contactData[key] || '').trim();
-            // If value looks like a phone number (contains mostly digits)
-            if (value && /^\d{9,12}$/.test(value.replace(/\D/g, ''))) {
+            if (!value) continue;
+            
+            // Clean value - remove non-digits
+            const cleanedValue = value.replace(/\D/g, '');
+            
+            // If cleaned value is 9-12 digits, it's likely a phone number
+            if (cleanedValue.length >= 9 && cleanedValue.length <= 13) {
               phoneRaw = value;
               console.log('[Import] Found phone in column:', key, '=', phoneRaw);
               break;
+            }
+          }
+          
+          // If still not found, try first column if it looks like a phone number
+          if (!phoneRaw) {
+            const firstKey = Object.keys(contactData)[0];
+            if (firstKey) {
+              const firstValue = String(contactData[firstKey] || '').trim();
+              const cleanedFirstValue = firstValue.replace(/\D/g, '');
+              if (cleanedFirstValue.length >= 9 && cleanedFirstValue.length <= 13) {
+                phoneRaw = firstValue;
+                console.log('[Import] Using first column as phone:', firstKey, '=', phoneRaw);
+              }
             }
           }
         }
@@ -197,31 +268,69 @@ export async function POST(request: NextRequest) {
         const email = emailField ? String(contactData[emailField] || '').trim() : '';
         const notes = notesField ? String(contactData[notesField] || '').trim() : '';
 
-        // If no name field found, use first column as name or set default
+        // If no name field found, use first column as name if it's not a phone number
         let finalName = name;
         if (!finalName) {
-          // Try first column as name
+          // Try first column as name if it doesn't look like a phone number
           const firstKey = Object.keys(contactData)[0];
-          if (firstKey && firstKey !== phoneField) {
-            finalName = String(contactData[firstKey] || '').trim();
+          if (firstKey) {
+            const firstValue = String(contactData[firstKey] || '').trim();
+            const cleanedFirstValue = firstValue.replace(/\D/g, '');
+            // If first column is not a phone number, use it as name
+            if (cleanedFirstValue.length < 9 || cleanedFirstValue.length > 13) {
+              finalName = firstValue;
+            }
           }
         }
         
-        // If still no name, set default
+        // If still no name, set default using phone number
         if (!finalName && phoneRaw) {
-          finalName = `Kişi ${phoneRaw.substring(phoneRaw.length - 4)}`; // Son 4 rakamı kullan
+          const cleanedPhone = phoneRaw.replace(/\D/g, '');
+          const last4Digits = cleanedPhone.length >= 4 
+            ? cleanedPhone.substring(cleanedPhone.length - 4) 
+            : cleanedPhone;
+          finalName = `Kişi ${last4Digits}`;
+          console.log('[Import] Using default name:', finalName, 'for phone:', phoneRaw);
+        }
+        
+        // If still no name and no phone, try to get any non-empty value as name
+        if (!finalName && !phoneRaw) {
+          for (const key of Object.keys(contactData)) {
+            const value = String(contactData[key] || '').trim();
+            if (value) {
+              // Check if it's not a phone number
+              const cleanedValue = value.replace(/\D/g, '');
+              if (cleanedValue.length < 9 || cleanedValue.length > 13) {
+                finalName = value;
+                break;
+              } else {
+                // It's a phone number, use it
+                phoneRaw = value;
+                const last4Digits = cleanedValue.length >= 4 
+                  ? cleanedValue.substring(cleanedValue.length - 4) 
+                  : cleanedValue;
+                finalName = `Kişi ${last4Digits}`;
+                break;
+              }
+            }
+          }
         }
 
-        if (!finalName || !phoneRaw) {
+        // Final check - phone is required, name is optional (we'll use default)
+        if (!phoneRaw) {
           results.failed++;
-          const errorMsg = !finalName && !phoneRaw 
-            ? 'İsim ve telefon bulunamadı' 
-            : !finalName 
-              ? 'İsim bulunamadı' 
-              : 'Telefon bulunamadı';
-          results.errors.push(`Satır ${results.success + results.failed}: ${errorMsg} - Sütunlar: ${Object.keys(contactData).join(', ')}`);
-          console.log('[Import] Row failed:', { contactData, nameField, phoneField, finalName, phoneRaw });
+          results.errors.push(`Satır ${results.success + results.failed + 1}: Telefon numarası bulunamadı - Sütunlar: ${Object.keys(contactData).join(', ')} - Değerler: ${JSON.stringify(contactData)}`);
+          console.log('[Import] Row failed - no phone:', { contactData, nameField, phoneField });
           continue;
+        }
+        
+        // Ensure we have a name (required field)
+        if (!finalName) {
+          const cleanedPhone = phoneRaw.replace(/\D/g, '');
+          const last4Digits = cleanedPhone.length >= 4 
+            ? cleanedPhone.substring(cleanedPhone.length - 4) 
+            : cleanedPhone;
+          finalName = `Kişi ${last4Digits}`;
         }
 
         // Format phone number using formatPhoneNumber function
