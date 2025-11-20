@@ -530,7 +530,11 @@ export async function sendBulkSMS(phones: string[], message: string): Promise<Se
     return [];
   }
 
-  // Tüm numaraları formatla (zaten formatlanmış olmalı ama yine de kontrol et)
+  // CepSMS API'si muhtemelen çok fazla numarayı tek seferde kabul etmiyor
+  // Bu yüzden önce tek tek göndermeyi deniyoruz (paralel olarak)
+  // Eğer gerçekten toplu gönderim destekleniyorsa, daha küçük batch'ler deneyebiliriz
+  
+  // Tüm numaralar zaten formatlanmış olmalı, ama yine de kontrol edelim
   const formattedPhones: string[] = [];
   const errors: Array<{ phone: string; error: string }> = [];
   
@@ -551,6 +555,54 @@ export async function sendBulkSMS(phones: string[], message: string): Promise<Se
     }));
   }
 
+  // CepSMS API'nin toplu gönderimi destekleyip desteklemediğini bilmiyoruz
+  // Bu yüzden paralel olarak tek tek gönderiyoruz (daha güvenilir)
+  // Her numara için ayrı ayrı sendSMS çağrısı yapıyoruz, ama Promise.all ile paralel çalıştırıyoruz
+  
+  console.log('[CepSMS] Toplu SMS gönderiliyor (paralel tek tek):', {
+    numaraSayısı: formattedPhones.length,
+    messageLength: message.length,
+  });
+
+  // Paralel olarak gönder (aynı anda en fazla 20)
+  const CONCURRENT_LIMIT = 20;
+  const results: SendSMSResult[] = [];
+  
+  for (let i = 0; i < formattedPhones.length; i += CONCURRENT_LIMIT) {
+    const batch = formattedPhones.slice(i, i + CONCURRENT_LIMIT);
+    
+    const batchPromises = batch.map(async (phone) => {
+      try {
+        return await sendSMS(phone, message);
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message || 'SMS gönderim hatası',
+        };
+      }
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+    
+    // Rate limiting için küçük bekleme (her batch sonrası)
+    if (i + CONCURRENT_LIMIT < formattedPhones.length) {
+      await new Promise(resolve => setTimeout(resolve, 200)); // 200ms bekle
+    }
+  }
+
+  // Formatlama hatası olan numaraları ekle
+  for (const err of errors) {
+    results.push({
+      success: false,
+      error: err.error,
+    });
+  }
+
+  return results;
+
+  /* 
+  // Eski toplu gönderim denemesi (CepSMS API'si desteklemiyor olabilir)
   try {
     console.log('[CepSMS] Toplu SMS gönderiliyor:', {
       numaraSayısı: formattedPhones.length,
@@ -598,116 +650,6 @@ export async function sendBulkSMS(phones: string[], message: string): Promise<Se
       }
     );
 
-    console.log('[CepSMS] Toplu API Yanıtı:', JSON.stringify(response.data, null, 2));
-
-    // API yanıtını kontrol et
-    if (!response.data) {
-      console.error('[CepSMS] Toplu API yanıtı boş!');
-      return formattedPhones.map(() => ({
-        success: false,
-        error: 'API yanıtı alınamadı',
-      }));
-    }
-
-    // CepSMS API'si toplu gönderim için genellikle bir MessageId veya MessageId array döner
-    // Ya da her numara için ayrı bir yanıt döner
-    const status = response.data.Status || response.data.status || response.data.statusCode;
-    const messageId = response.data.MessageId || response.data.messageId || response.data.id;
-    const messageIds = response.data.MessageIds || response.data.messageIds || (messageId ? [messageId] : []);
-    const error = response.data.Error || response.data.error || response.data.message || response.data.Message;
-
-    const statusStr = String(status || '').toUpperCase();
-    const isSuccess = 
-      statusStr === 'OK' || 
-      status === 200 || 
-      statusStr === 'SUCCESS' ||
-      (messageIds.length > 0 && !error && statusStr !== 'ERROR' && statusStr !== 'HATA' && statusStr !== 'FAIL');
-
-    console.log('[CepSMS] Toplu Başarı Kontrolü:', {
-      statusStr,
-      messageIds: messageIds.length,
-      error,
-      isSuccess,
-    });
-
-    // Eğer başarılıysa, her numara için sonuç oluştur
-    if (isSuccess && messageIds.length > 0) {
-      console.log('[CepSMS] ✅ Toplu SMS başarıyla gönderildi:', {
-        toplamNumara: formattedPhones.length,
-        messageIdSayısı: messageIds.length,
-      });
-
-      // Eğer messageId sayısı numara sayısına eşitse, her birine karşılık gelen messageId'yi at
-      // Eğer tek bir messageId varsa, tüm numaralar için aynı messageId kullanılabilir (CepSMS API'sine bağlı)
-      const results: SendSMSResult[] = [];
-      
-      for (let i = 0; i < formattedPhones.length; i++) {
-        // Eğer her numara için ayrı messageId varsa, o kullan
-        // Yoksa, ilk messageId'yi kullan (bazı API'ler batch için tek ID döner)
-        const assignedMessageId = messageIds[i] || messageIds[0] || messageId;
-        results.push({
-          success: true,
-          messageId: assignedMessageId ? String(assignedMessageId) : undefined,
-        });
-      }
-
-      // Formatlama hatası olan numaraları ekle
-      for (const err of errors) {
-        results.push({
-          success: false,
-          error: err.error,
-        });
-      }
-
-      return results;
-    }
-
-    // Hata durumu - tüm numaralar için başarısız sonuç döndür
-    const errorMessage = error || `Status: ${status}, MessageId: ${messageId || 'yok'}`;
-    console.error('[CepSMS] ❌ Toplu SMS gönderim hatası:', {
-      errorMessage,
-      status,
-      messageId,
-      fullResponse: response.data
-    });
-
-    return formattedPhones.map(() => ({
-      success: false,
-      error: errorMessage || 'Toplu SMS gönderim hatası',
-    }));
-
-  } catch (error: any) {
-    console.error('[CepSMS] Toplu SMS gönderim hatası (catch):', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
-
-    // Hata durumunda tüm numaralar için başarısız sonuç döndür
-    let errorMessage = '';
-    if (error.response) {
-      const errorData = error.response.data;
-      if (error.response.status === 400) {
-        if (typeof errorData === 'string') {
-          errorMessage = `Bad Request (400): ${errorData}`;
-        } else if (errorData?.Error || errorData?.error || errorData?.message) {
-          errorMessage = `Bad Request (400): ${errorData.Error || errorData.error || errorData.message}`;
-        } else {
-          errorMessage = 'Bad Request (400): API geçersiz istek hatası';
-        }
-      } else {
-        errorMessage = errorData?.Error || errorData?.error || errorData?.message || error.message;
-      }
-    } else if (error.request) {
-      errorMessage = 'API\'ye bağlanılamadı';
-    } else {
-      errorMessage = error.message || 'Toplu SMS gönderim hatası';
-    }
-
-    return formattedPhones.map(() => ({
-      success: false,
-      error: errorMessage,
-    }));
-  }
+  */
 }
 
