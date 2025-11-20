@@ -86,7 +86,9 @@ export default function CryptoPaymentPage() {
 
   const loadPackages = async () => {
     try {
-      const response = await api.get('/payment/packages');
+      // Admin ise admin endpoint'ini kullan, değilse normal endpoint'i kullan
+      const endpoint = isAdmin ? '/admin/payment-packages' : '/payment/packages';
+      const response = await api.get(endpoint);
       if (response.data.success) {
         setPackages(response.data.data.packages);
       }
@@ -97,7 +99,9 @@ export default function CryptoPaymentPage() {
 
   const loadCurrencies = async () => {
     try {
-      const response = await api.get('/payment/crypto-currencies');
+      // Admin ise admin endpoint'ini kullan, değilse normal endpoint'i kullan
+      const endpoint = isAdmin ? '/admin/crypto-currencies' : '/payment/crypto-currencies';
+      const response = await api.get(endpoint);
       if (response.data.success) {
         setCurrencies(response.data.data.currencies);
       }
@@ -270,6 +274,12 @@ export default function CryptoPaymentPage() {
           bonus: packageForm.bonus || 0,
           isActive: packageForm.isActive,
         };
+        // UUID kontrolü yap - id olmalı, packageId değil
+        if (!editingPackage.id || typeof editingPackage.id !== 'string' || editingPackage.id.length !== 36) {
+          setError('Paket ID geçersiz. Lütfen sayfayı yenileyin ve tekrar deneyin.');
+          setLoading(false);
+          return;
+        }
         const response = await api.put(`/admin/payment-packages/${editingPackage.id}`, updateData);
         if (response.data && response.data.success) {
           setSuccess(response.data.message || 'Paket başarıyla güncellendi');
@@ -334,6 +344,12 @@ export default function CryptoPaymentPage() {
       };
       
       if (editingCrypto && editingCrypto.id) {
+        // UUID kontrolü yap
+        if (typeof editingCrypto.id !== 'string' || editingCrypto.id.length !== 36) {
+          setError('Kripto para ID geçersiz. Lütfen sayfayı yenileyin ve tekrar deneyin.');
+          setLoading(false);
+          return;
+        }
         const response = await api.put(`/admin/crypto-currencies/${editingCrypto.id}`, cryptoData);
         if (response.data && response.data.success) {
           setSuccess(response.data.message || 'Kripto para birimi başarıyla güncellendi');
@@ -1818,15 +1834,31 @@ export default function CryptoPaymentPage() {
                                   onClick={async () => {
                                     if (confirm('Bu paketi silmek istediğinizden emin misiniz?')) {
                                       try {
-                                        await api.delete(`/admin/payment-packages/${pkg.id}`);
-                                        loadPackages();
-                                        setSuccess('Paket başarıyla silindi');
+                                        setLoading(true);
+                                        setError('');
+                                        // UUID kontrolü
+                                        if (!pkg.id || typeof pkg.id !== 'string') {
+                                          setError('Paket ID bulunamadı. Lütfen sayfayı yenileyin.');
+                                          setLoading(false);
+                                          return;
+                                        }
+                                        const response = await api.delete(`/admin/payment-packages/${pkg.id}`);
+                                        if (response.data && response.data.success) {
+                                          setSuccess(response.data.message || 'Paket başarıyla silindi');
+                                          loadPackages();
+                                        } else {
+                                          setError(response.data?.message || 'Paket silinemedi');
+                                        }
                                       } catch (err: any) {
-                                        setError(err.response?.data?.message || 'Paket silinirken hata oluştu');
+                                        console.error('Delete package error:', err);
+                                        setError(err.response?.data?.message || err.message || 'Paket silinirken hata oluştu');
+                                      } finally {
+                                        setLoading(false);
                                       }
                                     }
                                   }}
                                   sx={{ p: 0.5, ml: 1 }}
+                                  disabled={loading}
                                 >
                                   <Delete fontSize="small" color="error" />
                                 </IconButton>
@@ -1928,15 +1960,31 @@ export default function CryptoPaymentPage() {
                                   onClick={async () => {
                                     if (confirm('Bu kripto para birimini silmek istediğinizden emin misiniz?')) {
                                       try {
-                                        await api.delete(`/admin/crypto-currencies/${crypto.id || crypto.symbol}`);
-                                        loadCurrencies();
-                                        setSuccess('Kripto para birimi başarıyla silindi');
+                                        setLoading(true);
+                                        setError('');
+                                        // UUID kontrolü - id olmalı, symbol değil
+                                        if (!crypto.id || typeof crypto.id !== 'string') {
+                                          setError('Kripto para ID bulunamadı. Lütfen sayfayı yenileyin.');
+                                          setLoading(false);
+                                          return;
+                                        }
+                                        const response = await api.delete(`/admin/crypto-currencies/${crypto.id}`);
+                                        if (response.data && response.data.success) {
+                                          setSuccess(response.data.message || 'Kripto para birimi başarıyla silindi');
+                                          loadCurrencies();
+                                        } else {
+                                          setError(response.data?.message || 'Kripto para birimi silinemedi');
+                                        }
                                       } catch (err: any) {
-                                        setError(err.response?.data?.message || 'Kripto para birimi silinirken hata oluştu');
+                                        console.error('Delete crypto error:', err);
+                                        setError(err.response?.data?.message || err.message || 'Kripto para birimi silinirken hata oluştu');
+                                      } finally {
+                                        setLoading(false);
                                       }
                                     }
                                   }}
                                   sx={{ p: 0.5, ml: 1 }}
+                                  disabled={loading}
                                 >
                                   <Delete fontSize="small" color="error" />
                                 </IconButton>
