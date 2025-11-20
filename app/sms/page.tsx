@@ -408,13 +408,20 @@ export default function SMSInterfacePage() {
                         <strong>Servis:</strong> CepSMS
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
-                        <strong>Maliyet:</strong> 180 karakter = 1 Kredi
+                        <strong>Maliyet:</strong> 180 karakter = 1 Kredi (her numara için)
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mt: 0.5 }}>
                         <strong>Mesaj Uzunluğu:</strong> {formData.message.length} / {MAX_CHARACTERS} karakter
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mt: 0.5 }}>
-                        <strong>Tahmini Kredi:</strong> {Math.ceil(formData.message.length / MAX_CHARACTERS) || 0} kredi
+                        <strong>Numara Sayısı:</strong> {formData.phone ? formData.phone.split(/[,\n]/).filter((p: string) => p.trim()).length : 0} adet
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mt: 0.5 }}>
+                        <strong>Tahmini Kredi:</strong> {
+                          formData.phone && formData.message.length > 0
+                            ? (Math.ceil(formData.message.length / MAX_CHARACTERS) || 1) * formData.phone.split(/[,\n]/).filter((p: string) => p.trim()).length
+                            : 0
+                        } kredi ({Math.ceil(formData.message.length / MAX_CHARACTERS) || 1} kredi × {formData.phone ? formData.phone.split(/[,\n]/).filter((p: string) => p.trim()).length : 0} numara)
                       </Typography>
                     </Box>
                   </Grid>
