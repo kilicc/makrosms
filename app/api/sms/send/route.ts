@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
-import { sendSMS } from '@/lib/utils/cepSMSProvider';
+import { sendSMS, formatPhoneNumber, sendBulkSMS } from '@/lib/utils/cepSMSProvider';
 
 // Büyük gönderimler için timeout'u arttır (300 saniye = 5 dakika)
 export const maxDuration = 300;
@@ -29,17 +29,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Telefon numarası validasyonu: Sadece 905**, 05**, 5** formatları kabul edilir
-    const phoneNumbers = phone.split(/[,\n]/).map((p: string) => p.trim()).filter((p: string) => p);
-    const phoneRegex = /^(905|05|5)\d+$/;
-    const invalidPhones = phoneNumbers.filter((p: string) => !phoneRegex.test(p));
+    // Telefon numaralarını parse et ve temizle
+    const rawPhoneNumbers = phone.split(/[,\n]/).map((p: string) => p.trim()).filter((p: string) => p);
     
-    if (invalidPhones.length > 0) {
+    // Her numarayı formatla ve geçersiz olanları filtrele
+    const processedPhones: Array<{ original: string; formatted: string; error?: string }> = [];
+    
+    for (const rawPhone of rawPhoneNumbers) {
+      try {
+        const formattedPhone = formatPhoneNumber(rawPhone);
+        processedPhones.push({ original: rawPhone, formatted: formattedPhone });
+      } catch (error: any) {
+        // Formatlama hatası - geçersiz numara, ama devam et (log'la)
+        console.warn(`[SMS Send] Geçersiz telefon numarası formatı (atlanacak): ${rawPhone} - ${error.message}`);
+        processedPhones.push({ 
+          original: rawPhone, 
+          formatted: rawPhone, 
+          error: error.message 
+        });
+      }
+    }
+    
+    // Geçerli formatlanmış numaraları al
+    const validProcessedPhones = processedPhones.filter(p => !p.error);
+    
+    if (validProcessedPhones.length === 0) {
       return NextResponse.json(
-        { success: false, message: `Geçersiz telefon numarası formatı: ${invalidPhones.join(', ')}. Sadece 905**, 05**, 5** formatları kabul edilir.` },
+        { success: false, message: 'Geçerli telefon numarası bulunamadı. Lütfen numaraları kontrol edin.' },
         { status: 400 }
       );
     }
+    
+    // Formatlanmış numaraları al ve duplicate'leri temizle (Set kullanarak)
+    const uniqueFormattedPhones = Array.from(new Set(validProcessedPhones.map(p => p.formatted)));
+    
+    // Duplicate'ler varsa bilgi ver
+    const duplicateCount = validProcessedPhones.length - uniqueFormattedPhones.length;
+    if (duplicateCount > 0) {
+      console.log(`[SMS Send] ${duplicateCount} adet tekrar eden numara temizlendi`);
+    }
+    
+    // Geçersiz numara sayısını logla
+    const invalidCount = processedPhones.length - validProcessedPhones.length;
+    if (invalidCount > 0) {
+      console.log(`[SMS Send] ${invalidCount} adet geçersiz numara atlandı`);
+    }
+    
+    // Son telefon numaraları listesi
+    const phoneNumbers = uniqueFormattedPhones;
+    
+    console.log(`[SMS Send] Telefon numarası işleme özeti:`, {
+      toplamGirdi: rawPhoneNumbers.length,
+      geçerli: validProcessedPhones.length,
+      tekrarEden: duplicateCount,
+      geçersiz: invalidCount,
+      sonuç: phoneNumbers.length
+    });
 
     // Admin kullanıcıları için rol kontrolü
     const userRole = (auth.user.role || '').toLowerCase();
@@ -124,43 +169,49 @@ export async function POST(request: NextRequest) {
       const batch = batches[batchIndex];
       console.log(`[SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} numara)`);
       
-      // Batch içindeki numaralara paralel olarak SMS gönder (aynı anda en fazla 10)
+      // CepSMS API'sine toplu gönderim yap (batch içindeki tüm numaraları tek seferde gönder)
       const batchResults: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
-      const CONCURRENT_LIMIT = 10;
       
-      for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
-        const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
-        const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
+      try {
+        // CepSMS API'sine toplu gönderim için sendBulkSMS kullan
+        const bulkResults = await sendBulkSMS(batch, message);
+        
+        // Sonuçları batch formatına çevir
+        for (let i = 0; i < batch.length; i++) {
+          const bulkResult = bulkResults[i] || { success: false, error: 'Sonuç bulunamadı' };
+          batchResults.push({
+            phone: batch[i],
+            success: bulkResult.success,
+            messageId: bulkResult.messageId,
+            error: bulkResult.error,
+          });
+        }
+        
+        console.log(`[SMS Send] Batch ${batchIndex + 1}: Toplu gönderim tamamlandı - ${batchResults.filter(r => r.success).length} başarılı, ${batchResults.filter(r => !r.success).length} başarısız`);
+      } catch (error: any) {
+        // Toplu gönderim başarısız olursa, tek tek göndermeyi dene
+        console.warn(`[SMS Send] Batch ${batchIndex + 1}: Toplu gönderim başarısız, tek tek gönderiliyor...`, error);
+        
+        // Fallback: Tek tek gönder
+        for (const phoneNumber of batch) {
           try {
-            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderiliyor - ${phoneNumber}`);
             const smsResult = await sendSMS(phoneNumber, message);
-            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS sonucu - ${phoneNumber}:`, {
-              success: smsResult.success,
-              messageId: smsResult.messageId,
-              error: smsResult.error
-            });
-            return {
+            batchResults.push({
               phone: phoneNumber,
               success: smsResult.success,
               messageId: smsResult.messageId,
               error: smsResult.error,
-            };
-          } catch (error: any) {
-            console.error(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderim exception - ${phoneNumber}:`, error);
-            return {
+            });
+            
+            // Rate limiting için küçük bekleme
+            await new Promise(resolve => setTimeout(resolve, 50));
+          } catch (smsError: any) {
+            batchResults.push({
               phone: phoneNumber,
               success: false,
-              error: error.message || 'SMS gönderim hatası',
-            };
+              error: smsError.message || 'SMS gönderim hatası',
+            });
           }
-        });
-        
-        const concurrentResults = await Promise.all(concurrentPromises);
-        batchResults.push(...concurrentResults);
-        
-        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
-        if (i + CONCURRENT_LIMIT < batch.length) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
         }
       }
       
