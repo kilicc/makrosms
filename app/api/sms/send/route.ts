@@ -3,6 +3,10 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS } from '@/lib/utils/cepSMSProvider';
 
+// Büyük gönderimler için timeout'u arttır (300 saniye = 5 dakika)
+export const maxDuration = 300;
+export const dynamic = 'force-dynamic';
+
 // POST /api/sms/send - Tekli SMS gönderimi
 export async function POST(request: NextRequest) {
   try {
@@ -101,79 +105,126 @@ export async function POST(request: NextRequest) {
       requiredCredit = totalCreditNeeded;
     }
 
-    // Her numaraya ayrı SMS gönder
+    // Büyük gönderimler için batch processing (100'er 100'er)
+    const BATCH_SIZE = 100;
     const results: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
     let successCount = 0;
     let failCount = 0;
     
-    for (const phoneNumber of phoneNumbers) {
-      const smsResult = await sendSMS(phoneNumber, message);
-      results.push({
-        phone: phoneNumber,
-        success: smsResult.success,
-        messageId: smsResult.messageId,
-        error: smsResult.error,
-      });
-      
-      if (smsResult.success && smsResult.messageId) {
-        successCount++;
-      } else {
-        failCount++;
-      }
+    // Telefon numaralarını batch'lere böl
+    const batches: string[][] = [];
+    for (let i = 0; i < phoneNumbers.length; i += BATCH_SIZE) {
+      batches.push(phoneNumbers.slice(i, i + BATCH_SIZE));
     }
 
-    // Başarılı gönderimleri kaydet
-    const successfulSends = results.filter((r) => r.success && r.messageId);
-    if (successfulSends.length > 0) {
-      for (const result of successfulSends) {
+    console.log(`[SMS Send] Toplam ${phoneNumbers.length} numara, ${batches.length} batch halinde işlenecek`);
+
+    // Her batch'i işle
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(`[SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} numara)`);
+      
+      // Batch içindeki numaralara paralel olarak SMS gönder (aynı anda en fazla 10)
+      const batchResults: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
+      const CONCURRENT_LIMIT = 10;
+      
+      for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
+        const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
+        const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
+          try {
+            const smsResult = await sendSMS(phoneNumber, message);
+            return {
+              phone: phoneNumber,
+              success: smsResult.success,
+              messageId: smsResult.messageId,
+              error: smsResult.error,
+            };
+          } catch (error: any) {
+            return {
+              phone: phoneNumber,
+              success: false,
+              error: error.message || 'SMS gönderim hatası',
+            };
+          }
+        });
+        
+        const concurrentResults = await Promise.all(concurrentPromises);
+        batchResults.push(...concurrentResults);
+      }
+      
+      results.push(...batchResults);
+      
+      // Batch sonuçlarını say
+      for (const result of batchResults) {
+        if (result.success && result.messageId) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
+      // Her batch sonrası başarılı gönderimleri bulk insert yap
+      const successfulBatchSends = batchResults.filter((r) => r.success && r.messageId);
+      if (successfulBatchSends.length > 0 && auth.user) {
+        const bulkInsertData = successfulBatchSends.map((result) => ({
+          user_id: auth.user!.userId,
+          phone_number: result.phone,
+          message,
+          sender: serviceName || null,
+          status: 'gönderildi',
+          cost: isAdmin ? 0 : creditPerMessage,
+          cep_sms_message_id: result.messageId,
+          sent_at: new Date().toISOString(),
+        }));
+        
+        // Bulk insert (her batch için)
         await supabaseServer
           .from('sms_messages')
-          .insert({
-            user_id: auth.user.userId,
-            phone_number: result.phone,
-            message,
-            sender: serviceName || null,
-            status: 'gönderildi',
-            cost: isAdmin ? 0 : creditPerMessage, // Her mesaj için kredi
-            cep_sms_message_id: result.messageId,
-            sent_at: new Date().toISOString(),
-          });
+          .insert(bulkInsertData);
+        
+        console.log(`[SMS Send] Batch ${batchIndex + 1}: ${successfulBatchSends.length} SMS kaydedildi`);
       }
-    }
 
-    // Başarısız gönderimleri kaydet ve iade oluştur
-    const failedSends = results.filter((r) => !r.success);
-    if (failedSends.length > 0 && !isAdmin) {
-      for (const result of failedSends) {
-        const { data: failedSmsData } = await supabaseServer
+      // Her batch sonrası başarısız gönderimleri kaydet ve iade oluştur (bulk)
+      const failedBatchSends = batchResults.filter((r) => !r.success);
+      if (failedBatchSends.length > 0 && !isAdmin && auth.user) {
+        // Önce başarısız SMS'leri bulk insert yap
+        const bulkFailedData = failedBatchSends.map((result) => ({
+          user_id: auth.user!.userId,
+          phone_number: result.phone,
+          message,
+          sender: serviceName || null,
+          status: 'failed',
+          cost: creditPerMessage,
+          failed_at: new Date().toISOString(),
+        }));
+        
+        const { data: failedSmsDataArray, error: failedInsertError } = await supabaseServer
           .from('sms_messages')
-          .insert({
-            user_id: auth.user.userId,
-            phone_number: result.phone,
-            message,
-            sender: serviceName || null,
-            status: 'failed',
-            cost: creditPerMessage,
-            failed_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
-        if (failedSmsData) {
-          // Otomatik iade oluştur (48 saat sonra işlenecek)
+          .insert(bulkFailedData)
+          .select();
+        
+        if (!failedInsertError && failedSmsDataArray && failedSmsDataArray.length > 0) {
+          // Her başarısız SMS için iade oluştur (bulk)
+          const bulkRefundData = failedSmsDataArray.map((failedSmsData, index) => ({
+            user_id: auth.user!.userId,
+            sms_id: failedSmsData.id,
+            original_cost: creditPerMessage,
+            refund_amount: creditPerMessage,
+            reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - ${failedBatchSends[index].error || 'Bilinmeyen hata'}`,
+            status: 'pending',
+          }));
+          
           await supabaseServer
             .from('refunds')
-            .insert({
-              user_id: auth.user.userId,
-              sms_id: failedSmsData.id,
-              original_cost: creditPerMessage,
-              refund_amount: creditPerMessage,
-              reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - ${result.error || 'Bilinmeyen hata'}`,
-              status: 'pending',
-            });
+            .insert(bulkRefundData);
+          
+          console.log(`[SMS Send] Batch ${batchIndex + 1}: ${failedBatchSends.length} başarısız SMS kaydedildi ve iade oluşturuldu`);
         }
       }
     }
+
+    console.log(`[SMS Send] Tamamlandı: ${successCount} başarılı, ${failCount} başarısız`);
 
     // Sonuç mesajı
     if (successCount === phoneNumbers.length) {

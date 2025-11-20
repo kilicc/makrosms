@@ -87,22 +87,50 @@ export default function SMSInterfacePage() {
     setLoading(true);
 
     try {
-      const response = await api.post('/sms/send', {
-        phone: formData.phone,
-        message: formData.message,
-        serviceName: 'CepSMS',
-      });
+      const phoneCount = formData.phone.split(/[,\n]/).filter((p: string) => p.trim()).length;
+      
+      // Büyük gönderimler için bilgilendirme
+      if (phoneCount > 1000) {
+        setSuccess(`${phoneCount} numaraya SMS gönderiliyor... Bu işlem birkaç dakika sürebilir. Lütfen bekleyin.`);
+      }
+
+      // Timeout'u büyük gönderimler için arttır (her SMS için 5 saniye, minimum 60 saniye)
+      const timeout = Math.max(60000, phoneCount * 5000);
+      
+      const response = await Promise.race([
+        api.post('/sms/send', {
+          phone: formData.phone,
+          message: formData.message,
+          serviceName: 'CepSMS',
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('İstek zaman aşımına uğradı. SMS\'ler arka planda gönderiliyor olabilir. Lütfen raporları kontrol edin.')), timeout)
+        )
+      ]) as any;
 
       if (response.data.success) {
-        setSuccess('SMS başarıyla gönderildi');
+        const { totalSent = 0, totalFailed = 0 } = response.data.data || {};
+        let message = '';
+        if (totalFailed === 0) {
+          message = `${totalSent} adet SMS başarıyla gönderildi`;
+        } else {
+          message = `${totalSent} adet SMS gönderildi, ${totalFailed} adet başarısız. Başarısız mesajlar için kredi 48 saat içinde otomatik iade edilecektir.`;
+        }
+        setSuccess(message);
         setFormData({ phone: '', message: '' });
-        // Success mesajını 3 saniye sonra otomatik kapat
+        // Success mesajını 10 saniye sonra otomatik kapat (büyük gönderimler için daha uzun)
         setTimeout(() => {
           setSuccess('');
-        }, 3000);
+        }, 10000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'SMS gönderim hatası');
+      const errorMessage = err.message || err.response?.data?.message || 'SMS gönderim hatası';
+      setError(errorMessage);
+      
+      // Timeout hatası ise kullanıcıyı bilgilendir
+      if (errorMessage.includes('zaman aşımı') || errorMessage.includes('timeout')) {
+        setError(errorMessage + ' Lütfen raporları kontrol ederek SMS\'lerin durumunu öğrenebilirsiniz.');
+      }
     } finally {
       setLoading(false);
     }
