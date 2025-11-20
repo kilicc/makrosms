@@ -429,6 +429,55 @@ export const getTheme = (mode: 'light' | 'dark') => createTheme({
         },
       },
     },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: 11.04, // 9.6px × 1.15 = 11.04px
+          fontSize: '0.805rem', // 0.7rem × 1.15 = 0.805rem
+          padding: '11.04px 14.72px', // 9.6px 12.8px × 1.15
+          backgroundColor: mode === 'dark' ? 'rgba(30, 30, 30, 0.95)' : undefined,
+          color: mode === 'dark' ? 'rgba(255, 255, 255, 0.87)' : undefined,
+          '& .MuiAlert-icon': {
+            color: mode === 'dark' ? 'inherit' : undefined,
+          },
+          '& .MuiAlert-message': {
+            color: mode === 'dark' ? 'rgba(255, 255, 255, 0.87)' : undefined,
+          },
+          '& .MuiAlert-action': {
+            color: mode === 'dark' ? 'rgba(255, 255, 255, 0.87)' : undefined,
+          },
+        },
+        standardError: {
+          backgroundColor: mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : undefined,
+          color: mode === 'dark' ? '#ffcdd2' : undefined,
+          border: mode === 'dark' ? '1px solid rgba(244, 67, 54, 0.3)' : undefined,
+        },
+        standardSuccess: {
+          backgroundColor: mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : undefined,
+          color: mode === 'dark' ? '#c8e6c9' : undefined,
+          border: mode === 'dark' ? '1px solid rgba(76, 175, 80, 0.3)' : undefined,
+        },
+        standardWarning: {
+          backgroundColor: mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : undefined,
+          color: mode === 'dark' ? '#ffe0b2' : undefined,
+          border: mode === 'dark' ? '1px solid rgba(255, 152, 0, 0.3)' : undefined,
+        },
+        standardInfo: {
+          backgroundColor: mode === 'dark' ? 'rgba(33, 150, 243, 0.15)' : undefined,
+          color: mode === 'dark' ? '#bbdefb' : undefined,
+          border: mode === 'dark' ? '1px solid rgba(33, 150, 243, 0.3)' : undefined,
+        },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: {
+          fontSize: '0.69rem', // 0.6rem × 1.15 = 0.69rem
+          color: mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+          marginTop: '4.6px', // 4px × 1.15 = 4.6px
+        },
+      },
+    },
   },
 });
 

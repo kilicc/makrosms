@@ -739,11 +739,11 @@ export default function CryptoPaymentPage() {
                         sx={{
                           border: selectedPackage === pkg.id 
                             ? '2px solid #2196F3' 
-                            : '1px solid rgba(0,0,0,0.1)',
+                            : mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
                           cursor: 'pointer',
                           background: selectedPackage === pkg.id 
                             ? 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(244, 67, 54, 0.08) 100%)'
-                            : 'white',
+                            : mode === 'dark' ? '#1e1e1e' : '#ffffff',
                           borderRadius: 3,
                           boxShadow: selectedPackage === pkg.id
                             ? '0 8px 24px rgba(33, 150, 243, 0.2)'
@@ -867,7 +867,11 @@ export default function CryptoPaymentPage() {
                               </Typography>
                             </Box>
                             {pkg.bonus > 0 && (
-                              <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px dashed rgba(0,0,0,0.1)' }}>
+                              <Box sx={{ 
+                                mt: 1.5, 
+                                pt: 1.5, 
+                                borderTop: mode === 'dark' ? '1px dashed rgba(255,255,255,0.12)' : '1px dashed rgba(0,0,0,0.1)' 
+                              }}>
                                 <Typography 
                                   variant="caption" 
                                   sx={{
@@ -1207,9 +1211,9 @@ export default function CryptoPaymentPage() {
                             sx={{
                               mb: 3,
                               borderRadius: 3,
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                              border: '1px solid rgba(0,0,0,0.08)',
-                              background: 'background.paper',
+                              boxShadow: mode === 'dark' ? '0 4px 16px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.08)',
+                              border: mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                              background: mode === 'dark' ? '#1e1e1e' : 'background.paper',
                             }}
                           >
                             <CardContent sx={{ p: 2.5 }}>
@@ -1277,9 +1281,9 @@ export default function CryptoPaymentPage() {
                           <Card
                             sx={{
                               borderRadius: 3,
-                              boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                              border: '1px solid rgba(0,0,0,0.08)',
-                              background: 'background.paper',
+                              boxShadow: mode === 'dark' ? '0 4px 16px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.08)',
+                              border: mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                              background: mode === 'dark' ? '#1e1e1e' : 'background.paper',
                             }}
                           >
                             <CardContent sx={{ p: 2.5 }}>
@@ -1301,7 +1305,7 @@ export default function CryptoPaymentPage() {
                                   display: 'flex',
                                   justifyContent: 'center',
                                   p: 3,
-                                  bgcolor: 'background.paper',
+                                  bgcolor: mode === 'dark' ? '#2a2a2a' : 'background.paper',
                                   borderRadius: 3,
                                   border: '2px dashed rgba(33, 150, 243, 0.2)',
                                   background: mode === 'dark' 
@@ -1357,7 +1361,7 @@ export default function CryptoPaymentPage() {
                               <Box
                                 sx={{
                                   p: 2.5,
-                                  bgcolor: 'background.paper',
+                                  bgcolor: mode === 'dark' ? '#2a2a2a' : 'background.paper',
                                   borderRadius: 2,
                                   border: '1px solid rgba(33, 150, 243, 0.2)',
                                   textAlign: 'center',

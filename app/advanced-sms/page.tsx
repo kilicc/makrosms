@@ -512,10 +512,10 @@ export default function AdvancedSMSPage() {
                               borderRadius: 2,
                               border: selectedContacts.includes(contact.id)
                                 ? '2px solid #2196F3'
-                                : '1px solid rgba(0,0,0,0.1)',
+                                : mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
                               background: selectedContacts.includes(contact.id)
                                 ? 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(244, 67, 54, 0.08) 100%)'
-                                : 'white',
+                                : mode === 'dark' ? '#1e1e1e' : '#ffffff',
                               boxShadow: selectedContacts.includes(contact.id)
                                 ? '0 4px 12px rgba(33, 150, 243, 0.2)'
                                 : '0 1px 4px rgba(0,0,0,0.08)',
@@ -892,9 +892,9 @@ export default function AdvancedSMSPage() {
                         sx={{
                           mb: 3,
                           borderRadius: 2,
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                          border: '1px solid rgba(0,0,0,0.08)',
-                          background: 'background.paper',
+                          boxShadow: mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.06)',
+                          border: mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+                          background: mode === 'dark' ? '#1e1e1e' : 'background.paper',
                         }}
                       >
                         <CardContent sx={{ p: 2.5 }}>
@@ -990,7 +990,7 @@ export default function AdvancedSMSPage() {
                               </Box>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 4 }}>
-                              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: 'background.paper', borderRadius: 2 }}>
+                              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: mode === 'dark' ? '#2a2a2a' : 'background.paper', borderRadius: 2 }}>
                                 <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: 'success.main', mb: 0.5 }}>
                                   {selectedContacts.length}
                                 </Typography>
@@ -1000,7 +1000,7 @@ export default function AdvancedSMSPage() {
                               </Box>
                             </Grid>
                             <Grid size={{ xs: 12, sm: 4 }}>
-                              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: 'background.paper', borderRadius: 2 }}>
+                              <Box sx={{ textAlign: 'center', p: 1.5, bgcolor: mode === 'dark' ? '#2a2a2a' : 'background.paper', borderRadius: 2 }}>
                                 <Typography variant="h4" sx={{ fontSize: '28px', fontWeight: 700, color: 'warning.main', mb: 0.5 }}>
                                   {selectedContacts.length}
                                 </Typography>
@@ -1206,7 +1206,12 @@ export default function AdvancedSMSPage() {
                     Örnek Şablon:
                   </Typography>
                 </Box>
-                <Paper sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid rgba(0,0,0,0.1)' }}>
+                <Paper sx={{ 
+                  p: 2, 
+                  bgcolor: mode === 'dark' ? '#2a2a2a' : 'background.paper', 
+                  borderRadius: 2, 
+                  border: mode === 'dark' ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)' 
+                }}>
                   <Typography variant="body2" sx={{ fontSize: '13px', fontFamily: 'monospace', color: 'text.primary' }}>
                     {`Merhaba {{name}}, hoş geldiniz! Doğrulama kodunuz: {{code}}`}
                   </Typography>

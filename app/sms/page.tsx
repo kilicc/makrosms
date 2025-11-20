@@ -173,7 +173,12 @@ export default function SMSInterfacePage() {
               </Alert>
             )}
 
-            <Paper sx={{ p: 2, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <Paper sx={{ 
+              p: 2, 
+              borderRadius: 2, 
+              boxShadow: mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+              backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+            }}>
               <Box component="form" onSubmit={handleSubmit}>
                 <Grid container spacing={1.5}>
                   <Grid size={{ xs: 12 }}>
