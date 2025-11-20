@@ -383,7 +383,7 @@ export default function ContactsPage() {
                         },
                       }}
                     >
-                      {importing ? 'Import Ediliyor...' : 'Import Et'}
+                      {importing ? 'Import Ediliyor...' : 'Excel Yükle'}
                     </Button>
                     <Button
                       variant="outlined"
@@ -969,6 +969,97 @@ export default function ContactsPage() {
           </Dialog>
         </Box>
       </Box>
+
+      {/* Import Dialog */}
+      <Dialog 
+        open={importDialogOpen} 
+        onClose={() => {
+          if (!importing) {
+            setImportDialogOpen(false);
+            setImportFile(null);
+            setSelectedGroupForImport('');
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: '16px', fontWeight: 500 }}>
+          Excel Dosyası İçe Aktar
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            {importFile && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Seçilen dosya: <strong>{importFile.name}</strong>
+              </Alert>
+            )}
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="group-select-label" sx={{ fontSize: '14px' }}>
+                Grup Seç (Opsiyonel)
+              </InputLabel>
+              <Select
+                labelId="group-select-label"
+                value={selectedGroupForImport}
+                label="Grup Seç (Opsiyonel)"
+                onChange={(e) => setSelectedGroupForImport(e.target.value)}
+                size="small"
+                sx={{ fontSize: '14px' }}
+              >
+                <MenuItem value="" sx={{ fontSize: '14px' }}>
+                  <em>Grup seçilmedi (Tüm kişiler)</em>
+                </MenuItem>
+                {groups.map((group) => (
+                  <MenuItem key={group.id} value={group.id} sx={{ fontSize: '14px' }}>
+                    {group.name} ({group.contactCount} kişi)
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 1 }}>
+              <strong>Önemli:</strong>
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
+              • Excel dosyasında <strong>İsim</strong> ve <strong>Telefon</strong> sütunları olmalıdır
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
+              • Telefon numaraları otomatik olarak doğru formata (905xxxxxxxxx) dönüştürülecektir
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
+              • Desteklenen formatlar: 5075708797, 05075708797, 905075708797, vb.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+              • Zaten kayıtlı numaralar atlanacaktır
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => {
+              if (!importing) {
+                setImportDialogOpen(false);
+                setImportFile(null);
+                setSelectedGroupForImport('');
+              }
+            }}
+            disabled={importing}
+            sx={{ fontSize: '13px', textTransform: 'none' }}
+          >
+            İptal
+          </Button>
+          <Button
+            onClick={handleImport}
+            disabled={importing || !importFile}
+            variant="contained"
+            sx={{
+              fontSize: '13px',
+              textTransform: 'none',
+              background: 'linear-gradient(135deg, #2196F3 0%, #F44336 100%)',
+            }}
+          >
+            {importing ? 'İçe Aktarılıyor...' : 'İçe Aktar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ProtectedRoute>
   );
 }
