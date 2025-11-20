@@ -25,8 +25,8 @@ const CEPSMS_PASSWORD = process.env.CEPSMS_PASSWORD || 'Qaswed';
 const CEPSMS_FROM = process.env.CEPSMS_FROM || 'CepSMS';
 const CEPSMS_API_URL = 'https://panel4.cepsms.com/smsapi';
 // CepSMS MULTI endpoint - aynı endpoint, sadece format farklı (Messages array kullanılıyor)
+// Bazı CepSMS versiyonlarında /multi endpoint'i olabilir, ama genelde aynı endpoint kullanılır
 const CEPSMS_MULTI_API_URL = 'https://panel4.cepsms.com/smsapi';
-const CEPSMS_MULTI_API_URL = 'https://panel4.cepsms.com/smsapi/multi'; // MULTI endpoint
 
 // HTTPS agent - SSL sertifika doğrulamasını atla (development için)
 const httpsAgent = new https.Agent({
