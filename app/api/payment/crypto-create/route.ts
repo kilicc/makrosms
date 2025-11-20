@@ -33,8 +33,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get package
-    const packageData = PAYMENT_PACKAGES.find((p) => p.id === packageId);
+    // Get package from database first, fallback to static if not found
+    let packageData: any = null;
+    const { data: dbPackage, error: packageError } = await supabaseServer
+      .from('payment_packages')
+      .select('*')
+      .or(`id.eq.${packageId},package_id.eq.${packageId}`)
+      .eq('is_active', true)
+      .single();
+
+    if (dbPackage && !packageError) {
+      packageData = {
+        id: dbPackage.id,
+        packageId: dbPackage.package_id,
+        name: dbPackage.name,
+        credits: dbPackage.credits,
+        price: Number(dbPackage.price),
+        currency: dbPackage.currency || 'TRY',
+        bonus: dbPackage.bonus || 0,
+      };
+    } else {
+      // Fallback to static packages
+      packageData = PAYMENT_PACKAGES.find((p) => p.id === packageId);
+    }
+
     if (!packageData) {
       return NextResponse.json(
         { success: false, message: 'Geçersiz paket' },
@@ -42,13 +64,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get crypto currency info
-    const crypto = CRYPTO_CURRENCIES[cryptoCurrency.toUpperCase()];
-    if (!crypto) {
-      return NextResponse.json(
-        { success: false, message: 'Desteklenmeyen kripto para' },
-        { status: 400 }
-      );
+    // Get crypto currency info from database
+    const { data: cryptoData, error: cryptoError } = await supabaseServer
+      .from('crypto_currencies')
+      .select('*')
+      .eq('symbol', cryptoCurrency.toUpperCase())
+      .eq('is_active', true)
+      .single();
+
+    let crypto: any = null;
+    
+    if (cryptoData && !cryptoError) {
+      // Use database crypto data
+      crypto = {
+        symbol: cryptoData.symbol,
+        name: cryptoData.name,
+        decimals: cryptoData.decimals,
+        minAmount: Number(cryptoData.min_amount),
+        networkFee: Number(cryptoData.network_fee),
+        confirmations: cryptoData.confirmations,
+        walletAddress: cryptoData.wallet_address,
+      };
+    } else {
+      // Fallback to static data if not found in database
+      const staticCrypto = CRYPTO_CURRENCIES[cryptoCurrency.toUpperCase()];
+      if (!staticCrypto) {
+        return NextResponse.json(
+          { success: false, message: 'Desteklenmeyen kripto para' },
+          { status: 400 }
+        );
+      }
+      crypto = {
+        symbol: staticCrypto.symbol,
+        name: staticCrypto.name,
+        decimals: staticCrypto.decimals,
+        minAmount: staticCrypto.minAmount,
+        networkFee: staticCrypto.networkFee,
+        confirmations: staticCrypto.confirmations,
+        walletAddress: null, // Will use default
+      };
     }
 
     // Get crypto price
@@ -78,8 +132,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get wallet address
-    const walletAddress = getWalletAddress(cryptoCurrency);
+    // Get wallet address from database, fallback to default if not set
+    // Trim whitespace and ensure it's not empty
+    let walletAddress = crypto.walletAddress && crypto.walletAddress.trim() 
+      ? crypto.walletAddress.trim() 
+      : getWalletAddress(cryptoCurrency);
+    
+    if (!walletAddress) {
+      return NextResponse.json(
+        { success: false, message: 'Cüzdan adresi bulunamadı' },
+        { status: 400 }
+      );
+    }
 
     // Generate QR code
     const qrCodeData = await QRCode.toDataURL(walletAddress);
