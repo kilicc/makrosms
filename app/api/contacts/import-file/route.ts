@@ -64,7 +64,14 @@ export async function POST(request: NextRequest) {
       const workbook = XLSX.read(fileContent, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      contacts = XLSX.utils.sheet_to_json(worksheet);
+      contacts = XLSX.utils.sheet_to_json(worksheet, {
+        raw: false, // Tüm değerleri string olarak al
+        defval: '', // Boş hücreler için varsayılan değer
+      });
+      
+      console.log('[Import] Excel parsed, contacts count:', contacts.length);
+      console.log('[Import] First contact sample:', contacts[0]);
+      console.log('[Import] Available columns:', contacts.length > 0 ? Object.keys(contacts[0]) : []);
     }
 
     if (contacts.length === 0) {
@@ -95,31 +102,125 @@ export async function POST(request: NextRequest) {
       let phoneValue = 'Unknown';
       try {
         // Map column names (case-insensitive)
+        // Try to find name field - support multiple variations
         const nameField = Object.keys(contactData).find(
-          (key) => key.toLowerCase().includes('isim') || key.toLowerCase().includes('name') || key.toLowerCase().includes('ad')
+          (key) => {
+            const lowerKey = key.toLowerCase().trim();
+            return lowerKey.includes('isim') || 
+                   lowerKey.includes('name') || 
+                   lowerKey.includes('ad') || 
+                   lowerKey === 'isim' ||
+                   lowerKey === 'name' ||
+                   lowerKey === 'ad' ||
+                   lowerKey === 'adı' ||
+                   lowerKey === 'isimsoyisim';
+          }
         );
+        
+        // Try to find phone field - support multiple variations
         const phoneField = Object.keys(contactData).find(
-          (key) => key.toLowerCase().includes('telefon') || key.toLowerCase().includes('phone') || key.toLowerCase().includes('numara')
+          (key) => {
+            const lowerKey = key.toLowerCase().trim();
+            return lowerKey.includes('telefon') || 
+                   lowerKey.includes('phone') || 
+                   lowerKey.includes('numara') ||
+                   lowerKey.includes('tel') ||
+                   lowerKey === 'telefon' ||
+                   lowerKey === 'phone' ||
+                   lowerKey === 'numara' ||
+                   lowerKey === 'tel' ||
+                   lowerKey === '5' || // Excel'de sütun başlığı "5" olabilir
+                   lowerKey.startsWith('5'); // 5 ile başlayan sütun adları
+          }
         );
+        
         const emailField = Object.keys(contactData).find(
-          (key) => key.toLowerCase().includes('email') || key.toLowerCase().includes('e-posta') || key.toLowerCase().includes('eposta')
+          (key) => {
+            const lowerKey = key.toLowerCase().trim();
+            return lowerKey.includes('email') || 
+                   lowerKey.includes('e-posta') || 
+                   lowerKey.includes('eposta') ||
+                   lowerKey.includes('mail');
+          }
         );
+        
         const groupField = Object.keys(contactData).find(
-          (key) => key.toLowerCase().includes('grup') || key.toLowerCase().includes('group')
+          (key) => {
+            const lowerKey = key.toLowerCase().trim();
+            return lowerKey.includes('grup') || 
+                   lowerKey.includes('group');
+          }
         );
+        
         const notesField = Object.keys(contactData).find(
-          (key) => key.toLowerCase().includes('not') || key.toLowerCase().includes('note')
+          (key) => {
+            const lowerKey = key.toLowerCase().trim();
+            return lowerKey.includes('not') || 
+                   lowerKey.includes('note') ||
+                   lowerKey.includes('açıklama');
+          }
         );
+
+        // Log for debugging
+        if (results.success + results.failed === 0) {
+          console.log('[Import] Available columns:', Object.keys(contactData));
+          console.log('[Import] Found nameField:', nameField);
+          console.log('[Import] Found phoneField:', phoneField);
+        }
 
         const name = nameField ? String(contactData[nameField] || '').trim() : '';
         let phoneRaw = phoneField ? String(contactData[phoneField] || '').trim() : '';
+        
+        // If phone field not found, try to get from any column that looks like a phone number
+        if (!phoneRaw && phoneField) {
+          const rawValue = contactData[phoneField];
+          if (rawValue !== null && rawValue !== undefined) {
+            // Convert to string and clean
+            phoneRaw = String(rawValue).trim();
+          }
+        }
+        
+        // If still no phone, try first column that contains only numbers
+        if (!phoneRaw) {
+          for (const key of Object.keys(contactData)) {
+            const value = String(contactData[key] || '').trim();
+            // If value looks like a phone number (contains mostly digits)
+            if (value && /^\d{9,12}$/.test(value.replace(/\D/g, ''))) {
+              phoneRaw = value;
+              console.log('[Import] Found phone in column:', key, '=', phoneRaw);
+              break;
+            }
+          }
+        }
+        
         phoneValue = phoneRaw || 'Unknown';
         const email = emailField ? String(contactData[emailField] || '').trim() : '';
         const notes = notesField ? String(contactData[notesField] || '').trim() : '';
 
-        if (!name || !phoneRaw) {
+        // If no name field found, use first column as name or set default
+        let finalName = name;
+        if (!finalName) {
+          // Try first column as name
+          const firstKey = Object.keys(contactData)[0];
+          if (firstKey && firstKey !== phoneField) {
+            finalName = String(contactData[firstKey] || '').trim();
+          }
+        }
+        
+        // If still no name, set default
+        if (!finalName && phoneRaw) {
+          finalName = `Kişi ${phoneRaw.substring(phoneRaw.length - 4)}`; // Son 4 rakamı kullan
+        }
+
+        if (!finalName || !phoneRaw) {
           results.failed++;
-          results.errors.push(`${phoneValue}: İsim ve telefon gerekli`);
+          const errorMsg = !finalName && !phoneRaw 
+            ? 'İsim ve telefon bulunamadı' 
+            : !finalName 
+              ? 'İsim bulunamadı' 
+              : 'Telefon bulunamadı';
+          results.errors.push(`Satır ${results.success + results.failed}: ${errorMsg} - Sütunlar: ${Object.keys(contactData).join(', ')}`);
+          console.log('[Import] Row failed:', { contactData, nameField, phoneField, finalName, phoneRaw });
           continue;
         }
 
@@ -163,7 +264,7 @@ export async function POST(request: NextRequest) {
 
         contactsToInsert.push({
           user_id: auth.user.userId,
-          name,
+          name: finalName,
           phone,
           email: email || null,
           notes: notes || null,
