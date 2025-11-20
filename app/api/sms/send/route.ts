@@ -132,7 +132,13 @@ export async function POST(request: NextRequest) {
         const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
         const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
           try {
+            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderiliyor - ${phoneNumber}`);
             const smsResult = await sendSMS(phoneNumber, message);
+            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS sonucu - ${phoneNumber}:`, {
+              success: smsResult.success,
+              messageId: smsResult.messageId,
+              error: smsResult.error
+            });
             return {
               phone: phoneNumber,
               success: smsResult.success,
@@ -140,6 +146,7 @@ export async function POST(request: NextRequest) {
               error: smsResult.error,
             };
           } catch (error: any) {
+            console.error(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderim exception - ${phoneNumber}:`, error);
             return {
               phone: phoneNumber,
               success: false,
@@ -150,6 +157,11 @@ export async function POST(request: NextRequest) {
         
         const concurrentResults = await Promise.all(concurrentPromises);
         batchResults.push(...concurrentResults);
+        
+        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
+        if (i + CONCURRENT_LIMIT < batch.length) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
+        }
       }
       
       results.push(...batchResults);
@@ -188,6 +200,11 @@ export async function POST(request: NextRequest) {
       // Her batch sonrası başarısız gönderimleri kaydet ve iade oluştur (bulk)
       const failedBatchSends = batchResults.filter((r) => !r.success);
       if (failedBatchSends.length > 0 && !isAdmin && auth.user) {
+        // Başarısız SMS'lerin detaylarını logla
+        console.log(`[SMS Send] Batch ${batchIndex + 1}: ${failedBatchSends.length} başarısız SMS tespit edildi:`, 
+          failedBatchSends.map(r => ({ phone: r.phone, error: r.error }))
+        );
+        
         // Önce başarısız SMS'leri bulk insert yap
         const bulkFailedData = failedBatchSends.map((result) => ({
           user_id: auth.user!.userId,
@@ -197,6 +214,8 @@ export async function POST(request: NextRequest) {
           status: 'failed',
           cost: creditPerMessage,
           failed_at: new Date().toISOString(),
+          // Error mesajını service_name veya sender field'ında saklayalım (eğer yoksa)
+          // Ya da refund reason'da detaylı gösterelim
         }));
         
         const { data: failedSmsDataArray, error: failedInsertError } = await supabaseServer
@@ -204,22 +223,35 @@ export async function POST(request: NextRequest) {
           .insert(bulkFailedData)
           .select();
         
+        if (failedInsertError) {
+          console.error(`[SMS Send] Batch ${batchIndex + 1}: Başarısız SMS kayıt hatası:`, failedInsertError);
+        }
+        
         if (!failedInsertError && failedSmsDataArray && failedSmsDataArray.length > 0) {
-          // Her başarısız SMS için iade oluştur (bulk)
-          const bulkRefundData = failedSmsDataArray.map((failedSmsData, index) => ({
-            user_id: auth.user!.userId,
-            sms_id: failedSmsData.id,
-            original_cost: creditPerMessage,
-            refund_amount: creditPerMessage,
-            reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - ${failedBatchSends[index].error || 'Bilinmeyen hata'}`,
-            status: 'pending',
-          }));
+          // Her başarısız SMS için iade oluştur (bulk) - error mesajını reason'da detaylı göster
+          const bulkRefundData = failedSmsDataArray.map((failedSmsData, index) => {
+            const errorDetail = failedBatchSends[index].error || 'Bilinmeyen hata';
+            return {
+              user_id: auth.user!.userId,
+              sms_id: failedSmsData.id,
+              original_cost: creditPerMessage,
+              refund_amount: creditPerMessage,
+              reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - Telefon: ${failedBatchSends[index].phone} - Hata: ${errorDetail}`,
+              status: 'pending',
+            };
+          });
           
-          await supabaseServer
+          const { error: refundError } = await supabaseServer
             .from('refunds')
             .insert(bulkRefundData);
           
-          console.log(`[SMS Send] Batch ${batchIndex + 1}: ${failedBatchSends.length} başarısız SMS kaydedildi ve iade oluşturuldu`);
+          if (refundError) {
+            console.error(`[SMS Send] Batch ${batchIndex + 1}: İade oluşturma hatası:`, refundError);
+          } else {
+            console.log(`[SMS Send] Batch ${batchIndex + 1}: ${failedBatchSends.length} başarısız SMS kaydedildi ve iade oluşturuldu`);
+          }
+        } else {
+          console.error(`[SMS Send] Batch ${batchIndex + 1}: Başarısız SMS'ler kaydedilemedi!`);
         }
       }
     }

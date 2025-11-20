@@ -126,18 +126,22 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
     const formattedPhone = formatPhoneNumber(phone);
     
     console.log('[CepSMS] SMS gönderiliyor:', {
-      phone: formattedPhone,
+      originalPhone: phone,
+      formattedPhone: formattedPhone,
       messageLength: message.length,
+      messagePreview: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
       from: CEPSMS_FROM,
       username: CEPSMS_USERNAME,
+      apiUrl: CEPSMS_API_URL,
     });
 
     // CepSMS API isteği - From parametresi opsiyonel ve bazı hesaplarda geçersiz olabilir
+    // CepSMS API format: User, Pass, Message, Numbers (array formatında olmalı)
     const requestData: any = {
       User: CEPSMS_USERNAME,
       Pass: CEPSMS_PASSWORD,
       Message: message,
-      Numbers: [formattedPhone],
+      Numbers: [formattedPhone], // CepSMS API'si array bekliyor
     };
 
     // From parametresi sadece geçerli bir değer varsa ekle
@@ -146,22 +150,38 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
       requestData.From = CEPSMS_FROM;
     }
 
+    console.log('[CepSMS] API İsteği:', {
+      url: CEPSMS_API_URL,
+      requestData: {
+        ...requestData,
+        Pass: '***', // Şifreyi log'da gösterme
+      },
+    });
+
     const response = await axios.post<CepSMSResponse>(
       CEPSMS_API_URL,
       requestData,
       {
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         httpsAgent: httpsAgent,
         timeout: 30000, // 30 saniye timeout
+        validateStatus: function (status) {
+          // 200-399 arası tüm status kodlarını başarılı kabul et (bazı API'ler 200 dışı dönebiliyor)
+          return status >= 200 && status < 500;
+        },
       }
     );
 
-    console.log('[CepSMS] API Yanıtı:', JSON.stringify(response.data, null, 2));
+    console.log('[CepSMS] API Yanıtı (Ham):', JSON.stringify(response.data, null, 2));
+    console.log('[CepSMS] API Status:', response.status);
+    console.log('[CepSMS] API Headers:', JSON.stringify(response.headers, null, 2));
 
     // API yanıtını kontrol et
     if (!response.data) {
+      console.error('[CepSMS] API yanıtı boş!');
       return {
         success: false,
         error: 'API yanıtı alınamadı',
@@ -170,28 +190,64 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
 
     // Status kontrolü - farklı formatlar olabilir
     const status = response.data.Status || response.data.status || response.data.statusCode;
-    const messageId = response.data.MessageId || response.data.messageId || response.data.id;
-    const error = response.data.Error || response.data.error || response.data.message;
+    const messageId = response.data.MessageId || response.data.messageId || response.data.id || response.data.MessageID;
+    const error = response.data.Error || response.data.error || response.data.message || response.data.Message;
 
-    // Başarılı yanıt kontrolü
+    console.log('[CepSMS] Parse Edilen Değerler:', {
+      status,
+      messageId,
+      error,
+      rawData: response.data
+    });
+
+    // Başarılı yanıt kontrolü - daha fazla format kontrol et
     const statusStr = String(status || '').toUpperCase();
-    const isSuccess = statusStr === 'OK' || status === 200;
+    const messageIdStr = messageId ? String(messageId) : '';
+    
+    // Başarı kriterleri:
+    // 1. Status "OK" ise
+    // 2. Status 200 ise
+    // 3. Status yok ama messageId varsa ve status hata değilse
+    // 4. Response.data'nın kendisi başarılı bir yapı ise
+    const isSuccess = 
+      statusStr === 'OK' || 
+      status === 200 || 
+      statusStr === 'SUCCESS' ||
+      (messageId && !error && statusStr !== 'ERROR' && statusStr !== 'HATA' && statusStr !== 'FAIL');
+    
+    console.log('[CepSMS] Başarı Kontrolü:', {
+      statusStr,
+      messageId: messageIdStr,
+      error,
+      isSuccess,
+      statusNumeric: status
+    });
     
     if (isSuccess && messageId) {
-      console.log('[CepSMS] SMS başarıyla gönderildi:', messageId);
+      console.log('[CepSMS] ✅ SMS başarıyla gönderildi:', {
+        messageId: String(messageId),
+        phone: formattedPhone,
+        status
+      });
       return {
         success: true,
         messageId: String(messageId),
       };
     }
 
-    // Hata varsa göster
+    // Hata varsa detaylı log
     const errorMessage = error || `Status: ${status}, MessageId: ${messageId || 'yok'}`;
-    console.error('[CepSMS] SMS gönderim hatası:', errorMessage);
+    console.error('[CepSMS] ❌ SMS gönderim hatası:', {
+      errorMessage,
+      phone: formattedPhone,
+      status,
+      messageId,
+      fullResponse: response.data
+    });
     
     return {
       success: false,
-      error: errorMessage || 'Bilinmeyen hata - API yanıtı beklenmedik formatta',
+      error: errorMessage || `Bilinmeyen hata - API yanıtı beklenmedik formatta. Status: ${status}, MessageId: ${messageId || 'yok'}`,
     };
   } catch (error: any) {
     console.error('[CepSMS] SMS gönderim hatası (catch):', {
@@ -200,20 +256,53 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
       status: error.response?.status,
       statusText: error.response?.statusText,
       code: error.code,
+      request: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        data: error.config.data,
+      } : null,
     });
 
     // Axios hata yanıtı varsa
     if (error.response) {
       const errorData = error.response.data;
-      const errorMessage = errorData?.Error || errorData?.error || errorData?.message || error.message;
+      let errorMessage = '';
+      
+      // 400 Bad Request - detaylı hata mesajı göster
+      if (error.response.status === 400) {
+        if (typeof errorData === 'string') {
+          errorMessage = `Bad Request (400): ${errorData}`;
+        } else if (errorData?.Error || errorData?.error || errorData?.message) {
+          errorMessage = `Bad Request (400): ${errorData.Error || errorData.error || errorData.message}`;
+        } else {
+          errorMessage = `Bad Request (400): API geçersiz istek hatası. Muhtemelen eksik/hatalı parametre veya geçersiz telefon numarası formatı.`;
+        }
+      } else {
+        errorMessage = errorData?.Error || errorData?.error || errorData?.message || error.message;
+      }
+      
+      // Eğer hala mesaj yoksa genel mesaj ver
+      if (!errorMessage) {
+        errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`;
+      }
+      
+      // Detaylı log
+      console.error('[CepSMS] API Hata Detayları:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        errorData: JSON.stringify(errorData),
+        errorMessage,
+      });
+      
       return {
         success: false,
-        error: errorMessage || `HTTP ${error.response.status}: ${error.response.statusText}`,
+        error: errorMessage,
       };
     }
 
     // Network hatası
     if (error.request) {
+      console.error('[CepSMS] Network hatası - API\'ye ulaşılamadı');
       return {
         success: false,
         error: 'API\'ye bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.',
@@ -221,6 +310,7 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
     }
 
     // Diğer hatalar
+    console.error('[CepSMS] Genel hata:', error.message);
     return {
       success: false,
       error: error.message || 'SMS gönderim hatası',
