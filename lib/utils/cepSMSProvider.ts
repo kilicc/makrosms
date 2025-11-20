@@ -138,14 +138,17 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
       apiUrl: CEPSMS_API_URL,
     });
 
-    // CepSMS API isteği - From parametresi opsiyonel ve bazı hesaplarda geçersiz olabilir
-    // CepSMS API format: User, Pass, Message, Numbers (array formatında olmalı)
-    const requestData: any = {
+    // CepSMS API isteği - Tek numara için GSM formatı veya Numbers array formatı deneniyor
+    // Önce basit format deneniyor: User, Pass, Message, GSM (string)
+    let requestData: any = {
       User: CEPSMS_USERNAME,
       Pass: CEPSMS_PASSWORD,
       Message: message,
-      Numbers: [formattedPhone], // CepSMS API'si array bekliyor
     };
+
+    // CepSMS API formatları - önce GSM (string) formatını dene
+    // Eğer 400 hatası verirse, Numbers array formatını dene
+    requestData.GSM = formattedPhone; // Önce GSM string formatını dene
 
     // From parametresi sadece geçerli bir değer varsa ekle
     // CepSMS hesabında kayıtlı gönderen adı yoksa From parametresini kaldır
@@ -161,22 +164,62 @@ export async function sendSMS(phone: string, message: string): Promise<SendSMSRe
       },
     });
 
-    const response = await axios.post<CepSMSResponse>(
-      CEPSMS_API_URL,
-      requestData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        httpsAgent: httpsAgent,
-        timeout: 30000, // 30 saniye timeout
-        validateStatus: function (status) {
-          // 200-399 arası tüm status kodlarını başarılı kabul et (bazı API'ler 200 dışı dönebiliyor)
-          return status >= 200 && status < 500;
-        },
+    let response: any;
+    try {
+      // Önce GSM (string) formatını dene
+      response = await axios.post<CepSMSResponse>(
+        CEPSMS_API_URL,
+        requestData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000, // 30 saniye timeout
+          validateStatus: function (status) {
+            return status >= 200 && status < 500;
+          },
+        }
+      );
+    } catch (firstError: any) {
+      // Eğer GSM formatı 400 hatası verirse, Numbers array formatını dene
+      if (firstError.response?.status === 400) {
+        console.warn('[CepSMS] GSM formatı 400 hatası verdi, Numbers array formatı deneniyor...');
+        
+        // Numbers array formatını dene
+        requestData = {
+          User: CEPSMS_USERNAME,
+          Pass: CEPSMS_PASSWORD,
+          Message: message,
+          Numbers: [formattedPhone], // Array formatını dene
+        };
+        
+        if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+          requestData.From = CEPSMS_FROM;
+        }
+        
+        // Numbers array formatını dene
+        response = await axios.post<CepSMSResponse>(
+          CEPSMS_API_URL,
+          requestData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            httpsAgent: httpsAgent,
+            timeout: 30000,
+            validateStatus: function (status) {
+              return status >= 200 && status < 500;
+            },
+          }
+        );
+      } else {
+        // Diğer hatalar için tekrar fırlat
+        throw firstError;
       }
-    );
+    }
 
     console.log('[CepSMS] API Yanıtı (Ham):', JSON.stringify(response.data, null, 2));
     console.log('[CepSMS] API Status:', response.status);
