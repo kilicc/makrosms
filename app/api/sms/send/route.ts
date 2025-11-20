@@ -169,51 +169,50 @@ export async function POST(request: NextRequest) {
       const batch = batches[batchIndex];
       console.log(`[SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} numara)`);
       
-      // CepSMS API'sine toplu gönderim yap (batch içindeki tüm numaraları tek seferde gönder)
+      // CepSMS API'sine paralel olarak tek tek gönder (MULTI formatı 100 numara için bile 400 hatası veriyor)
+      // Bu yüzden direkt paralel tek tek gönderim yapıyoruz
       const batchResults: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
       
-      try {
-        // CepSMS API'sine toplu gönderim için sendBulkSMS kullan
-        const bulkResults = await sendBulkSMS(batch, message);
-        
-        // Sonuçları batch formatına çevir
-        for (let i = 0; i < batch.length; i++) {
-          const bulkResult = bulkResults[i] || { success: false, error: 'Sonuç bulunamadı' };
-          batchResults.push({
-            phone: batch[i],
-            success: bulkResult.success,
-            messageId: bulkResult.messageId,
-            error: bulkResult.error,
-          });
-        }
-        
-        console.log(`[SMS Send] Batch ${batchIndex + 1}: Toplu gönderim tamamlandı - ${batchResults.filter(r => r.success).length} başarılı, ${batchResults.filter(r => !r.success).length} başarısız`);
-      } catch (error: any) {
-        // Toplu gönderim başarısız olursa, tek tek göndermeyi dene
-        console.warn(`[SMS Send] Batch ${batchIndex + 1}: Toplu gönderim başarısız, tek tek gönderiliyor...`, error);
-        
-        // Fallback: Tek tek gönder
-        for (const phoneNumber of batch) {
+      // Paralel olarak gönder (aynı anda en fazla 20)
+      const CONCURRENT_LIMIT = 20;
+      
+      for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
+        const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
+        const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
           try {
+            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderiliyor - ${phoneNumber}`);
             const smsResult = await sendSMS(phoneNumber, message);
-            batchResults.push({
+            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS sonucu - ${phoneNumber}:`, {
+              success: smsResult.success,
+              messageId: smsResult.messageId,
+              error: smsResult.error
+            });
+            return {
               phone: phoneNumber,
               success: smsResult.success,
               messageId: smsResult.messageId,
               error: smsResult.error,
-            });
-            
-            // Rate limiting için küçük bekleme
-            await new Promise(resolve => setTimeout(resolve, 50));
-          } catch (smsError: any) {
-            batchResults.push({
+            };
+          } catch (error: any) {
+            console.error(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderim exception - ${phoneNumber}:`, error);
+            return {
               phone: phoneNumber,
               success: false,
-              error: smsError.message || 'SMS gönderim hatası',
-            });
+              error: error.message || 'SMS gönderim hatası',
+            };
           }
+        });
+        
+        const concurrentResults = await Promise.all(concurrentPromises);
+        batchResults.push(...concurrentResults);
+        
+        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
+        if (i + CONCURRENT_LIMIT < batch.length) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
         }
       }
+      
+      console.log(`[SMS Send] Batch ${batchIndex + 1}: Tamamlandı - ${batchResults.filter(r => r.success).length} başarılı, ${batchResults.filter(r => !r.success).length} başarısız`);
       
       results.push(...batchResults);
       
