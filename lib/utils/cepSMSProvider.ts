@@ -31,46 +31,61 @@ const httpsAgent = new https.Agent({
 });
 
 /**
- * Telefon numarasını CepSMS formatına dönüştür (905xxxxxxxxx)
+ * Telefon numarasını CepSMS formatına dönüştür (905xxxxxxxxx - 12 haneli)
  */
 export function formatPhoneNumber(phone: string): string {
   // Sadece rakamları al
   let cleaned = phone.replace(/\D/g, '');
   
-  // 12 haneli ve 90 ile başlıyorsa (905xxxxxxxxx) - bu geçerli bir format
-  if (cleaned.length === 12 && cleaned.startsWith('90') && cleaned.startsWith('905')) {
-    return cleaned;
-  }
-  
-  // 11 haneli ve 90 ile başlıyorsa (90xxxxxxxxx) - bu da geçerli
-  if (cleaned.length === 11 && cleaned.startsWith('90')) {
-    return cleaned;
-  }
-  
-  // 0 ile başlıyorsa (0xxxxxxxxx)
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1); // 0'ı kaldır
-    if (cleaned.length === 10 && cleaned.startsWith('5')) {
-      return '90' + cleaned;
+  // 12 haneli ve 905 ile başlıyorsa (905xxxxxxxxx) - bu geçerli bir format
+  // Örnek: 905551234567 (905 + 9 hane = 12 hane)
+  if (cleaned.length === 12 && cleaned.startsWith('905')) {
+    // Geçerliliği kontrol et: 905 + 9 hane daha olmalı (toplam 12 hane)
+    if (/^905\d{9}$/.test(cleaned)) {
+      return cleaned;
     }
   }
   
-  // 10 haneli ve 5 ile başlıyorsa (5xxxxxxxxx)
+  // Eğer 5 haneden az veya 13 haneden fazla ise hata ver
+  if (cleaned.length < 9 || cleaned.length > 13) {
+    throw new Error(`Geçersiz telefon numarası uzunluğu: ${phone} (${cleaned.length} hane). Geçerli formatlar: 905551234567 (12 hane), 05551234567 (11 hane), 551234567 (10 hane)`);
+  }
+  
+  // 11 haneli ve 90 ile başlıyorsa (90xxxxxxxxx) - hatalı format (90 ile başlayıp 905 olmalı)
+  // Bu durumda 0 ekleyerek 12 haneli yapmaya çalışma, hata ver
+  if (cleaned.length === 11 && cleaned.startsWith('90')) {
+    throw new Error(`Geçersiz telefon numarası formatı: ${phone}. 11 haneli numaralar 905 ile başlamalıdır (örn: 905551234567)`);
+  }
+  
+  // 10 haneli ve 05 ile başlıyorsa (05xxxxxxxxx) - 0'ı kaldır ve 90 ekle
+  if (cleaned.length === 10 && cleaned.startsWith('05')) {
+    const withoutZero = cleaned.substring(1); // 0'ı kaldır
+    if (withoutZero.length === 9 && withoutZero.startsWith('5')) {
+      return '90' + withoutZero;
+    }
+  }
+  
+  // 10 haneli ve 5 ile başlıyorsa (5xxxxxxxxx) - 90 ekle
   if (cleaned.length === 10 && cleaned.startsWith('5')) {
     return '90' + cleaned;
   }
   
-  // 11 haneli ve 5 ile başlıyorsa (5xxxxxxxxxx) - 0 eksik, 90 ekle
+  // 11 haneli ve 5 ile başlıyorsa (5xxxxxxxxxx) - ilk 10 haneyi al ve 90 ekle
   if (cleaned.length === 11 && cleaned.startsWith('5')) {
     return '90' + cleaned.substring(0, 10);
   }
   
-  // 12 haneli ve 5 ile başlıyorsa (5xxxxxxxxxxx) - başındaki 5'i kaldır ve 90 ekle
-  if (cleaned.length === 12 && cleaned.startsWith('5')) {
-    return '90' + cleaned.substring(0, 10);
+  // 9 haneli ve 5 ile başlıyorsa (5xxxxxxxx) - 90 ekle (mobil numaralar)
+  if (cleaned.length === 9 && cleaned.startsWith('5')) {
+    return '90' + cleaned;
   }
   
-  throw new Error(`Geçersiz telefon numarası formatı: ${phone}. Lütfen geçerli bir Türkiye telefon numarası girin (örn: 905551234567, 05551234567, 551234567)`);
+  // 13 haneli ve 905 ile başlıyorsa - ilk 12 haneyi al
+  if (cleaned.length === 13 && cleaned.startsWith('905')) {
+    return cleaned.substring(0, 12);
+  }
+  
+  throw new Error(`Geçersiz telefon numarası formatı: ${phone} (${cleaned.length} hane). Geçerli formatlar: 905551234567 (12 hane), 05551234567 (11 hane), 551234567 (10 hane)`);
 }
 
 /**

@@ -117,82 +117,110 @@ export async function POST(request: NextRequest) {
       requiredCredit = Math.ceil(messageLength / 180) || 1;
     }
 
-    // İlk numaraya SMS gönder
-    const firstPhone = phoneNumbers[0];
-    const smsResult = await sendSMS(firstPhone, Message);
-
-    if (smsResult.success && smsResult.messageId) {
-      // SMS kaydı oluştur
-      const { data: smsMessageData, error: createError } = await supabaseServer
-        .from('sms_messages')
-        .insert({
-          user_id: auth.user.id,
-          phone_number: firstPhone,
-          message: Message,
-          sender: From || null,
-          status: 'gönderildi',
-          cost: isAdmin ? 0 : requiredCredit,
-          cep_sms_message_id: smsResult.messageId,
-          sent_at: StartDate ? new Date(StartDate).toISOString() : new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (createError || !smsMessageData) {
-        // Kredi geri ver (admin değilse)
-        if (!isAdmin) {
-          await supabaseServer
-            .from('users')
-            .update({ credit: userCredit })
-            .eq('id', auth.user.id);
-        }
-        return NextResponse.json(
-          {
-            MessageId: 0,
-            Status: 'Error',
-            Error: 'SMS kaydı oluşturulamadı',
-          },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        MessageId: smsMessageData.id,
-        Status: 'OK',
+    // Her numaraya ayrı SMS gönder
+    const results: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
+    let successCount = 0;
+    let failCount = 0;
+    const creditPerMessage = requiredCredit; // Mesaj başına kredi
+    
+    for (const phoneNumber of phoneNumbers) {
+      const smsResult = await sendSMS(phoneNumber, Message);
+      results.push({
+        phone: phoneNumber,
+        success: smsResult.success,
+        messageId: smsResult.messageId,
+        error: smsResult.error,
       });
-    } else {
-      // SMS gönderim başarısız
-      const { data: failedSmsData } = await supabaseServer
-        .from('sms_messages')
-        .insert({
-          user_id: auth.user.id,
-          phone_number: firstPhone,
-          message: Message,
-          sender: From || null,
-          status: 'failed',
-          cost: isAdmin ? 0 : requiredCredit,
-          failed_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      
+      if (smsResult.success && smsResult.messageId) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    }
 
-      if (failedSmsData && !isAdmin) {
+    // Başarılı gönderimleri kaydet
+    const successfulSends = results.filter((r) => r.success && r.messageId);
+    if (successfulSends.length > 0) {
+      for (const result of successfulSends) {
         await supabaseServer
-          .from('refunds')
+          .from('sms_messages')
           .insert({
             user_id: auth.user.id,
-            sms_id: failedSmsData.id,
-            original_cost: requiredCredit,
-            refund_amount: requiredCredit,
-            reason: 'SMS gönderim başarısız - Otomatik iade (48 saat)',
-            status: 'pending',
+            phone_number: result.phone,
+            message: Message,
+            sender: From || null,
+            status: 'gönderildi',
+            cost: isAdmin ? 0 : creditPerMessage,
+            cep_sms_message_id: result.messageId,
+            sent_at: StartDate ? new Date(StartDate).toISOString() : new Date().toISOString(),
           });
       }
+    }
 
+    // Başarısız gönderimleri kaydet ve iade oluştur
+    const failedSends = results.filter((r) => !r.success);
+    if (failedSends.length > 0 && !isAdmin) {
+      for (const result of failedSends) {
+        const { data: failedSmsData } = await supabaseServer
+          .from('sms_messages')
+          .insert({
+            user_id: auth.user.id,
+            phone_number: result.phone,
+            message: Message,
+            sender: From || null,
+            status: 'failed',
+            cost: creditPerMessage,
+            failed_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (failedSmsData) {
+          // Otomatik iade oluştur (48 saat sonra işlenecek)
+          await supabaseServer
+            .from('refunds')
+            .insert({
+              user_id: auth.user.id,
+              sms_id: failedSmsData.id,
+              original_cost: creditPerMessage,
+              refund_amount: creditPerMessage,
+              reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - ${result.error || 'Bilinmeyen hata'}`,
+              status: 'pending',
+            });
+        }
+      }
+    }
+
+    // Sonuç - API v1 formatında döndür
+    if (successCount === phoneNumbers.length) {
+      // Tüm SMS'ler başarılı - ilk mesaj ID'sini döndür
+      const firstSuccess = successfulSends[0];
+      return NextResponse.json({
+        MessageId: firstSuccess?.messageId || 0,
+        Status: 'OK',
+        TotalSent: successCount,
+        TotalFailed: failCount,
+      });
+    } else if (successCount > 0) {
+      // Kısmen başarılı
+      const firstSuccess = successfulSends[0];
+      return NextResponse.json({
+        MessageId: firstSuccess?.messageId || 0,
+        Status: 'Partial',
+        TotalSent: successCount,
+        TotalFailed: failCount,
+        Error: `${failCount} adet SMS gönderilemedi`,
+      });
+    } else {
+      // Tüm SMS'ler başarısız
       return NextResponse.json(
         {
           MessageId: 0,
           Status: 'Error',
+          Error: results[0]?.error || 'SMS gönderim başarısız',
+          TotalSent: successCount,
+          TotalFailed: failCount,
         },
         { status: 400 }
       );
