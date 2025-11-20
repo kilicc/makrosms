@@ -284,17 +284,43 @@ export default function ContactsPage() {
       });
 
       if (response.data.success) {
-        setSuccess(response.data.message || 'Import başarılı');
+        const resultMessage = response.data.message || 'Import başarılı';
+        const resultData = response.data.data || {};
+        
+        if (resultData.success > 0) {
+          setSuccess(resultMessage);
+        } else if (resultData.failed > 0) {
+          // Tüm kayıtlar başarısız olmuşsa detaylı hata göster
+          const errorDetails = resultData.errors && resultData.errors.length > 0
+            ? resultData.errors.slice(0, 5).join('. ')
+            : 'Bilinmeyen hata';
+          setError(`Import başarısız: ${errorDetails}`);
+        } else {
+          setSuccess(resultMessage);
+        }
+        
         setImportDialogOpen(false);
         setImportFile(null);
         setSelectedGroupForImport('');
         loadContacts();
         loadGroups();
       } else {
-        setError(response.data.message || 'Import hatası');
+        const errorMessage = response.data.message || 'Import hatası';
+        const errorData = response.data.data || {};
+        if (errorData.errors && errorData.errors.length > 0) {
+          setError(`${errorMessage}. Hatalar: ${errorData.errors.slice(0, 5).join('. ')}`);
+        } else {
+          setError(errorMessage);
+        }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Import hatası');
+      const errorMessage = err.response?.data?.message || 'Import hatası';
+      const errorData = err.response?.data?.data || {};
+      if (errorData.errors && errorData.errors.length > 0) {
+        setError(`${errorMessage}. Hatalar: ${errorData.errors.slice(0, 5).join('. ')}`);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setImporting(false);
       if (fileInputRef.current) {
