@@ -600,56 +600,5 @@ export async function sendBulkSMS(phones: string[], message: string): Promise<Se
   }
 
   return results;
-
-  /* 
-  // Eski toplu gönderim denemesi (CepSMS API'si desteklemiyor olabilir)
-  try {
-    console.log('[CepSMS] Toplu SMS gönderiliyor:', {
-      numaraSayısı: formattedPhones.length,
-      messageLength: message.length,
-      from: CEPSMS_FROM,
-      username: CEPSMS_USERNAME,
-    });
-
-    // CepSMS API'sine toplu gönderim isteği
-    const requestData: any = {
-      User: CEPSMS_USERNAME,
-      Pass: CEPSMS_PASSWORD,
-      Message: message,
-      Numbers: formattedPhones, // CepSMS API'si array bekliyor
-    };
-
-    // From parametresi sadece geçerli bir değer varsa ekle
-    if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
-      requestData.From = CEPSMS_FROM;
-    }
-
-    console.log('[CepSMS] Toplu API İsteği:', {
-      url: CEPSMS_API_URL,
-      numaraSayısı: formattedPhones.length,
-      requestData: {
-        ...requestData,
-        Pass: '***', // Şifreyi log'da gösterme
-        Numbers: `[${formattedPhones.length} numara]`, // Array'i log'da gösterme
-      },
-    });
-
-    const response = await axios.post<CepSMSResponse>(
-      CEPSMS_API_URL,
-      requestData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        httpsAgent: httpsAgent,
-        timeout: 60000, // Toplu gönderim için daha uzun timeout (60 saniye)
-        validateStatus: function (status) {
-          return status >= 200 && status < 500;
-        },
-      }
-    );
-
-  */
 }
 
