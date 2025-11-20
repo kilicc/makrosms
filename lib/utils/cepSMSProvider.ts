@@ -92,19 +92,20 @@ export function formatPhoneNumber(phone: string): string {
     }
   }
   
+  // 10 haneli ve 5 ile başlıyorsa (5xxxxxxxxx) - 90 ekle
+  // Örnek: 575708797 -> 90575708797 (12 hane)
+  // Örnek: 5075708797 -> 905075708797 (12 hane) - Bu format için özel kontrol
+  if (cleaned.length === 10 && cleaned.startsWith('5')) {
+    return '90' + cleaned; // 905xxxxxxxxx (12 hane)
+  }
+  
   // 11 haneli ve 5 ile başlıyorsa (5xxxxxxxxxx) - ilk 10 haneyi al ve 90 ekle
-  // Örnek: 5075708797 -> ilk 10 hane: 5075708797 -> 905075708797 (12 hane)
+  // Örnek: 50757087971 -> ilk 10 hane: 5075708797 -> 905075708797 (12 hane)
   if (cleaned.length === 11 && cleaned.startsWith('5')) {
     const firstTen = cleaned.substring(0, 10);
     if (firstTen.startsWith('5')) {
       return '90' + firstTen; // 905xxxxxxxxx (12 hane)
     }
-  }
-  
-  // 10 haneli ve 5 ile başlıyorsa (5xxxxxxxxx) - 90 ekle
-  // Örnek: 575708797 -> 90575708797 (12 hane)
-  if (cleaned.length === 10 && cleaned.startsWith('5')) {
-    return '90' + cleaned; // 905xxxxxxxxx (12 hane)
   }
   
   // 9 haneli ve 5 ile başlıyorsa (5xxxxxxxx) - 90 ekle (mobil numaralar)
