@@ -24,6 +24,9 @@ const CEPSMS_USERNAME = process.env.CEPSMS_USERNAME || 'Testfn';
 const CEPSMS_PASSWORD = process.env.CEPSMS_PASSWORD || 'Qaswed';
 const CEPSMS_FROM = process.env.CEPSMS_FROM || 'CepSMS';
 const CEPSMS_API_URL = 'https://panel4.cepsms.com/smsapi';
+// CepSMS MULTI endpoint - aynı endpoint, sadece format farklı (Messages array kullanılıyor)
+const CEPSMS_MULTI_API_URL = 'https://panel4.cepsms.com/smsapi';
+const CEPSMS_MULTI_API_URL = 'https://panel4.cepsms.com/smsapi/multi'; // MULTI endpoint
 
 // HTTPS agent - SSL sertifika doğrulamasını atla (development için)
 const httpsAgent = new https.Agent({
@@ -555,13 +558,143 @@ export async function sendBulkSMS(phones: string[], message: string): Promise<Se
     }));
   }
 
-  // CepSMS API'nin toplu gönderimi destekleyip desteklemediğini bilmiyoruz
-  // Bu yüzden paralel olarak tek tek gönderiyoruz (daha güvenilir)
-  // Her numara için ayrı ayrı sendSMS çağrısı yapıyoruz, ama Promise.all ile paralel çalıştırıyoruz
-  
-  console.log('[CepSMS] Toplu SMS gönderiliyor (paralel tek tek):', {
+  // CepSMS API'nin MULTI formatını kullanarak toplu gönderim yap
+  // MULTI format: Messages array içinde her numara için Message ve GSM
+  console.log('[CepSMS] Toplu SMS gönderiliyor (MULTI format):', {
     numaraSayısı: formattedPhones.length,
     messageLength: message.length,
+  });
+
+  try {
+    // MULTI format isteği hazırla
+    const requestData: any = {
+      User: CEPSMS_USERNAME,
+      Pass: CEPSMS_PASSWORD,
+      Coding: 'default',
+      StartDate: null,
+      ValidityPeriod: 1440,
+      Messages: formattedPhones.map(phone => ({
+        Message: message,
+        GSM: phone,
+      })),
+    };
+
+    // From parametresi sadece geçerli bir değer varsa ekle
+    if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+      requestData.From = CEPSMS_FROM;
+    }
+
+    console.log('[CepSMS] MULTI API İsteği:', {
+      url: CEPSMS_MULTI_API_URL,
+      numaraSayısı: formattedPhones.length,
+      requestData: {
+        ...requestData,
+        Pass: '***', // Şifreyi log'da gösterme
+        Messages: `[${formattedPhones.length} mesaj]`, // Array'i log'da gösterme
+      },
+    });
+
+    const response = await axios.post<CepSMSResponse>(
+      CEPSMS_MULTI_API_URL,
+      requestData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        httpsAgent: httpsAgent,
+        timeout: 60000, // Toplu gönderim için daha uzun timeout (60 saniye)
+        validateStatus: function (status) {
+          return status >= 200 && status < 500;
+        },
+      }
+    );
+
+    console.log('[CepSMS] MULTI API Yanıtı:', JSON.stringify(response.data, null, 2));
+
+    // API yanıtını kontrol et
+    if (!response.data) {
+      console.error('[CepSMS] MULTI API yanıtı boş!');
+      // Fallback: Paralel tek tek gönder
+      return await sendBulkSMSParallel(formattedPhones, message, errors);
+    }
+
+    // MULTI API yanıtı genellikle MessageIds array döner
+    const status = response.data.Status || response.data.status || response.data.statusCode;
+    const messageIds = response.data.MessageIds || response.data.messageIds || [];
+    const error = response.data.Error || response.data.error || response.data.message || response.data.Message;
+
+    const statusStr = String(status || '').toUpperCase();
+    const isSuccess = 
+      statusStr === 'OK' || 
+      status === 200 || 
+      statusStr === 'SUCCESS' ||
+      (messageIds.length > 0 && !error && statusStr !== 'ERROR' && statusStr !== 'HATA' && statusStr !== 'FAIL');
+
+    console.log('[CepSMS] MULTI Başarı Kontrolü:', {
+      statusStr,
+      messageIds: messageIds.length,
+      error,
+      isSuccess,
+    });
+
+    if (isSuccess && messageIds.length > 0) {
+      console.log('[CepSMS] ✅ MULTI SMS başarıyla gönderildi:', {
+        toplamNumara: formattedPhones.length,
+        messageIdSayısı: messageIds.length,
+      });
+
+      // Her numara için sonuç oluştur
+      const results: SendSMSResult[] = [];
+      
+      for (let i = 0; i < formattedPhones.length; i++) {
+        // Eğer her numara için ayrı messageId varsa, o kullan
+        // Yoksa, ilk messageId'yi kullan (bazı API'ler batch için tek ID döner)
+        const assignedMessageId = messageIds[i] || messageIds[0];
+        results.push({
+          success: true,
+          messageId: assignedMessageId ? String(assignedMessageId) : undefined,
+        });
+      }
+
+      // Formatlama hatası olan numaraları ekle
+      for (const err of errors) {
+        results.push({
+          success: false,
+          error: err.error,
+        });
+      }
+
+      return results;
+    }
+
+    // MULTI API başarısız oldu, fallback: Paralel tek tek gönder
+    const errorMessage = error || `Status: ${status}`;
+    console.warn('[CepSMS] ⚠️ MULTI API başarısız, paralel tek tek gönderime geçiliyor:', errorMessage);
+    return await sendBulkSMSParallel(formattedPhones, message, errors);
+
+  } catch (error: any) {
+    console.error('[CepSMS] MULTI API hatası (catch), paralel tek tek gönderime geçiliyor:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+
+    // Fallback: Paralel tek tek gönder
+    return await sendBulkSMSParallel(formattedPhones, message, errors);
+  }
+}
+
+/**
+ * Paralel olarak tek tek SMS gönder (fallback method)
+ */
+async function sendBulkSMSParallel(
+  formattedPhones: string[], 
+  message: string, 
+  errors: Array<{ phone: string; error: string }>
+): Promise<SendSMSResult[]> {
+  console.log('[CepSMS] Paralel tek tek SMS gönderiliyor (fallback):', {
+    numaraSayısı: formattedPhones.length,
   });
 
   // Paralel olarak gönder (aynı anda en fazla 20)
