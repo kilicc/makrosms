@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
+import { formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
 
 // POST /api/contacts/import-file - CSV/Excel dosyasından rehber import et
 export async function POST(request: NextRequest) {
@@ -111,21 +112,32 @@ export async function POST(request: NextRequest) {
         );
 
         const name = nameField ? String(contactData[nameField] || '').trim() : '';
-        const phone = phoneField ? String(contactData[phoneField] || '').trim().replace(/\D/g, '') : '';
-        phoneValue = phone || (phoneField ? String(contactData[phoneField] || 'Unknown') : 'Unknown');
+        let phoneRaw = phoneField ? String(contactData[phoneField] || '').trim() : '';
+        phoneValue = phoneRaw || 'Unknown';
         const email = emailField ? String(contactData[emailField] || '').trim() : '';
         const notes = notesField ? String(contactData[notesField] || '').trim() : '';
 
-        if (!name || !phone) {
+        if (!name || !phoneRaw) {
           results.failed++;
           results.errors.push(`${phoneValue}: İsim ve telefon gerekli`);
           continue;
         }
 
-        // Check if phone already exists
+        // Format phone number using formatPhoneNumber function
+        // This will convert formats like 5075708797, 05075708797, etc. to 905075708797
+        let phone: string;
+        try {
+          phone = formatPhoneNumber(phoneRaw);
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`${phoneValue}: ${error.message || 'Geçersiz telefon formatı'}`);
+          continue;
+        }
+
+        // Check if phone already exists (check with formatted number)
         if (existingPhones.has(phone)) {
           results.failed++;
-          results.errors.push(`${phoneValue}: Zaten kayıtlı`);
+          results.errors.push(`${phoneValue} (${phone}): Zaten kayıtlı`);
           continue;
         }
 

@@ -43,6 +43,9 @@ export default function ContactsPage() {
   const [success, setSuccess] = useState('');
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedGroupForImport, setSelectedGroupForImport] = useState<string>('');
+  const [importFile, setImportFile] = useState<File | null>(null);
   
   // Bulk operations
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
@@ -245,13 +248,34 @@ export default function ContactsPage() {
     }
   };
 
-  const handleImport = async (file: File) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      if (fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls') {
+        setImportFile(file);
+        setImportDialogOpen(true);
+      } else {
+        setError('Sadece CSV veya Excel dosyaları destekleniyor');
+      }
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      setError('Dosya seçilmedi');
+      return;
+    }
+
     try {
       setImporting(true);
       setError('');
       
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', importFile);
+      if (selectedGroupForImport) {
+        formData.append('groupId', selectedGroupForImport);
+      }
 
       const response = await api.post('/contacts/import-file', formData, {
         headers: {
@@ -261,7 +285,11 @@ export default function ContactsPage() {
 
       if (response.data.success) {
         setSuccess(response.data.message || 'Import başarılı');
+        setImportDialogOpen(false);
+        setImportFile(null);
+        setSelectedGroupForImport('');
         loadContacts();
+        loadGroups();
       } else {
         setError(response.data.message || 'Import hatası');
       }
@@ -271,18 +299,6 @@ export default function ContactsPage() {
       setImporting(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      if (fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls') {
-        handleImport(file);
-      } else {
-        setError('Sadece CSV veya Excel dosyaları destekleniyor');
       }
     }
   };
