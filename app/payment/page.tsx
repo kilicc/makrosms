@@ -245,68 +245,120 @@ export default function CryptoPaymentPage() {
 
   // Admin management handlers
   const handleSavePackage = async () => {
+    if (!packageForm.name || packageForm.credits <= 0 || packageForm.price <= 0) {
+      setError('Paket adı, kredi ve fiyat gerekli ve 0\'dan büyük olmalıdır');
+      return;
+    }
+    
+    if (!editingPackage && !packageForm.packageId) {
+      setError('Paket ID gerekli');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
     try {
-      setLoading(true);
-      setError('');
-      
       if (editingPackage) {
         // Update existing package - packageId is not required for update
         const updateData = {
           name: packageForm.name,
           credits: packageForm.credits,
           price: packageForm.price,
-          currency: packageForm.currency,
-          bonus: packageForm.bonus,
+          currency: packageForm.currency || 'TRY',
+          bonus: packageForm.bonus || 0,
           isActive: packageForm.isActive,
         };
-        await api.put(`/admin/payment-packages/${editingPackage.id}`, updateData);
-        setSuccess('Paket başarıyla güncellendi');
+        const response = await api.put(`/admin/payment-packages/${editingPackage.id}`, updateData);
+        if (response.data && response.data.success) {
+          setSuccess(response.data.message || 'Paket başarıyla güncellendi');
+          setTimeout(() => {
+            setPackageDialogOpen(false);
+            loadPackages();
+          }, 500);
+        } else {
+          setError(response.data?.message || 'Paket güncellenemedi');
+        }
       } else {
         // Create new package - packageId is required
-        if (!packageForm.packageId) {
-          setError('Paket ID gerekli');
-          return;
+        const createData = {
+          packageId: packageForm.packageId,
+          name: packageForm.name,
+          credits: packageForm.credits,
+          price: packageForm.price,
+          currency: packageForm.currency || 'TRY',
+          bonus: packageForm.bonus || 0,
+          isActive: packageForm.isActive,
+        };
+        const response = await api.post('/admin/payment-packages', createData);
+        if (response.data && response.data.success) {
+          setSuccess(response.data.message || 'Paket başarıyla oluşturuldu');
+          setTimeout(() => {
+            setPackageDialogOpen(false);
+            loadPackages();
+          }, 500);
+        } else {
+          setError(response.data?.message || 'Paket oluşturulamadı');
         }
-        await api.post('/admin/payment-packages', packageForm);
-        setSuccess('Paket başarıyla oluşturuldu');
       }
-      setPackageDialogOpen(false);
-      loadPackages();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Paket kaydedilirken hata oluştu');
+      console.error('Package save error:', err);
+      setError(err.response?.data?.message || err.message || 'Paket kaydedilirken hata oluştu');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveCrypto = async () => {
+    if (!cryptoForm.symbol || !cryptoForm.name) {
+      setError('Sembol ve isim gerekli');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    
     try {
-      setLoading(true);
-      setError('');
-      
       // Prepare data - ensure walletAddress is sent correctly
       const cryptoData = {
-        symbol: cryptoForm.symbol,
+        symbol: cryptoForm.symbol.toUpperCase(),
         name: cryptoForm.name,
-        decimals: cryptoForm.decimals,
-        minAmount: cryptoForm.minAmount,
-        networkFee: cryptoForm.networkFee,
-        confirmations: cryptoForm.confirmations,
-        walletAddress: cryptoForm.walletAddress || null, // Convert empty string to null
+        decimals: cryptoForm.decimals || 18,
+        minAmount: cryptoForm.minAmount || 0,
+        networkFee: cryptoForm.networkFee || 0,
+        confirmations: cryptoForm.confirmations || 3,
+        walletAddress: (cryptoForm.walletAddress && cryptoForm.walletAddress.trim() !== '') ? cryptoForm.walletAddress.trim() : null, // Convert empty string to null
         isActive: cryptoForm.isActive,
       };
       
       if (editingCrypto && editingCrypto.id) {
-        await api.put(`/admin/crypto-currencies/${editingCrypto.id}`, cryptoData);
-        setSuccess('Kripto para birimi başarıyla güncellendi');
+        const response = await api.put(`/admin/crypto-currencies/${editingCrypto.id}`, cryptoData);
+        if (response.data && response.data.success) {
+          setSuccess(response.data.message || 'Kripto para birimi başarıyla güncellendi');
+          setTimeout(() => {
+            setCryptoDialogOpen(false);
+            loadCurrencies();
+          }, 500);
+        } else {
+          setError(response.data?.message || 'Kripto para birimi güncellenemedi');
+        }
       } else {
-        await api.post('/admin/crypto-currencies', cryptoData);
-        setSuccess('Kripto para birimi başarıyla oluşturuldu');
+        const response = await api.post('/admin/crypto-currencies', cryptoData);
+        if (response.data && response.data.success) {
+          setSuccess(response.data.message || 'Kripto para birimi başarıyla oluşturuldu');
+          setTimeout(() => {
+            setCryptoDialogOpen(false);
+            loadCurrencies();
+          }, 500);
+        } else {
+          setError(response.data?.message || 'Kripto para birimi oluşturulamadı');
+        }
       }
-      setCryptoDialogOpen(false);
-      loadCurrencies();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Kripto para birimi kaydedilirken hata oluştu');
+      console.error('Crypto save error:', err);
+      setError(err.response?.data?.message || err.message || 'Kripto para birimi kaydedilirken hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -1703,6 +1755,8 @@ export default function CryptoPaymentPage() {
                         onClick={() => {
                           setEditingPackage(null);
                           setPackageForm({ packageId: '', name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
+                          setError('');
+                          setSuccess('');
                           setPackageDialogOpen(true);
                         }}
                         sx={{
@@ -1751,6 +1805,8 @@ export default function CryptoPaymentPage() {
                                   onClick={() => {
                                     setEditingPackage(pkg);
                                     setPackageForm({ packageId: pkg.packageId || '', name: pkg.name, credits: pkg.credits, price: pkg.price, currency: pkg.currency || 'TRY', bonus: pkg.bonus || 0, isActive: pkg.isActive !== false });
+                                    setError('');
+                                    setSuccess('');
                                     setPackageDialogOpen(true);
                                   }}
                                   sx={{ p: 0.5 }}
@@ -1796,6 +1852,8 @@ export default function CryptoPaymentPage() {
                         onClick={() => {
                           setEditingCrypto(null);
                           setCryptoForm({ symbol: '', name: '', decimals: 18, minAmount: 0, networkFee: 0, confirmations: 3, walletAddress: '', isActive: true });
+                          setError('');
+                          setSuccess('');
                           setCryptoDialogOpen(true);
                         }}
                         sx={{
@@ -1857,6 +1915,8 @@ export default function CryptoPaymentPage() {
                                       walletAddress: crypto.walletAddress || '', 
                                       isActive: crypto.isActive !== false 
                                     });
+                                    setError('');
+                                    setSuccess('');
                                     setCryptoDialogOpen(true);
                                   }}
                                   sx={{ p: 0.5 }}
@@ -1895,6 +1955,16 @@ export default function CryptoPaymentPage() {
             <Dialog open={packageDialogOpen} onClose={() => setPackageDialogOpen(false)} maxWidth="sm" fullWidth>
               <DialogTitle>{editingPackage ? 'Paket Düzenle' : 'Yeni Paket'}</DialogTitle>
               <DialogContent>
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
+                    {error}
+                  </Alert>
+                )}
+                {success && (
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>
+                    {success}
+                  </Alert>
+                )}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                   {!editingPackage && (
                     <TextField
@@ -1962,11 +2032,11 @@ export default function CryptoPaymentPage() {
                 </Box>
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setPackageDialogOpen(false)}>İptal</Button>
+                <Button onClick={() => setPackageDialogOpen(false)} disabled={loading}>İptal</Button>
                 <Button 
                   onClick={handleSavePackage} 
                   variant="contained" 
-                  disabled={loading || (!editingPackage && !packageForm.packageId) || !packageForm.name || !packageForm.credits || !packageForm.price}
+                  disabled={loading || (!editingPackage && !packageForm.packageId) || !packageForm.name || packageForm.credits <= 0 || packageForm.price <= 0}
                 >
                   {loading ? 'Kaydediliyor...' : 'Kaydet'}
                 </Button>
@@ -1977,6 +2047,16 @@ export default function CryptoPaymentPage() {
             <Dialog open={cryptoDialogOpen} onClose={() => setCryptoDialogOpen(false)} maxWidth="sm" fullWidth>
               <DialogTitle>{editingCrypto ? 'Kripto Para Düzenle' : 'Yeni Kripto Para'}</DialogTitle>
               <DialogContent>
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>
+                    {error}
+                  </Alert>
+                )}
+                {success && (
+                  <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setSuccess('')}>
+                    {success}
+                  </Alert>
+                )}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                   <TextField
                     label="Sembol"
@@ -2046,8 +2126,12 @@ export default function CryptoPaymentPage() {
                 </Box>
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setCryptoDialogOpen(false)}>İptal</Button>
-                <Button onClick={handleSaveCrypto} variant="contained" disabled={loading}>
+                <Button onClick={() => setCryptoDialogOpen(false)} disabled={loading}>İptal</Button>
+                <Button 
+                  onClick={handleSaveCrypto} 
+                  variant="contained" 
+                  disabled={loading || !cryptoForm.symbol || !cryptoForm.name}
+                >
                   {loading ? 'Kaydediliyor...' : 'Kaydet'}
                 </Button>
               </DialogActions>
