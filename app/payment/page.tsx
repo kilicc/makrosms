@@ -65,7 +65,7 @@ export default function CryptoPaymentPage() {
   const [cryptoDialogOpen, setCryptoDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<PaymentPackage | null>(null);
   const [editingCrypto, setEditingCrypto] = useState<CryptoCurrency | null>(null);
-  const [packageForm, setPackageForm] = useState({ name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
+  const [packageForm, setPackageForm] = useState({ packageId: '', name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
   const [cryptoForm, setCryptoForm] = useState({ symbol: '', name: '', decimals: 18, minAmount: 0, networkFee: 0, confirmations: 3, walletAddress: '', isActive: true });
   
   // Admin payment request states
@@ -248,10 +248,25 @@ export default function CryptoPaymentPage() {
     try {
       setLoading(true);
       setError('');
+      
       if (editingPackage) {
-        await api.put(`/admin/payment-packages/${editingPackage.id}`, packageForm);
+        // Update existing package - packageId is not required for update
+        const updateData = {
+          name: packageForm.name,
+          credits: packageForm.credits,
+          price: packageForm.price,
+          currency: packageForm.currency,
+          bonus: packageForm.bonus,
+          isActive: packageForm.isActive,
+        };
+        await api.put(`/admin/payment-packages/${editingPackage.id}`, updateData);
         setSuccess('Paket başarıyla güncellendi');
       } else {
+        // Create new package - packageId is required
+        if (!packageForm.packageId) {
+          setError('Paket ID gerekli');
+          return;
+        }
         await api.post('/admin/payment-packages', packageForm);
         setSuccess('Paket başarıyla oluşturuldu');
       }
@@ -268,11 +283,24 @@ export default function CryptoPaymentPage() {
     try {
       setLoading(true);
       setError('');
+      
+      // Prepare data - ensure walletAddress is sent correctly
+      const cryptoData = {
+        symbol: cryptoForm.symbol,
+        name: cryptoForm.name,
+        decimals: cryptoForm.decimals,
+        minAmount: cryptoForm.minAmount,
+        networkFee: cryptoForm.networkFee,
+        confirmations: cryptoForm.confirmations,
+        walletAddress: cryptoForm.walletAddress || null, // Convert empty string to null
+        isActive: cryptoForm.isActive,
+      };
+      
       if (editingCrypto && editingCrypto.id) {
-        await api.put(`/admin/crypto-currencies/${editingCrypto.id}`, cryptoForm);
+        await api.put(`/admin/crypto-currencies/${editingCrypto.id}`, cryptoData);
         setSuccess('Kripto para birimi başarıyla güncellendi');
       } else {
-        await api.post('/admin/crypto-currencies', cryptoForm);
+        await api.post('/admin/crypto-currencies', cryptoData);
         setSuccess('Kripto para birimi başarıyla oluşturuldu');
       }
       setCryptoDialogOpen(false);
@@ -1674,7 +1702,7 @@ export default function CryptoPaymentPage() {
                         startIcon={<Add />}
                         onClick={() => {
                           setEditingPackage(null);
-                          setPackageForm({ name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
+                          setPackageForm({ packageId: '', name: '', credits: 0, price: 0, currency: 'TRY', bonus: 0, isActive: true });
                           setPackageDialogOpen(true);
                         }}
                         sx={{
@@ -1722,7 +1750,7 @@ export default function CryptoPaymentPage() {
                                   size="small"
                                   onClick={() => {
                                     setEditingPackage(pkg);
-                                    setPackageForm({ name: pkg.name, credits: pkg.credits, price: pkg.price, currency: pkg.currency, bonus: pkg.bonus || 0, isActive: pkg.isActive !== false });
+                                    setPackageForm({ packageId: pkg.packageId || '', name: pkg.name, credits: pkg.credits, price: pkg.price, currency: pkg.currency || 'TRY', bonus: pkg.bonus || 0, isActive: pkg.isActive !== false });
                                     setPackageDialogOpen(true);
                                   }}
                                   sx={{ p: 0.5 }}
@@ -1820,8 +1848,8 @@ export default function CryptoPaymentPage() {
                                   onClick={() => {
                                     setEditingCrypto(crypto);
                                     setCryptoForm({ 
-                                      symbol: crypto.symbol, 
-                                      name: crypto.name, 
+                                      symbol: crypto.symbol || '', 
+                                      name: crypto.name || '', 
                                       decimals: crypto.decimals || 18, 
                                       minAmount: crypto.minAmount || 0, 
                                       networkFee: crypto.networkFee || 0, 
@@ -1868,28 +1896,42 @@ export default function CryptoPaymentPage() {
               <DialogTitle>{editingPackage ? 'Paket Düzenle' : 'Yeni Paket'}</DialogTitle>
               <DialogContent>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  {!editingPackage && (
+                    <TextField
+                      label="Paket ID *"
+                      value={packageForm.packageId}
+                      onChange={(e) => setPackageForm({ ...packageForm, packageId: e.target.value })}
+                      fullWidth
+                      size="small"
+                      required
+                      helperText="Benzersiz paket ID'si (örn: starter, pro, premium)"
+                    />
+                  )}
                   <TextField
-                    label="Paket Adı"
+                    label="Paket Adı *"
                     value={packageForm.name}
                     onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
                     fullWidth
                     size="small"
+                    required
                   />
                   <TextField
-                    label="Kredi"
+                    label="Kredi *"
                     type="number"
                     value={packageForm.credits}
                     onChange={(e) => setPackageForm({ ...packageForm, credits: parseInt(e.target.value) || 0 })}
                     fullWidth
                     size="small"
+                    required
                   />
                   <TextField
-                    label="Fiyat"
+                    label="Fiyat *"
                     type="number"
                     value={packageForm.price}
                     onChange={(e) => setPackageForm({ ...packageForm, price: parseFloat(e.target.value) || 0 })}
                     fullWidth
                     size="small"
+                    required
                   />
                   <TextField
                     label="Para Birimi"
@@ -1921,7 +1963,11 @@ export default function CryptoPaymentPage() {
               </DialogContent>
               <DialogActions>
                 <Button onClick={() => setPackageDialogOpen(false)}>İptal</Button>
-                <Button onClick={handleSavePackage} variant="contained" disabled={loading}>
+                <Button 
+                  onClick={handleSavePackage} 
+                  variant="contained" 
+                  disabled={loading || (!editingPackage && !packageForm.packageId) || !packageForm.name || !packageForm.credits || !packageForm.price}
+                >
                   {loading ? 'Kaydediliyor...' : 'Kaydet'}
                 </Button>
               </DialogActions>

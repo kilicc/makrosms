@@ -36,7 +36,10 @@ export async function PUT(
     if (minAmount !== undefined) updateData.min_amount = parseFloat(minAmount);
     if (networkFee !== undefined) updateData.network_fee = parseFloat(networkFee);
     if (confirmations !== undefined) updateData.confirmations = parseInt(confirmations);
-    if (walletAddress !== undefined) updateData.wallet_address = walletAddress || null;
+    // walletAddress: explicitly handle empty string as null
+    if (walletAddress !== undefined) {
+      updateData.wallet_address = (walletAddress && walletAddress.trim() !== '') ? walletAddress.trim() : null;
+    }
     if (isActive !== undefined) updateData.is_active = isActive;
     if (displayOrder !== undefined) updateData.display_order = parseInt(displayOrder);
 
