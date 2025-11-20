@@ -947,7 +947,24 @@ export default function AdvancedSMSPage() {
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '12px' }}>
-                                Tahmini Kredi: {Math.ceil(message.length / MAX_CHARACTERS) || 0}
+                                Tahmini Kredi: {
+                                  (() => {
+                                    const messageCredits = Math.ceil(message.length / MAX_CHARACTERS) || 1;
+                                    let recipientCount = 0;
+                                    
+                                    if (selectedGroup) {
+                                      // Grup seçildiyse, o gruptaki kişilerin sayısını al
+                                      const groupContacts = contacts.filter((c: Contact) => c.groupId === selectedGroup);
+                                      recipientCount = groupContacts.length;
+                                    } else if (selectedContacts.length > 0) {
+                                      // Manuel seçilen kişilerin sayısı
+                                      recipientCount = selectedContacts.length;
+                                    }
+                                    
+                                    const totalCredits = messageCredits * (recipientCount || 1);
+                                    return `${totalCredits} kredi (${messageCredits} kredi × ${recipientCount || 1} alıcı)`;
+                                  })()
+                                }
                               </Typography>
                               {message.length > MAX_CHARACTERS && (
                                 <Chip
