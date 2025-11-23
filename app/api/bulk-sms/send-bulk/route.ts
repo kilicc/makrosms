@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
+import { getSystemCredit, deductFromSystemCredit, checkSystemCredit } from '@/lib/utils/systemCredit';
 
 // Büyük gönderimler için timeout'u arttır (600 saniye = 10 dakika)
 // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye
@@ -45,26 +46,9 @@ export async function POST(request: NextRequest) {
     const userRole = (auth.user.role || '').toLowerCase();
     const isAdmin = userRole === 'admin' || userRole === 'moderator' || userRole === 'administrator';
 
-    // Get user to check credit using Supabase (admin değilse)
-    let userCredit = 0;
+    // Kredi hesaplama için değişkenler
     let requiredCredit = 0;
     let creditPerMessage = 0;
-    
-    if (!isAdmin) {
-      const { data: user, error: userError } = await supabaseServer
-        .from('users')
-        .select('credit')
-        .eq('id', auth.user.userId)
-        .single();
-
-      if (userError || !user) {
-        return NextResponse.json(
-          { success: false, message: 'Kullanıcı bulunamadı' },
-          { status: 404 }
-        );
-      }
-      userCredit = user.credit || 0;
-    }
 
     // Get contacts using Supabase
     const { data: contactsData, error: contactsError } = await supabaseServer
@@ -97,32 +81,32 @@ export async function POST(request: NextRequest) {
     creditPerMessage = Math.ceil(messageLength / 180) || 1; // En az 1 kredi
     requiredCredit = contacts.length * creditPerMessage; // Her numara için kredi
     
-    if (!isAdmin && userCredit < requiredCredit) {
+    // Normal kullanıcılar ve adminler için sistem kredisinden kontrol ve düş
+    // Sistem kredisini kontrol et (admin kredisi)
+    const systemCreditAvailable = await checkSystemCredit(requiredCredit);
+    
+    if (!systemCreditAvailable) {
+      const currentSystemCredit = await getSystemCredit();
       return NextResponse.json(
         {
           success: false,
-          message: `Yetersiz kredi. Gerekli: ${requiredCredit} (${contacts.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut: ${userCredit}`,
+          message: `Yetersiz sistem kredisi. Gerekli: ${requiredCredit} (${contacts.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut Sistem Kredisi: ${currentSystemCredit}`,
         },
         { status: 400 }
       );
     }
 
-    // Kredi düş (başarılı veya başarısız olsun, tüm SMS'ler için kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek) - Admin değilse
-    if (!isAdmin) {
-      const { data: currentUser } = await supabaseServer
-        .from('users')
-        .select('credit')
-        .eq('id', auth.user.userId)
-        .single();
-
-      if (currentUser) {
-        // Tüm SMS'ler için kredi düş (başarısız olursa 48 saat sonra iade edilecek)
-        const newCredit = Math.max(0, (currentUser.credit || 0) - requiredCredit);
-        await supabaseServer
-          .from('users')
-          .update({ credit: newCredit })
-          .eq('id', auth.user.userId);
-      }
+    // Sistem kredisinden düş (başarılı veya başarısız olsun, tüm SMS'ler için kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
+    const deducted = await deductFromSystemCredit(requiredCredit);
+    
+    if (!deducted) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Sistem kredisi güncellenemedi',
+        },
+        { status: 500 }
+      );
     }
 
     // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi
@@ -322,19 +306,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Bulk SMS Send] Tamamlandı: ${results.sent} başarılı, ${results.failed} başarısız`);
 
-    // Get updated user credit using Supabase
-    const { data: updatedUser } = await supabaseServer
-      .from('users')
-      .select('credit')
-      .eq('id', auth.user.userId)
-      .single();
+    // Sistem kredisini al (gösterim için)
+    const currentSystemCredit = await getSystemCredit();
 
     return NextResponse.json({
       success: true,
       message: `Toplu SMS gönderimi tamamlandı: ${results.sent} başarılı, ${results.failed} başarısız`,
       data: {
         ...results,
-        remainingCredit: updatedUser?.credit || 0,
+        remainingCredit: currentSystemCredit, // Sistem kredisi (admin kredisi)
         jobId, // Tüm gönderimlerde job ID gönder
       },
     });

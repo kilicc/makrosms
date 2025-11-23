@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber, sendBulkSMS } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
+import { getSystemCredit, deductFromSystemCredit, checkSystemCredit } from '@/lib/utils/systemCredit';
 
 // Büyük gönderimler için timeout'u arttır (600 saniye = 10 dakika)
 // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye
@@ -104,52 +105,62 @@ export async function POST(request: NextRequest) {
     const totalCreditNeeded = creditPerMessage * phoneNumbers.length; // Toplam kredi = mesaj başına kredi * numara sayısı
     
     if (!isAdmin) {
-      const { data: user, error: userError } = await supabaseServer
-        .from('users')
-        .select('credit')
-        .eq('id', auth.user.userId)
-        .single();
-
-      if (userError || !user) {
-        return NextResponse.json(
-          { success: false, message: 'Kullanıcı bulunamadı' },
-          { status: 404 }
-        );
-      }
-
-      // Check credit - toplam kredi kontrolü
+      // Normal kullanıcılar için sistem kredisinden (admin kredisinden) kontrol ve düş
       requiredCredit = totalCreditNeeded;
-      userCredit = user.credit || 0;
       
-      if (userCredit < requiredCredit) {
+      // Sistem kredisini kontrol et (admin kredisi)
+      const systemCreditAvailable = await checkSystemCredit(requiredCredit);
+      
+      if (!systemCreditAvailable) {
+        const currentSystemCredit = await getSystemCredit();
         return NextResponse.json(
           {
             success: false,
-            message: `Yetersiz kredi. Gerekli: ${requiredCredit} (${phoneNumbers.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut: ${userCredit}`,
+            message: `Yetersiz sistem kredisi. Gerekli: ${requiredCredit} (${phoneNumbers.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut Sistem Kredisi: ${currentSystemCredit}`,
           },
           { status: 400 }
         );
       }
 
-      // Kredi düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
-      const { data: updatedUserData, error: updateError } = await supabaseServer
-        .from('users')
-        .update({ credit: Math.max(0, (userCredit || 0) - requiredCredit) })
-        .eq('id', auth.user.userId)
-        .select('credit')
-        .single();
-
-      if (updateError) {
+      // Sistem kredisinden düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
+      const deducted = await deductFromSystemCredit(requiredCredit);
+      
+      if (!deducted) {
         return NextResponse.json(
-          { success: false, message: updateError.message || 'Kredi güncellenemedi' },
+          { success: false, message: 'Sistem kredisi güncellenemedi' },
           { status: 500 }
         );
       }
-      
-      updatedUser = updatedUserData;
+
+      // Normal kullanıcının kendi kredisini de güncelle (gösterim için - sistem kredisinden farklı tutulabilir veya 0 yapılabilir)
+      // Şimdilik sadece sistem kredisinden düşüyoruz, kullanıcının kendi kredisi gösterilmez
     } else {
-      // Admin kullanıcıları için kredi hesaplama (sadece cost için)
+      // Admin kullanıcıları için sistem kredisinden düş (adminler sistem kredisini kullanır)
       requiredCredit = totalCreditNeeded;
+      
+      // Sistem kredisini kontrol et
+      const systemCreditAvailable = await checkSystemCredit(requiredCredit);
+      
+      if (!systemCreditAvailable) {
+        const currentSystemCredit = await getSystemCredit();
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Yetersiz sistem kredisi. Gerekli: ${requiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Sistem kredisinden düş
+      const deducted = await deductFromSystemCredit(requiredCredit);
+      
+      if (!deducted) {
+        return NextResponse.json(
+          { success: false, message: 'Sistem kredisi güncellenemedi' },
+          { status: 500 }
+        );
+      }
     }
 
     // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi
@@ -328,6 +339,9 @@ export async function POST(request: NextRequest) {
       currentBatch: batches.length,
     });
 
+    // Sistem kredisini al (gösterim için)
+    const currentSystemCredit = await getSystemCredit();
+
     // Sonuç mesajı
     if (successCount === phoneNumbers.length) {
       // Tüm SMS'ler başarılı
@@ -337,7 +351,7 @@ export async function POST(request: NextRequest) {
         data: {
           totalSent: successCount,
           totalFailed: failCount,
-          remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
+          remainingCredit: currentSystemCredit, // Sistem kredisi (admin kredisi)
           results: phoneNumbers.length >= 100 ? undefined : results, // 100+ gönderimlerde results göndermeyelim (çok büyük olabilir)
           jobId, // Tüm gönderimlerde job ID gönder
         },
@@ -350,7 +364,7 @@ export async function POST(request: NextRequest) {
         data: {
           totalSent: successCount,
           totalFailed: failCount,
-          remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
+          remainingCredit: currentSystemCredit,
           results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim
           jobId, // Büyük gönderimlerde job ID gönder
         },
@@ -364,7 +378,7 @@ export async function POST(request: NextRequest) {
           data: {
             totalSent: successCount,
             totalFailed: failCount,
-            remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
+            remainingCredit: currentSystemCredit,
             results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim
             jobId, // Büyük gönderimlerde job ID gönder
           },

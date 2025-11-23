@@ -3,6 +3,7 @@ import { getSupabaseServer } from '@/lib/supabase-server';
 import { authenticateApiKey } from '@/lib/middleware/apiKeyAuth';
 import { sendSMS, formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
+import { getSystemCredit, deductFromSystemCredit, checkSystemCredit } from '@/lib/utils/systemCredit';
 
 // Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
 // 50,000 SMS için yaklaşık 40-50 dakika gerekiyor
@@ -79,48 +80,38 @@ export async function POST(request: NextRequest) {
     let userCredit = 0;
     let requiredCredit = 0;
 
-    if (!isAdmin) {
-      const { data: user, error: userError } = await supabaseServer
-        .from('users')
-        .select('credit')
-        .eq('id', auth.user.id)
-        .single();
+    // Normal kullanıcılar için sistem kredisinden (admin kredisinden) kontrol ve düş
+    const messageLength = Message.length;
+    requiredCredit = Math.ceil(messageLength / 180) || 1;
+    const totalRequiredCredit = phoneNumbers.length * requiredCredit;
 
-      if (userError || !user) {
-        return NextResponse.json(
-          {
-            MessageId: 0,
-            Status: 'Error',
-            Error: 'Kullanıcı bulunamadı',
-          },
-          { status: 404 }
-        );
-      }
+    // Sistem kredisini kontrol et (admin kredisi)
+    const systemCreditAvailable = await checkSystemCredit(totalRequiredCredit);
+    
+    if (!systemCreditAvailable) {
+      const currentSystemCredit = await getSystemCredit();
+      return NextResponse.json(
+        {
+          MessageId: 0,
+          Status: 'Error',
+          Error: `Yetersiz sistem kredisi. Gerekli: ${totalRequiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
+        },
+        { status: 400 }
+      );
+    }
 
-      userCredit = user.credit || 0;
-      const messageLength = Message.length;
-      requiredCredit = Math.ceil(messageLength / 180) || 1;
-      const totalRequiredCredit = phoneNumbers.length * requiredCredit;
-
-      if (userCredit < totalRequiredCredit) {
-        return NextResponse.json(
-          {
-            MessageId: 0,
-            Status: 'Error',
-            Error: `Yetersiz kredi. Gerekli: ${totalRequiredCredit}, Mevcut: ${userCredit}`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Kredi düş
-      await supabaseServer
-        .from('users')
-        .update({ credit: Math.max(0, userCredit - totalRequiredCredit) })
-        .eq('id', auth.user.id);
-    } else {
-      const messageLength = Message.length;
-      requiredCredit = Math.ceil(messageLength / 180) || 1;
+    // Sistem kredisinden düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
+    const deducted = await deductFromSystemCredit(totalRequiredCredit);
+    
+    if (!deducted) {
+      return NextResponse.json(
+        {
+          MessageId: 0,
+          Status: 'Error',
+          Error: 'Sistem kredisi güncellenemedi',
+        },
+        { status: 500 }
+      );
     }
 
     // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi

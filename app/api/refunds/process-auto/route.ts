@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
+import { updateSystemCredit, getSystemCredit } from '@/lib/utils/systemCredit';
 
 // POST /api/refunds/process-auto - Otomatik iade işleme (48 saat sonra)
 // Bu endpoint cron job veya scheduled task tarafından çağrılacak
@@ -71,19 +72,16 @@ export async function POST(request: NextRequest) {
 
         // SMS'in hala başarısız olduğunu kontrol et
         if (sms && sms.status === 'failed') {
-          // Kullanıcıya kredi iade et
+          // Sistem kredisinden iade et (kullanıcıya değil, sistem kredisine)
           const refundAmount = Number(refund.refund_amount);
-          const currentCredit = user?.credit || 0;
-          const newCredit = currentCredit + refundAmount;
+          const currentSystemCredit = await getSystemCredit();
+          const newSystemCredit = currentSystemCredit + refundAmount;
 
-          // Kullanıcı kredisini güncelle
-          const { error: updateUserError } = await supabaseServer
-            .from('users')
-            .update({ credit: Math.floor(newCredit) })
-            .eq('id', refund.user_id);
+          // Sistem kredisini güncelle (tüm adminlere aynı kredi)
+          const updated = await updateSystemCredit(newSystemCredit);
 
-          if (updateUserError) {
-            throw updateUserError;
+          if (!updated) {
+            throw new Error('Sistem kredisi güncellenemedi');
           }
 
           // İade durumunu güncelle

@@ -36,13 +36,13 @@ async function createAdmin2User() {
 
   try {
     // Admin2 kullanıcı bilgileri
-    const adminUser = {
-      username: 'admin2',
-      email: 'admin2@makrosms.com',
-      password: '123',
-      role: 'admin',
-      credit: 10000,
-    };
+           const adminUser = {
+             username: 'admin2',
+             email: 'admin2@makrosms.com',
+             password: '123',
+             role: 'admin',
+             credit: 50000, // Sistem kredisi: 50,000
+           };
 
     console.log('📋 Admin2 Kullanıcı Bilgileri:');
     console.log(`   Username: ${adminUser.username}`);

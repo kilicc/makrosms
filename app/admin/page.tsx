@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, Delete, VpnKey, ContentCopy } from '@mui/icons-material';
+import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, Delete, VpnKey, ContentCopy, Refresh } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import { useRouter } from 'next/navigation';
 import ClientDate from '@/components/ClientDate';
@@ -332,7 +332,40 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleResetCredit = async (userId: string, username: string) => {
+    if (!confirm(`${username} kullanıcısının kredisini sıfırlamak istediğinizden emin misiniz?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.post(`/admin/users/${userId}/reset-credit`);
+      if (response.data.success) {
+        setSuccess(`${username} kullanıcısının kredisi sıfırlandı.`);
+        loadUsers();
+        loadStats();
+      } else {
+        setError(response.data.error || response.data.message || 'Kredi sıfırlama hatası');
+      }
+    } catch (err: any) {
+      console.error('Kredi sıfırlama hatası:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Kredi sıfırlama hatası';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteUser = async (userId: string, username: string) => {
+    // admin2 kullanıcısı silinemesin
+    if (username === 'admin2') {
+      setError('admin2 kullanıcısı silinemez!');
+      return;
+    }
+
     if (!confirm(`${username} kullanıcısını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve kullanıcının tüm verileri (mesajlar, kişiler, şablonlar vb.) silinecektir!`)) {
       return;
     }
@@ -867,15 +900,54 @@ export default function AdminDashboardPage() {
                                     >
                                       Detay
                                     </Button>
+                                    {(u.role === 'admin' || u.role === 'administrator' || u.role === 'moderator') && user?.username !== 'admin2' ? (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        disabled
+                                        sx={{
+                                          borderRadius: 1.5,
+                                          textTransform: 'none',
+                                          fontSize: '12px',
+                                          fontWeight: 500,
+                                          py: 0.5,
+                                          px: 1,
+                                        }}
+                                      >
+                                        Admin2 Gerekli
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<Add />}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedUser(u);
+                                          setCreditDialogOpen(true);
+                                        }}
+                                        sx={{
+                                          borderRadius: 1.5,
+                                          textTransform: 'none',
+                                          fontSize: '12px',
+                                          fontWeight: 500,
+                                          py: 0.5,
+                                          px: 1,
+                                        }}
+                                      >
+                                        Kredi
+                                      </Button>
+                                    )}
                                     <Button
                                       size="small"
                                       variant="outlined"
-                                      startIcon={<Add />}
+                                      color="warning"
+                                      startIcon={<Refresh />}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedUser(u);
-                                        setCreditDialogOpen(true);
+                                        handleResetCredit(u.id, u.username);
                                       }}
+                                      disabled={u.credit === 0}
                                       sx={{
                                         borderRadius: 1.5,
                                         textTransform: 'none',
@@ -885,9 +957,9 @@ export default function AdminDashboardPage() {
                                         px: 1,
                                       }}
                                     >
-                                      Kredi
+                                      Sıfırla
                                     </Button>
-                                    {u.username !== 'admin' && (
+                                    {u.username !== 'admin' && u.username !== 'admin2' && (
                                       <Button
                                         size="small"
                                         variant="outlined"

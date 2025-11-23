@@ -41,9 +41,10 @@ export async function DELETE(
       );
     }
 
-    if (user.username === 'admin') {
+    // admin ve admin2 kullanıcıları silinemesin
+    if (user.username === 'admin' || user.username === 'admin2') {
       return NextResponse.json(
-        { success: false, error: 'Admin kullanıcısı silinemez' },
+        { success: false, error: `${user.username} kullanıcısı silinemez` },
         { status: 400 }
       );
     }
