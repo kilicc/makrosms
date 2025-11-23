@@ -3,8 +3,9 @@ import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber, sendBulkSMS } from '@/lib/utils/cepSMSProvider';
 
-// Büyük gönderimler için timeout'u arttır (300 saniye = 5 dakika)
-export const maxDuration = 300;
+// Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
+// 50,000 SMS için yaklaşık 40-50 dakika gerekiyor
+export const maxDuration = 3600;
 export const dynamic = 'force-dynamic';
 
 // POST /api/sms/send - Tekli SMS gönderimi
