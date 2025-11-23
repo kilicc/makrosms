@@ -4,9 +4,9 @@ import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber, sendBulkSMS } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
 
-// Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
-// 50,000 SMS için yaklaşık 40-50 dakika gerekiyor
-export const maxDuration = 3600;
+// Büyük gönderimler için timeout'u arttır (600 saniye = 10 dakika)
+// CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye
+export const maxDuration = 600;
 export const dynamic = 'force-dynamic';
 
 // POST /api/sms/send - Tekli SMS gönderimi
@@ -152,8 +152,10 @@ export async function POST(request: NextRequest) {
       requiredCredit = totalCreditNeeded;
     }
 
-    // Büyük gönderimler için batch processing (100'er 100'er)
-    const BATCH_SIZE = 100;
+    // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi
+    // Batch processing optimize edildi
+    const BATCH_SIZE = 500; // Daha büyük batch'ler
+    const CONCURRENT_LIMIT = 100; // Yüksek concurrent limit (83 SMS/saniye kapasitesine göre)
     const results: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
     let successCount = 0;
     let failCount = 0;
@@ -164,40 +166,27 @@ export async function POST(request: NextRequest) {
       batches.push(phoneNumbers.slice(i, i + BATCH_SIZE));
     }
 
-    console.log(`[SMS Send] Toplam ${phoneNumbers.length} numara, ${batches.length} batch halinde işlenecek`);
+    console.log(`[SMS Send] Toplam ${phoneNumbers.length} numara, ${batches.length} batch halinde işlenecek (Batch size: ${BATCH_SIZE}, Concurrent: ${CONCURRENT_LIMIT})`);
 
-    // Büyük gönderimler için progress tracking (1000+ SMS)
-    let jobId: string | null = null;
-    if (phoneNumbers.length >= 1000) {
-      jobId = generateJobId();
-      createSMSJob(jobId, phoneNumbers.length, batches.length);
-      updateProgress(jobId, { status: 'processing' });
-      console.log(`[SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
-    }
+    // Tüm gönderimler için progress tracking
+    const jobId = generateJobId();
+    createSMSJob(jobId, phoneNumbers.length, batches.length);
+    updateProgress(jobId, { status: 'processing' });
+    console.log(`[SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
 
     // Her batch'i işle
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       console.log(`[SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} numara)`);
       
-      // CepSMS API'sine paralel olarak tek tek gönder (MULTI formatı 100 numara için bile 400 hatası veriyor)
-      // Bu yüzden direkt paralel tek tek gönderim yapıyoruz
       const batchResults: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
       
-      // Paralel olarak gönder (aynı anda en fazla 20)
-      const CONCURRENT_LIMIT = 20;
-      
+      // Paralel olarak gönder (CepSMS 83 SMS/saniye kapasitesine göre optimize edildi)
       for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
         const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
         const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
           try {
-            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS gönderiliyor - ${phoneNumber}`);
             const smsResult = await sendSMS(phoneNumber, message);
-            console.log(`[SMS Send] Batch ${batchIndex + 1}: SMS sonucu - ${phoneNumber}:`, {
-              success: smsResult.success,
-              messageId: smsResult.messageId,
-              error: smsResult.error
-            });
             return {
               phone: phoneNumber,
               success: smsResult.success,
@@ -217,9 +206,10 @@ export async function POST(request: NextRequest) {
         const concurrentResults = await Promise.all(concurrentPromises);
         batchResults.push(...concurrentResults);
         
-        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
+        // Rate limiting kaldırıldı - CepSMS API hızına göre optimize edildi
+        // Her concurrent batch sonrası çok kısa bekleme (API'ye yük binmemesi için)
         if (i + CONCURRENT_LIMIT < batch.length) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
+          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms bekle
         }
       }
       
@@ -236,16 +226,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Progress güncelle (büyük gönderimler için)
-      if (jobId) {
-        updateProgress(jobId, {
-          completed: results.length,
-          successCount,
-          failCount,
-          currentBatch: batchIndex + 1,
-        });
-        console.log(`[SMS Send] Progress: ${results.length}/${phoneNumbers.length} (${Math.round((results.length / phoneNumbers.length) * 100)}%)`);
-      }
+      // Progress güncelle
+      updateProgress(jobId, {
+        completed: results.length,
+        successCount,
+        failCount,
+        currentBatch: batchIndex + 1,
+      });
+      console.log(`[SMS Send] Progress: ${results.length}/${phoneNumbers.length} (${Math.round((results.length / phoneNumbers.length) * 100)}%)`);
 
       // Her batch sonrası başarılı gönderimleri bulk insert yap
       const successfulBatchSends = batchResults.filter((r) => r.success && r.messageId);
@@ -331,16 +319,14 @@ export async function POST(request: NextRequest) {
     console.log(`[SMS Send] Tamamlandı: ${successCount} başarılı, ${failCount} başarısız`);
 
     // Progress'i tamamlandı olarak işaretle
-    if (jobId) {
-      saveResults(jobId, results);
-      updateProgress(jobId, {
-        status: successCount === phoneNumbers.length ? 'completed' : (successCount > 0 ? 'completed' : 'failed'),
-        completed: results.length,
-        successCount,
-        failCount,
-        currentBatch: batches.length,
-      });
-    }
+    saveResults(jobId, results);
+    updateProgress(jobId, {
+      status: successCount === phoneNumbers.length ? 'completed' : (successCount > 0 ? 'completed' : 'failed'),
+      completed: results.length,
+      successCount,
+      failCount,
+      currentBatch: batches.length,
+    });
 
     // Sonuç mesajı
     if (successCount === phoneNumbers.length) {
@@ -352,8 +338,8 @@ export async function POST(request: NextRequest) {
           totalSent: successCount,
           totalFailed: failCount,
           remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
-          results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim (çok büyük olabilir)
-          jobId, // Büyük gönderimlerde job ID gönder
+          results: phoneNumbers.length >= 100 ? undefined : results, // 100+ gönderimlerde results göndermeyelim (çok büyük olabilir)
+          jobId, // Tüm gönderimlerde job ID gönder
         },
       });
     } else if (successCount > 0) {

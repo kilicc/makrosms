@@ -386,12 +386,12 @@ export default function AdvancedSMSPage() {
       if (response.data.success) {
         const { sent = 0, failed = 0, jobId: responseJobId } = response.data.data || {};
         
-        // Büyük gönderimler için progress tracking başlat
-        if (responseJobId && contactCount >= 1000) {
+        // Tüm gönderimler için progress tracking başlat
+        if (responseJobId) {
           startProgressTracking(responseJobId);
           setSuccess(`${contactCount} kişiye SMS gönderilmeye başlandı. İlerleme durumu aşağıda gösteriliyor.`);
         } else {
-          // Küçük gönderimler için normal mesaj
+          // Job ID yoksa normal mesaj göster (fallback)
           setSuccess(`${sent} SMS başarıyla gönderildi${failed > 0 ? `, ${failed} başarısız` : ''}`);
           setMessage('');
           setSelectedContacts([]);
@@ -485,7 +485,7 @@ export default function AdvancedSMSPage() {
               </Alert>
             )}
 
-            {/* Progress Tracking UI - Büyük gönderimler için */}
+            {/* Progress Tracking UI - Tüm gönderimler için */}
             {progress && jobId && progress.status === 'processing' && (
               <Paper
                 elevation={2}

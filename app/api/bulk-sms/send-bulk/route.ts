@@ -4,8 +4,9 @@ import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
 
-// Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
-export const maxDuration = 3600;
+// Büyük gönderimler için timeout'u arttır (600 saniye = 10 dakika)
+// CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye
+export const maxDuration = 600;
 export const dynamic = 'force-dynamic';
 
 // POST /api/bulk-sms/send-bulk - Toplu SMS gönderimi
@@ -124,23 +125,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Büyük gönderimler için batch processing (100'er 100'er)
-    const BATCH_SIZE = 100;
+    // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi
+    // Batch processing optimize edildi
+    const BATCH_SIZE = 500; // Daha büyük batch'ler
+    const CONCURRENT_LIMIT = 100; // Yüksek concurrent limit (83 SMS/saniye kapasitesine göre)
     const batches: Array<typeof contacts> = [];
     for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
       batches.push(contacts.slice(i, i + BATCH_SIZE));
     }
 
-    console.log(`[Bulk SMS Send] Toplam ${contacts.length} kişi, ${batches.length} batch halinde işlenecek`);
+    console.log(`[Bulk SMS Send] Toplam ${contacts.length} kişi, ${batches.length} batch halinde işlenecek (Batch size: ${BATCH_SIZE}, Concurrent: ${CONCURRENT_LIMIT})`);
 
-    // Büyük gönderimler için progress tracking (1000+ SMS)
-    let jobId: string | null = null;
-    if (contacts.length >= 1000) {
-      jobId = generateJobId();
-      createSMSJob(jobId, contacts.length, batches.length);
-      updateProgress(jobId, { status: 'processing' });
-      console.log(`[Bulk SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
-    }
+    // Tüm gönderimler için progress tracking
+    const jobId = generateJobId();
+    createSMSJob(jobId, contacts.length, batches.length);
+    updateProgress(jobId, { status: 'processing' });
+    console.log(`[Bulk SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
 
     const results = {
       sent: 0,
@@ -155,9 +155,7 @@ export async function POST(request: NextRequest) {
       const batch = batches[batchIndex];
       console.log(`[Bulk SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} kişi)`);
       
-      // Paralel olarak gönder (aynı anda en fazla 20)
-      const CONCURRENT_LIMIT = 20;
-      
+      // Paralel olarak gönder (CepSMS 83 SMS/saniye kapasitesine göre optimize edildi)
       for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
         const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
         const concurrentPromises = concurrentBatch.map(async (contact) => {
@@ -288,42 +286,39 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
+        // Rate limiting kaldırıldı - CepSMS API hızına göre optimize edildi
+        // Her concurrent batch sonrası çok kısa bekleme (API'ye yük binmemesi için)
         if (i + CONCURRENT_LIMIT < batch.length) {
-          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
+          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms bekle
         }
       }
 
-      // Progress güncelle (büyük gönderimler için)
-      if (jobId) {
-        const completed = results.sent + results.failed;
-        updateProgress(jobId, {
-          completed,
-          successCount: results.sent,
-          failCount: results.failed,
-          currentBatch: batchIndex + 1,
-        });
-        console.log(`[Bulk SMS Send] Progress: ${completed}/${contacts.length} (${Math.round((completed / contacts.length) * 100)}%)`);
-      }
+      // Progress güncelle
+      const completed = results.sent + results.failed;
+      updateProgress(jobId, {
+        completed,
+        successCount: results.sent,
+        failCount: results.failed,
+        currentBatch: batchIndex + 1,
+      });
+      console.log(`[Bulk SMS Send] Progress: ${completed}/${contacts.length} (${Math.round((completed / contacts.length) * 100)}%)`);
     }
 
     // Progress'i tamamlandı olarak işaretle
-    if (jobId) {
-      const allResults = contacts.map((contact, index) => {
-        const result = results.messageIds.length > index 
-          ? { phone: contact.phone, success: true }
-          : { phone: contact.phone, success: false, error: results.errors[index - results.messageIds.length] || 'Bilinmeyen hata' };
-        return result;
-      });
-      saveResults(jobId, allResults);
-      updateProgress(jobId, {
-        status: results.sent === contacts.length ? 'completed' : (results.sent > 0 ? 'completed' : 'failed'),
-        completed: results.sent + results.failed,
-        successCount: results.sent,
-        failCount: results.failed,
-        currentBatch: batches.length,
-      });
-    }
+    const allResults = contacts.map((contact, index) => {
+      const result = results.messageIds.length > index 
+        ? { phone: contact.phone, success: true }
+        : { phone: contact.phone, success: false, error: results.errors[index - results.messageIds.length] || 'Bilinmeyen hata' };
+      return result;
+    });
+    saveResults(jobId, allResults);
+    updateProgress(jobId, {
+      status: results.sent === contacts.length ? 'completed' : (results.sent > 0 ? 'completed' : 'failed'),
+      completed: results.sent + results.failed,
+      successCount: results.sent,
+      failCount: results.failed,
+      currentBatch: batches.length,
+    });
 
     console.log(`[Bulk SMS Send] Tamamlandı: ${results.sent} başarılı, ${results.failed} başarısız`);
 
@@ -340,7 +335,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...results,
         remainingCredit: updatedUser?.credit || 0,
-        jobId, // Büyük gönderimlerde job ID gönder
+        jobId, // Tüm gönderimlerde job ID gönder
       },
     });
   } catch (error: any) {

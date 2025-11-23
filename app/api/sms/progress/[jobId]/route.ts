@@ -43,13 +43,12 @@ export async function GET(
       ? Math.round((progress.completed / progress.total) * 100) 
       : 0;
 
-    // Kalan süre tahmini (eğer başladıysa)
+    // Kalan süre tahmini (CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye)
     let estimatedTimeRemaining: number | null = null;
     if (progress.completed > 0 && progress.status === 'processing') {
-      const elapsed = Date.now() - progress.startedAt.getTime();
-      const rate = progress.completed / elapsed; // SMS per millisecond
+      const CEPSMS_RATE = 83; // SMS per second (50,000 / 600 seconds)
       const remaining = progress.total - progress.completed;
-      estimatedTimeRemaining = Math.round(remaining / rate / 1000); // seconds
+      estimatedTimeRemaining = Math.round(remaining / CEPSMS_RATE); // seconds
     }
 
     return NextResponse.json({
