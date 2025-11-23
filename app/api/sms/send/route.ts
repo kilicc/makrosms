@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber, sendBulkSMS } from '@/lib/utils/cepSMSProvider';
+import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
 
 // Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
 // 50,000 SMS için yaklaşık 40-50 dakika gerekiyor
@@ -165,6 +166,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SMS Send] Toplam ${phoneNumbers.length} numara, ${batches.length} batch halinde işlenecek`);
 
+    // Büyük gönderimler için progress tracking (1000+ SMS)
+    let jobId: string | null = null;
+    if (phoneNumbers.length >= 1000) {
+      jobId = generateJobId();
+      createSMSJob(jobId, phoneNumbers.length, batches.length);
+      updateProgress(jobId, { status: 'processing' });
+      console.log(`[SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
+    }
+
     // Her batch'i işle
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
@@ -224,6 +234,17 @@ export async function POST(request: NextRequest) {
         } else {
           failCount++;
         }
+      }
+
+      // Progress güncelle (büyük gönderimler için)
+      if (jobId) {
+        updateProgress(jobId, {
+          completed: results.length,
+          successCount,
+          failCount,
+          currentBatch: batchIndex + 1,
+        });
+        console.log(`[SMS Send] Progress: ${results.length}/${phoneNumbers.length} (${Math.round((results.length / phoneNumbers.length) * 100)}%)`);
       }
 
       // Her batch sonrası başarılı gönderimleri bulk insert yap
@@ -309,6 +330,18 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SMS Send] Tamamlandı: ${successCount} başarılı, ${failCount} başarısız`);
 
+    // Progress'i tamamlandı olarak işaretle
+    if (jobId) {
+      saveResults(jobId, results);
+      updateProgress(jobId, {
+        status: successCount === phoneNumbers.length ? 'completed' : (successCount > 0 ? 'completed' : 'failed'),
+        completed: results.length,
+        successCount,
+        failCount,
+        currentBatch: batches.length,
+      });
+    }
+
     // Sonuç mesajı
     if (successCount === phoneNumbers.length) {
       // Tüm SMS'ler başarılı
@@ -319,7 +352,8 @@ export async function POST(request: NextRequest) {
           totalSent: successCount,
           totalFailed: failCount,
           remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
-          results,
+          results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim (çok büyük olabilir)
+          jobId, // Büyük gönderimlerde job ID gönder
         },
       });
     } else if (successCount > 0) {
@@ -331,7 +365,8 @@ export async function POST(request: NextRequest) {
           totalSent: successCount,
           totalFailed: failCount,
           remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
-          results,
+          results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim
+          jobId, // Büyük gönderimlerde job ID gönder
         },
       });
     } else {
@@ -344,7 +379,8 @@ export async function POST(request: NextRequest) {
             totalSent: successCount,
             totalFailed: failCount,
             remainingCredit: isAdmin ? null : (updatedUser ? updatedUser.credit : 0),
-            results,
+            results: jobId ? undefined : results, // Büyük gönderimlerde results göndermeyelim
+            jobId, // Büyük gönderimlerde job ID gönder
           },
         },
         { status: 400 }
