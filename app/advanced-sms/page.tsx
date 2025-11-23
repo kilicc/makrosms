@@ -1,7 +1,7 @@
 'use client';
 
-import { Box, Container, Typography, Paper, TextField, Button, Grid, Alert, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Chip, Divider, alpha, InputAdornment } from '@mui/material';
-import { useState, useEffect } from 'react';
+import { Box, Container, Typography, Paper, TextField, Button, Grid, Alert, Card, CardContent, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Chip, Divider, alpha, InputAdornment, LinearProgress, CircularProgress } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,12 +66,104 @@ export default function AdvancedSMSPage() {
   });
   const [editingTemplate, setEditingTemplate] = useState<SMSTemplate | null>(null);
 
+  // Progress tracking states
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{
+    total: number;
+    completed: number;
+    successCount: number;
+    failCount: number;
+    currentBatch: number;
+    totalBatches: number;
+    percentage: number;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    estimatedTimeRemaining: number | null;
+  } | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     loadContacts();
     loadGroups();
     loadTemplates();
     loadShortLinks();
   }, []);
+
+  // Cleanup progress interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Progress polling
+  const checkProgress = async (jobId: string) => {
+    try {
+      const response = await api.get(`/sms/progress/${jobId}`);
+      if (response.data.success) {
+        const data = response.data.data;
+        setProgress({
+          total: data.total,
+          completed: data.completed,
+          successCount: data.successCount,
+          failCount: data.failCount,
+          currentBatch: data.currentBatch,
+          totalBatches: data.totalBatches,
+          percentage: data.percentage,
+          status: data.status,
+          estimatedTimeRemaining: data.estimatedTimeRemaining,
+        });
+
+        // Tamamlandıysa polling'i durdur
+        if (data.status === 'completed' || data.status === 'failed') {
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
+          
+          // Tamamlandı mesajı göster
+          if (data.status === 'completed') {
+            setSuccess(`${data.successCount} adet SMS başarıyla gönderildi${data.failCount > 0 ? `, ${data.failCount} adet başarısız` : ''}`);
+          } else {
+            setError(`SMS gönderim tamamlandı: ${data.failCount} adet başarısız`);
+          }
+          
+          setLoading(false);
+          setJobId(null);
+        }
+      }
+    } catch (error: any) {
+      console.error('Progress check error:', error);
+    }
+  };
+
+  // Start progress tracking
+  const startProgressTracking = (jobId: string) => {
+    setJobId(jobId);
+    setProgress({
+      total: 0,
+      completed: 0,
+      successCount: 0,
+      failCount: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+      percentage: 0,
+      status: 'processing',
+      estimatedTimeRemaining: null,
+    });
+
+    // İlk kontrol
+    checkProgress(jobId);
+
+    // Her 2 saniyede bir kontrol et
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    progressIntervalRef.current = setInterval(() => {
+      checkProgress(jobId);
+    }, 2000);
+  };
 
   const loadContacts = async () => {
     try {
@@ -283,6 +375,8 @@ export default function AdvancedSMSPage() {
     setLoading(true);
 
     try {
+      const contactCount = selectedContacts.length;
+      
       const response = await api.post('/bulk-sms/send-bulk', {
         contactIds: selectedContacts,
         message,
@@ -290,15 +384,24 @@ export default function AdvancedSMSPage() {
       });
 
       if (response.data.success) {
-        setSuccess(`${response.data.data.sent} SMS başarıyla gönderildi`);
-        setMessage('');
-        setSelectedContacts([]);
-        setSelectedGroup('');
-        loadContacts();
+        const { sent = 0, failed = 0, jobId: responseJobId } = response.data.data || {};
+        
+        // Büyük gönderimler için progress tracking başlat
+        if (responseJobId && contactCount >= 1000) {
+          startProgressTracking(responseJobId);
+          setSuccess(`${contactCount} kişiye SMS gönderilmeye başlandı. İlerleme durumu aşağıda gösteriliyor.`);
+        } else {
+          // Küçük gönderimler için normal mesaj
+          setSuccess(`${sent} SMS başarıyla gönderildi${failed > 0 ? `, ${failed} başarısız` : ''}`);
+          setMessage('');
+          setSelectedContacts([]);
+          setSelectedGroup('');
+          loadContacts();
+          setLoading(false);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'SMS gönderim hatası');
-    } finally {
       setLoading(false);
     }
   };
@@ -380,6 +483,148 @@ export default function AdvancedSMSPage() {
               <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
                 {success}
               </Alert>
+            )}
+
+            {/* Progress Tracking UI - Büyük gönderimler için */}
+            {progress && jobId && progress.status === 'processing' && (
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  backgroundColor: mode === 'dark' ? '#1e1e1e' : '#fff',
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
+                  SMS Gönderim İlerlemesi
+                </Typography>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      İlerleme: {progress.completed.toLocaleString('tr-TR')} / {progress.total.toLocaleString('tr-TR')}
+                    </Typography>
+                    <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
+                      %{progress.percentage}
+                    </Typography>
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progress.percentage}
+                    sx={{
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: mode === 'dark' ? '#424242' : '#e0e0e0',
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 5,
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Toplam
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {progress.total.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Tamamlanan
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
+                      {progress.completed.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Başarılı
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
+                      {progress.successCount.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Başarısız
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
+                      {progress.failCount.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {progress.totalBatches > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Batch: {progress.currentBatch} / {progress.totalBatches}
+                    </Typography>
+                  </Box>
+                )}
+
+                {progress.estimatedTimeRemaining && progress.estimatedTimeRemaining > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Tahmini Kalan Süre: ~{Math.round(progress.estimatedTimeRemaining / 60)} dakika
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="body2" color="text.secondary">
+                    Gönderim devam ediyor... Sayfa yenilenirse Job ID: {jobId}
+                  </Typography>
+                </Box>
+              </Paper>
+            )}
+
+            {progress && jobId && (progress.status === 'completed' || progress.status === 'failed') && (
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  backgroundColor: mode === 'dark' ? '#1e1e1e' : '#fff',
+                }}
+              >
+                <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
+                  Gönderim Tamamlandı
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={100}
+                  color={progress.status === 'completed' ? 'success' : 'error'}
+                  sx={{
+                    height: 10,
+                    borderRadius: 5,
+                    mb: 2,
+                  }}
+                />
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">Toplam</Typography>
+                    <Typography variant="h6">{progress.total.toLocaleString('tr-TR')}</Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">Başarılı</Typography>
+                    <Typography variant="h6" color="success.main">
+                      {progress.successCount.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
+                    <Typography variant="caption" color="text.secondary">Başarısız</Typography>
+                    <Typography variant="h6" color="error.main">
+                      {progress.failCount.toLocaleString('tr-TR')}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
             )}
 
             <Grid container spacing={3}>

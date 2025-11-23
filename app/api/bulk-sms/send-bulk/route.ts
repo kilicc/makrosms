@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
+import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
+
+// Büyük gönderimler için timeout'u arttır (3600 saniye = 1 saat)
+export const maxDuration = 3600;
+export const dynamic = 'force-dynamic';
 
 // POST /api/bulk-sms/send-bulk - Toplu SMS gönderimi
 export async function POST(request: NextRequest) {
@@ -119,6 +124,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Büyük gönderimler için batch processing (100'er 100'er)
+    const BATCH_SIZE = 100;
+    const batches: Array<typeof contacts> = [];
+    for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
+      batches.push(contacts.slice(i, i + BATCH_SIZE));
+    }
+
+    console.log(`[Bulk SMS Send] Toplam ${contacts.length} kişi, ${batches.length} batch halinde işlenecek`);
+
+    // Büyük gönderimler için progress tracking (1000+ SMS)
+    let jobId: string | null = null;
+    if (contacts.length >= 1000) {
+      jobId = generateJobId();
+      createSMSJob(jobId, contacts.length, batches.length);
+      updateProgress(jobId, { status: 'processing' });
+      console.log(`[Bulk SMS Send] Progress tracking başlatıldı - Job ID: ${jobId}`);
+    }
+
     const results = {
       sent: 0,
       failed: 0,
@@ -127,129 +150,182 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
-    // Send SMS to each contact
-    // Her bir numara için 1 SMS = 1 kredi
-    // Gruptaki numaralar kadar kredi düşülür
-    for (const contact of contacts) {
-      try {
-        // Her numara için SMS gönder
-        const smsResult = await sendSMS(contact.phone, message);
+    // Her batch'i işle
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(`[Bulk SMS Send] Batch ${batchIndex + 1}/${batches.length} işleniyor (${batch.length} kişi)`);
+      
+      // Paralel olarak gönder (aynı anda en fazla 20)
+      const CONCURRENT_LIMIT = 20;
+      
+      for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
+        const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
+        const concurrentPromises = concurrentBatch.map(async (contact) => {
+          try {
+            // Her numara için SMS gönder
+            const smsResult = await sendSMS(contact.phone, message);
 
-        if (smsResult.success && smsResult.messageId) {
-          // Create SMS message record using Supabase
-          // Her SMS kaydı = 1 kredi (cost: 1)
-          const { data: smsMessageData, error: createError } = await supabaseServer
-            .from('sms_messages')
-            .insert({
-              user_id: auth.user.userId,
-              contact_id: contact.id,
-              phone_number: contact.phone,
-              message,
-              sender: sender || null,
-              status: 'gönderildi',
-              cost: isAdmin ? 0 : creditPerMessage, // Admin kullanıcıları için cost: 0
-              cep_sms_message_id: smsResult.messageId,
-              sent_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (!createError && smsMessageData) {
-            // Update contact last contacted using Supabase
-            const { data: contactData } = await supabaseServer
-              .from('contacts')
-              .select('contact_count')
-              .eq('id', contact.id)
-              .single();
-
-            if (contactData) {
-              await supabaseServer
-                .from('contacts')
-                .update({
-                  last_contacted: new Date().toISOString(),
-                  contact_count: (contactData.contact_count || 0) + 1,
+            if (smsResult.success && smsResult.messageId) {
+              // Create SMS message record using Supabase
+              // Her SMS kaydı = 1 kredi (cost: 1)
+              const { data: smsMessageData, error: createError } = await supabaseServer
+                .from('sms_messages')
+                .insert({
+                  user_id: auth.user!.userId,
+                  contact_id: contact.id,
+                  phone_number: contact.phone,
+                  message,
+                  sender: sender || null,
+                  status: 'gönderildi',
+                  cost: isAdmin ? 0 : creditPerMessage, // Admin kullanıcıları için cost: 0
+                  cep_sms_message_id: smsResult.messageId,
+                  sent_at: new Date().toISOString(),
                 })
-                .eq('id', contact.id);
-            }
+                .select()
+                .single();
 
+              if (!createError && smsMessageData) {
+                // Update contact last contacted using Supabase
+                const { data: contactData } = await supabaseServer
+                  .from('contacts')
+                  .select('contact_count')
+                  .eq('id', contact.id)
+                  .single();
+
+                if (contactData) {
+                  await supabaseServer
+                    .from('contacts')
+                    .update({
+                      last_contacted: new Date().toISOString(),
+                      contact_count: (contactData.contact_count || 0) + 1,
+                    })
+                    .eq('id', contact.id);
+                }
+
+                return { success: true, contact, smsMessageData };
+              } else {
+                // SMS kaydı oluşturulamadı ama kredi düşüldü, otomatik iade oluştur
+                const { data: failedSmsData, error: failedError } = await supabaseServer
+                  .from('sms_messages')
+                  .insert({
+                    user_id: auth.user!.userId,
+                    contact_id: contact.id,
+                    phone_number: contact.phone,
+                    message,
+                    sender: sender || null,
+                    status: 'failed',
+                    cost: isAdmin ? 0 : creditPerMessage,
+                    failed_at: new Date().toISOString(),
+                  })
+                  .select()
+                  .single();
+
+                if (!failedError && failedSmsData && !isAdmin) {
+                  await supabaseServer
+                    .from('refunds')
+                    .insert({
+                      user_id: auth.user!.userId,
+                      sms_id: failedSmsData.id,
+                      original_cost: creditPerMessage,
+                      refund_amount: creditPerMessage,
+                      reason: 'SMS kaydı oluşturulamadı - Otomatik iade (48 saat)',
+                      status: 'pending',
+                    });
+                }
+
+                return { success: false, contact, error: 'SMS kaydı oluşturulamadı' };
+              }
+            } else {
+              // SMS gönderim başarısız - kredi düşüldü, otomatik iade oluştur (48 saat sonra iade edilecek)
+              const { data: failedSmsData, error: failedError } = await supabaseServer
+                .from('sms_messages')
+                .insert({
+                  user_id: auth.user!.userId,
+                  contact_id: contact.id,
+                  phone_number: contact.phone,
+                  message,
+                  sender: sender || null,
+                  status: 'failed',
+                  cost: isAdmin ? 0 : creditPerMessage,
+                  failed_at: new Date().toISOString(),
+                })
+                .select()
+                .single();
+
+              if (!failedError && failedSmsData && !isAdmin) {
+                await supabaseServer
+                  .from('refunds')
+                  .insert({
+                    user_id: auth.user!.userId,
+                    sms_id: failedSmsData.id,
+                    original_cost: creditPerMessage,
+                    refund_amount: creditPerMessage,
+                    reason: 'SMS gönderim başarısız - Otomatik iade (48 saat)',
+                    status: 'pending',
+                  });
+              }
+
+              return { success: false, contact, error: smsResult.error || 'Bilinmeyen hata' };
+            }
+          } catch (error: any) {
+            return { success: false, contact, error: error.message };
+          }
+        });
+
+        const batchResults = await Promise.all(concurrentPromises);
+
+        // Sonuçları topla
+        for (const result of batchResults) {
+          if (result.success) {
             results.sent++;
-            results.totalCost += creditPerMessage; // 180 karakter = 1 kredi
-            results.messageIds.push(smsMessageData.id);
+            results.totalCost += creditPerMessage;
+            if (result.smsMessageData?.id) {
+              results.messageIds.push(result.smsMessageData.id);
+            }
           } else {
             results.failed++;
-            results.errors.push(`${contact.phone}: SMS kaydı oluşturulamadı`);
-            // SMS kaydı oluşturulamadı ama kredi düşüldü, otomatik iade oluştur
-            const { data: failedSmsData, error: failedError } = await supabaseServer
-              .from('sms_messages')
-              .insert({
-                user_id: auth.user.userId,
-                contact_id: contact.id,
-                phone_number: contact.phone,
-                message,
-                sender: sender || null,
-              status: 'failed',
-              cost: isAdmin ? 0 : creditPerMessage, // Admin kullanıcıları için cost: 0
-              failed_at: new Date().toISOString(),
-              })
-              .select()
-              .single();
-
-            if (!failedError && failedSmsData && !isAdmin) {
-              // Otomatik iade oluştur (48 saat sonra işlenecek) - Admin kullanıcıları için iade oluşturulmaz
-              await supabaseServer
-                .from('refunds')
-                .insert({
-                  user_id: auth.user.userId,
-                  sms_id: failedSmsData.id,
-                  original_cost: creditPerMessage,
-                  refund_amount: creditPerMessage,
-                  reason: 'SMS kaydı oluşturulamadı - Otomatik iade (48 saat)',
-                  status: 'pending',
-                });
-            }
+            results.errors.push(`${result.contact.phone}: ${result.error}`);
           }
-        } else {
-          // SMS gönderim başarısız - kredi düşüldü, otomatik iade oluştur (48 saat sonra iade edilecek)
-          const { data: failedSmsData, error: failedError } = await supabaseServer
-            .from('sms_messages')
-            .insert({
-              user_id: auth.user.userId,
-              contact_id: contact.id,
-              phone_number: contact.phone,
-              message,
-              sender: sender || null,
-              status: 'failed',
-              cost: isAdmin ? 0 : creditPerMessage, // Admin kullanıcıları için cost: 0
-              failed_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (!failedError && failedSmsData && !isAdmin) {
-            // Otomatik iade oluştur (48 saat sonra işlenecek) - Admin kullanıcıları için iade oluşturulmaz
-            await supabaseServer
-              .from('refunds')
-              .insert({
-                user_id: auth.user.userId,
-                sms_id: failedSmsData.id,
-                original_cost: creditPerMessage,
-                refund_amount: creditPerMessage,
-                reason: 'SMS gönderim başarısız - Otomatik iade (48 saat)',
-                status: 'pending',
-              });
-          }
-
-          results.failed++;
-          results.errors.push(`${contact.phone}: ${smsResult.error || 'Bilinmeyen hata'}`);
         }
-      } catch (error: any) {
-        results.failed++;
-        results.errors.push(`${contact.phone}: ${error.message}`);
+
+        // Her concurrent batch sonrası kısa bir bekleme (rate limiting için)
+        if (i + CONCURRENT_LIMIT < batch.length) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms bekle
+        }
+      }
+
+      // Progress güncelle (büyük gönderimler için)
+      if (jobId) {
+        const completed = results.sent + results.failed;
+        updateProgress(jobId, {
+          completed,
+          successCount: results.sent,
+          failCount: results.failed,
+          currentBatch: batchIndex + 1,
+        });
+        console.log(`[Bulk SMS Send] Progress: ${completed}/${contacts.length} (${Math.round((completed / contacts.length) * 100)}%)`);
       }
     }
 
-    // Kredi zaten düşüldü (başarılı ve başarısız tüm SMS'ler için)
-    // Başarısız olanlar için otomatik iade oluşturuldu, 48 saat sonra iade edilecek
+    // Progress'i tamamlandı olarak işaretle
+    if (jobId) {
+      const allResults = contacts.map((contact, index) => {
+        const result = results.messageIds.length > index 
+          ? { phone: contact.phone, success: true }
+          : { phone: contact.phone, success: false, error: results.errors[index - results.messageIds.length] || 'Bilinmeyen hata' };
+        return result;
+      });
+      saveResults(jobId, allResults);
+      updateProgress(jobId, {
+        status: results.sent === contacts.length ? 'completed' : (results.sent > 0 ? 'completed' : 'failed'),
+        completed: results.sent + results.failed,
+        successCount: results.sent,
+        failCount: results.failed,
+        currentBatch: batches.length,
+      });
+    }
+
+    console.log(`[Bulk SMS Send] Tamamlandı: ${results.sent} başarılı, ${results.failed} başarısız`);
 
     // Get updated user credit using Supabase
     const { data: updatedUser } = await supabaseServer
@@ -264,6 +340,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...results,
         remainingCredit: updatedUser?.credit || 0,
+        jobId, // Büyük gönderimlerde job ID gönder
       },
     });
   } catch (error: any) {
