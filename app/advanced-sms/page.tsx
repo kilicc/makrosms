@@ -485,8 +485,8 @@ export default function AdvancedSMSPage() {
               </Alert>
             )}
 
-            {/* Progress Tracking UI - Tüm gönderimler için */}
-            {progress && jobId && progress.status === 'processing' && (
+            {/* Progress Tracking UI - 1'den fazla SMS için */}
+            {progress && jobId && progress.total > 1 && (
               <Paper
                 elevation={2}
                 sx={{
@@ -574,56 +574,26 @@ export default function AdvancedSMSPage() {
                   </Box>
                 )}
 
-                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={16} />
-                  <Typography variant="body2" color="text.secondary">
-                    Gönderim devam ediyor... Sayfa yenilenirse Job ID: {jobId}
-                  </Typography>
-                </Box>
-              </Paper>
-            )}
-
-            {progress && jobId && (progress.status === 'completed' || progress.status === 'failed') && (
-              <Paper
-                elevation={2}
-                sx={{
-                  p: 3,
-                  mb: 3,
-                  borderRadius: 2,
-                  backgroundColor: mode === 'dark' ? '#1e1e1e' : '#fff',
-                }}
-              >
-                <Typography variant="h6" gutterBottom sx={{ mb: 2, fontWeight: 600 }}>
-                  Gönderim Tamamlandı
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={100}
-                  color={progress.status === 'completed' ? 'success' : 'error'}
-                  sx={{
-                    height: 10,
-                    borderRadius: 5,
-                    mb: 2,
-                  }}
-                />
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
-                    <Typography variant="caption" color="text.secondary">Toplam</Typography>
-                    <Typography variant="h6">{progress.total.toLocaleString('tr-TR')}</Typography>
-                  </Box>
-                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
-                    <Typography variant="caption" color="text.secondary">Başarılı</Typography>
-                    <Typography variant="h6" color="success.main">
-                      {progress.successCount.toLocaleString('tr-TR')}
+                {progress.status === 'processing' ? (
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="body2" color="text.secondary">
+                      Gönderim devam ediyor... Sayfa yenilenirse Job ID: {jobId}
                     </Typography>
                   </Box>
-                  <Box sx={{ flex: '1 1 150px', minWidth: '120px' }}>
-                    <Typography variant="caption" color="text.secondary">Başarısız</Typography>
-                    <Typography variant="h6" color="error.main">
-                      {progress.failCount.toLocaleString('tr-TR')}
-                    </Typography>
+                ) : (
+                  <Box sx={{ mt: 2 }}>
+                    {progress.status === 'completed' ? (
+                      <Alert severity="success" sx={{ borderRadius: 2 }}>
+                        Gönderim tamamlandı! {progress.successCount} başarılı, {progress.failCount} başarısız.
+                      </Alert>
+                    ) : (
+                      <Alert severity="error" sx={{ borderRadius: 2 }}>
+                        Gönderim tamamlandı: {progress.failCount} adet başarısız.
+                      </Alert>
+                    )}
                   </Box>
-                </Box>
+                )}
               </Paper>
             )}
 
