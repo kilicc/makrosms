@@ -105,10 +105,37 @@ export async function POST(request: NextRequest) {
     const totalCreditNeeded = creditPerMessage * phoneNumbers.length; // Toplam kredi = mesaj başına kredi * numara sayısı
     
     if (!isAdmin) {
-      // Normal kullanıcılar için sistem kredisinden (admin kredisinden) kontrol ve düş
+      // Normal kullanıcılar için hem kullanıcı kredisinden hem de sistem kredisinden (admin kredisinden) kontrol ve düş
       requiredCredit = totalCreditNeeded;
       
-      // Sistem kredisini kontrol et (admin kredisi)
+      // Önce kullanıcının kendi kredisini kontrol et
+      const { data: user, error: userError } = await supabaseServer
+        .from('users')
+        .select('credit')
+        .eq('id', auth.user.userId)
+        .single();
+
+      if (userError || !user) {
+        return NextResponse.json(
+          { success: false, message: 'Kullanıcı bulunamadı' },
+          { status: 404 }
+        );
+      }
+
+      userCredit = user.credit || 0;
+      
+      // Kullanıcının kendi kredisini kontrol et
+      if (userCredit < requiredCredit) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Yetersiz kredi. Gerekli: ${requiredCredit} (${phoneNumbers.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut Krediniz: ${userCredit}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Sistem kredisini kontrol et (admin kredisi - tüm kullanıcıların toplam limiti)
       const systemCreditAvailable = await checkSystemCredit(requiredCredit);
       
       if (!systemCreditAvailable) {
@@ -116,13 +143,35 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: `Yetersiz sistem kredisi. Gerekli: ${requiredCredit} (${phoneNumbers.length} numara × ${creditPerMessage} kredi = ${requiredCredit} kredi), Mevcut Sistem Kredisi: ${currentSystemCredit}`,
+            message: `Sistem kredisi yetersiz. Gerekli: ${requiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
           },
           { status: 400 }
         );
       }
 
-      // Sistem kredisinden düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
+      // Önce kullanıcının kendi kredisinden düş
+      console.log(`[SMS Send] Kullanıcı kredisinden ${requiredCredit} kredi düşülüyor...`);
+      console.log(`[SMS Send] Kullanıcı kredisi: ${userCredit} -> ${userCredit - requiredCredit}`);
+      
+      const { data: updatedUserData, error: updateError } = await supabaseServer
+        .from('users')
+        .update({ credit: Math.max(0, userCredit - requiredCredit) })
+        .eq('id', auth.user.userId)
+        .select('credit')
+        .single();
+
+      if (updateError) {
+        console.error(`[SMS Send] Kullanıcı kredisi düşülemedi!`, updateError);
+        return NextResponse.json(
+          { success: false, message: updateError.message || 'Kredi güncellenemedi' },
+          { status: 500 }
+        );
+      }
+      
+      updatedUser = updatedUserData;
+      console.log(`[SMS Send] Kullanıcı kredisi düşürüldü: ${userCredit} -> ${updatedUser.credit}`);
+
+      // Sonra sistem kredisinden düş (admin kredisinden - tüm kullanıcıların toplam limiti)
       console.log(`[SMS Send] Sistem kredisinden ${requiredCredit} kredi düşülüyor...`);
       const currentCreditBefore = await getSystemCredit();
       console.log(`[SMS Send] Mevcut sistem kredisi: ${currentCreditBefore}`);
@@ -130,18 +179,20 @@ export async function POST(request: NextRequest) {
       const deducted = await deductFromSystemCredit(requiredCredit);
       
       if (!deducted) {
-        console.error(`[SMS Send] Sistem kredisi düşülemedi!`);
+        console.error(`[SMS Send] Sistem kredisi düşülemedi! Kullanıcı kredisi iade ediliyor...`);
+        // Sistem kredisi düşülemedi, kullanıcı kredisini geri yükle
+        await supabaseServer
+          .from('users')
+          .update({ credit: userCredit })
+          .eq('id', auth.user.userId);
         return NextResponse.json(
-          { success: false, message: 'Sistem kredisi güncellenemedi' },
+          { success: false, message: 'Sistem kredisi güncellenemedi, kredi iade edildi' },
           { status: 500 }
         );
       }
       
       const currentCreditAfter = await getSystemCredit();
       console.log(`[SMS Send] Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${requiredCredit} kredi düşüldü)`);
-
-      // Normal kullanıcının kendi kredisini de güncelle (gösterim için - sistem kredisinden farklı tutulabilir veya 0 yapılabilir)
-      // Şimdilik sadece sistem kredisinden düşüyoruz, kullanıcının kendi kredisi gösterilmez
     } else {
       // Admin kullanıcıları için sistem kredisinden düş (adminler sistem kredisini kullanır)
       requiredCredit = totalCreditNeeded;

@@ -80,47 +80,123 @@ export async function POST(request: NextRequest) {
     let userCredit = 0;
     let requiredCredit = 0;
 
-    // Normal kullanıcılar için sistem kredisinden (admin kredisinden) kontrol ve düş
+    // Normal kullanıcılar için hem kullanıcı kredisinden hem de sistem kredisinden (admin kredisinden) kontrol ve düş
     const messageLength = Message.length;
     requiredCredit = Math.ceil(messageLength / 180) || 1;
     const totalRequiredCredit = phoneNumbers.length * requiredCredit;
 
-    // Sistem kredisini kontrol et (admin kredisi)
-    const systemCreditAvailable = await checkSystemCredit(totalRequiredCredit);
-    
-    if (!systemCreditAvailable) {
-      const currentSystemCredit = await getSystemCredit();
-      return NextResponse.json(
-        {
-          MessageId: 0,
-          Status: 'Error',
-          Error: `Yetersiz sistem kredisi. Gerekli: ${totalRequiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
-        },
-        { status: 400 }
-      );
-    }
+    if (!isAdmin) {
+      // Önce kullanıcının kendi kredisini kontrol et
+      const { data: user, error: userError } = await supabaseServer
+        .from('users')
+        .select('credit')
+        .eq('id', auth.user.id)
+        .single();
 
-    // Sistem kredisinden düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
-    console.log(`[Advanced SMS Send] Sistem kredisinden ${totalRequiredCredit} kredi düşülüyor...`);
-    const currentCreditBefore = await getSystemCredit();
-    console.log(`[Advanced SMS Send] Mevcut sistem kredisi: ${currentCreditBefore}`);
-    
-    const deducted = await deductFromSystemCredit(totalRequiredCredit);
-    
-    if (!deducted) {
-      console.error(`[Advanced SMS Send] Sistem kredisi düşülemedi!`);
-      return NextResponse.json(
-        {
-          MessageId: 0,
-          Status: 'Error',
-          Error: 'Sistem kredisi güncellenemedi',
-        },
-        { status: 500 }
-      );
+      if (userError || !user) {
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: 'Kullanıcı bulunamadı',
+          },
+          { status: 404 }
+        );
+      }
+
+      userCredit = user.credit || 0;
+      
+      // Kullanıcının kendi kredisini kontrol et
+      if (userCredit < totalRequiredCredit) {
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: `Yetersiz kredi. Gerekli: ${totalRequiredCredit}, Mevcut Krediniz: ${userCredit}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Sistem kredisini kontrol et (admin kredisi - tüm kullanıcıların toplam limiti)
+      const systemCreditAvailable = await checkSystemCredit(totalRequiredCredit);
+      
+      if (!systemCreditAvailable) {
+        const currentSystemCredit = await getSystemCredit();
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: `Sistem kredisi yetersiz. Gerekli: ${totalRequiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Önce kullanıcının kendi kredisinden düş
+      console.log(`[Advanced SMS Send] Kullanıcı kredisinden ${totalRequiredCredit} kredi düşülüyor...`);
+      console.log(`[Advanced SMS Send] Kullanıcı kredisi: ${userCredit} -> ${userCredit - totalRequiredCredit}`);
+      
+      await supabaseServer
+        .from('users')
+        .update({ credit: Math.max(0, userCredit - totalRequiredCredit) })
+        .eq('id', auth.user.id);
+
+      // Sonra sistem kredisinden düş (admin kredisinden - tüm kullanıcıların toplam limiti)
+      console.log(`[Advanced SMS Send] Sistem kredisinden ${totalRequiredCredit} kredi düşülüyor...`);
+      const currentCreditBefore = await getSystemCredit();
+      console.log(`[Advanced SMS Send] Mevcut sistem kredisi: ${currentCreditBefore}`);
+      
+      const deducted = await deductFromSystemCredit(totalRequiredCredit);
+      
+      if (!deducted) {
+        console.error(`[Advanced SMS Send] Sistem kredisi düşülemedi! Kullanıcı kredisi iade ediliyor...`);
+        // Sistem kredisi düşülemedi, kullanıcı kredisini geri yükle
+        await supabaseServer
+          .from('users')
+          .update({ credit: userCredit })
+          .eq('id', auth.user.id);
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: 'Sistem kredisi güncellenemedi, kredi iade edildi',
+          },
+          { status: 500 }
+        );
+      }
+      
+      const currentCreditAfter = await getSystemCredit();
+      console.log(`[Advanced SMS Send] Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${totalRequiredCredit} kredi düşüldü)`);
+    } else {
+      // Admin kullanıcıları için sadece sistem kredisinden düş
+      const systemCreditAvailable = await checkSystemCredit(totalRequiredCredit);
+      
+      if (!systemCreditAvailable) {
+        const currentSystemCredit = await getSystemCredit();
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: `Yetersiz sistem kredisi. Gerekli: ${totalRequiredCredit}, Mevcut Sistem Kredisi: ${currentSystemCredit}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const deducted = await deductFromSystemCredit(totalRequiredCredit);
+      
+      if (!deducted) {
+        return NextResponse.json(
+          {
+            MessageId: 0,
+            Status: 'Error',
+            Error: 'Sistem kredisi güncellenemedi',
+          },
+          { status: 500 }
+        );
+      }
     }
-    
-    const currentCreditAfter = await getSystemCredit();
-    console.log(`[Advanced SMS Send] Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${totalRequiredCredit} kredi düşüldü)`);
 
     // CepSMS API rate limiting: 500 kişiye gönderirken bad request hatası alınıyor
     // Batch size'ı küçültüp rate limiting ekleyerek daha yavaş gönderelim
