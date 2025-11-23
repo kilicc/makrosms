@@ -123,14 +123,22 @@ export async function POST(request: NextRequest) {
       }
 
       // Sistem kredisinden düş (başarılı veya başarısız olsun, kredi düşülecek, başarısız olursa 48 saat sonra iade edilecek)
+      console.log(`[SMS Send] Sistem kredisinden ${requiredCredit} kredi düşülüyor...`);
+      const currentCreditBefore = await getSystemCredit();
+      console.log(`[SMS Send] Mevcut sistem kredisi: ${currentCreditBefore}`);
+      
       const deducted = await deductFromSystemCredit(requiredCredit);
       
       if (!deducted) {
+        console.error(`[SMS Send] Sistem kredisi düşülemedi!`);
         return NextResponse.json(
           { success: false, message: 'Sistem kredisi güncellenemedi' },
           { status: 500 }
         );
       }
+      
+      const currentCreditAfter = await getSystemCredit();
+      console.log(`[SMS Send] Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${requiredCredit} kredi düşüldü)`);
 
       // Normal kullanıcının kendi kredisini de güncelle (gösterim için - sistem kredisinden farklı tutulabilir veya 0 yapılabilir)
       // Şimdilik sadece sistem kredisinden düşüyoruz, kullanıcının kendi kredisi gösterilmez
@@ -153,20 +161,29 @@ export async function POST(request: NextRequest) {
       }
 
       // Sistem kredisinden düş
+      console.log(`[SMS Send] Admin: Sistem kredisinden ${requiredCredit} kredi düşülüyor...`);
+      const currentCreditBefore = await getSystemCredit();
+      console.log(`[SMS Send] Admin: Mevcut sistem kredisi: ${currentCreditBefore}`);
+      
       const deducted = await deductFromSystemCredit(requiredCredit);
       
       if (!deducted) {
+        console.error(`[SMS Send] Admin: Sistem kredisi düşülemedi!`);
         return NextResponse.json(
           { success: false, message: 'Sistem kredisi güncellenemedi' },
           { status: 500 }
         );
       }
+      
+      const currentCreditAfter = await getSystemCredit();
+      console.log(`[SMS Send] Admin: Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${requiredCredit} kredi düşüldü)`);
     }
 
-    // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye kapasitesi
-    // Batch processing optimize edildi
-    const BATCH_SIZE = 500; // Daha büyük batch'ler
-    const CONCURRENT_LIMIT = 100; // Yüksek concurrent limit (83 SMS/saniye kapasitesine göre)
+    // CepSMS API rate limiting: 500 kişiye gönderirken bad request hatası alınıyor
+    // Batch size'ı küçültüp rate limiting ekleyerek daha yavaş gönderelim
+    const BATCH_SIZE = 50; // Küçük batch'ler (500'den 50'ye düşürüldü)
+    const CONCURRENT_LIMIT = 10; // Düşük concurrent limit (rate limiting için)
+    const RATE_LIMIT_DELAY = 50; // Her batch arasında 50ms bekle (rate limiting)
     const results: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
     let successCount = 0;
     let failCount = 0;
@@ -192,11 +209,16 @@ export async function POST(request: NextRequest) {
       
       const batchResults: Array<{ phone: string; success: boolean; messageId?: string; error?: string }> = [];
       
-      // Paralel olarak gönder (CepSMS 83 SMS/saniye kapasitesine göre optimize edildi)
+      // Paralel olarak gönder (rate limiting ile)
       for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
         const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
-        const concurrentPromises = concurrentBatch.map(async (phoneNumber) => {
+        const concurrentPromises = concurrentBatch.map(async (phoneNumber, idx) => {
           try {
+            // Her SMS arasında küçük bir delay (rate limiting)
+            if (idx > 0) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
             const smsResult = await sendSMS(phoneNumber, message);
             return {
               phone: phoneNumber,
@@ -217,11 +239,15 @@ export async function POST(request: NextRequest) {
         const concurrentResults = await Promise.all(concurrentPromises);
         batchResults.push(...concurrentResults);
         
-        // Rate limiting kaldırıldı - CepSMS API hızına göre optimize edildi
-        // Her concurrent batch sonrası çok kısa bekleme (API'ye yük binmemesi için)
+        // Rate limiting: Her concurrent batch sonrası bekleme
         if (i + CONCURRENT_LIMIT < batch.length) {
-          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms bekle
+          await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
         }
+      }
+      
+      // Her batch sonrası daha uzun bir bekleme (CepSMS rate limit'i için)
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
       console.log(`[SMS Send] Batch ${batchIndex + 1}: Tamamlandı - ${batchResults.filter(r => r.success).length} başarılı, ${batchResults.filter(r => !r.success).length} başarısız`);
