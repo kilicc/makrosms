@@ -60,8 +60,8 @@ JWT_SECRET=your_super_secret_jwt_key_here_change_this_in_production
 JWT_EXPIRE=7d
 
 # CepSMS Configuration
-CEPSMS_USERNAME=Testfn
-CEPSMS_PASSWORD=Qaswed
+CEPSMS_USERNAME=Szxx
+CEPSMS_PASSWORD=KepdaKeoz7289
 CEPSMS_FROM=CepSMS
 
 # Crypto Payment Configuration

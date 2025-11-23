@@ -1,388 +1,281 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServer } from '@/lib/supabase-server';
 import { authenticateRequest } from '@/lib/middleware/auth';
-import { hashPassword } from '@/lib/utils/password';
-import crypto from 'crypto';
+import axios from 'axios';
+import https from 'https';
+import FormData from 'form-data';
 
-// Helper function to create NextRequest from URL and body
-function createNextRequest(url: string, method: string, body?: any): NextRequest {
-  const request = new NextRequest(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  return request;
-}
+const CEPSMS_USERNAME = process.env.CEPSMS_USERNAME || 'Szxx';
+const CEPSMS_PASSWORD = process.env.CEPSMS_PASSWORD || 'KepdaKeoz7289';
+const CEPSMS_FROM = process.env.CEPSMS_FROM || 'CepSMS';
+const CEPSMS_API_URL = 'https://panel4.cepsms.com/smsapi';
+
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : false,
+});
 
 /**
- * POST /api/admin/test-api
- * API testleri için demo kullanıcı oluşturur ve testleri çalıştırır
+ * GET /api/admin/test-api
+ * CepSMS API'yi test et - tüm formatları dene ve sonuçları göster
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const auth = authenticateRequest(request);
-
-    if (!auth.authenticated || !auth.user) {
+    if (!auth.authenticated || !auth.user || auth.user.role !== 'admin') {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
+        { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userRole = (auth.user.role || '').toLowerCase();
-    const isAdmin = userRole === 'admin' || userRole === 'moderator' || userRole === 'administrator';
+    const testPhone = '905321234567';
+    const testMessage = 'Test mesajı';
 
-    if (!isAdmin) {
-      return NextResponse.json(
-        { success: false, message: 'Admin yetkisi gerekli' },
-        { status: 403 }
-      );
-    }
+    const results: any[] = [];
 
-    const supabaseServer = getSupabaseServer();
-
-    // Demo kullanıcı oluştur
-    const demoUsername = 'demo_api_user';
-    const demoEmail = 'demo_api@makrosms.com';
-    const demoPassword = 'Demo123!@#';
-
-    // Önce kullanıcıyı kontrol et
-    let { data: existingUser } = await supabaseServer
-      .from('users')
-      .select('id, username, credit')
-      .eq('username', demoUsername)
-      .single();
-
-    let userId: string;
-    let isNewUser = false;
-
-    if (existingUser) {
-      userId = existingUser.id;
-    } else {
-      // Şifreyi hash'le
-      const passwordHash = await hashPassword(demoPassword);
-
-      // Kullanıcı oluştur
-      const { data: newUser, error: userError } = await supabaseServer
-        .from('users')
-        .insert({
-          username: demoUsername,
-          email: demoEmail,
-          password_hash: passwordHash,
-          role: 'user',
-          credit: 1000, // 1000 SMS kredisi
-        })
-        .select('id, credit')
-        .single();
-
-      if (userError || !newUser) {
-        return NextResponse.json(
-          { success: false, message: `Kullanıcı oluşturulamadı: ${userError?.message}` },
-          { status: 500 }
-        );
+    // Format 1: GSM (string) JSON
+    try {
+      console.log('[Test] Format 1: GSM (string) JSON');
+      const requestData1: any = {
+        User: CEPSMS_USERNAME,
+        Pass: CEPSMS_PASSWORD,
+        Message: testMessage,
+        GSM: testPhone,
+      };
+      if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+        requestData1.From = CEPSMS_FROM;
       }
 
-      userId = newUser.id;
-      isNewUser = true;
+      const response1 = await axios.post(
+        CEPSMS_API_URL,
+        requestData1,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000,
+          validateStatus: () => true, // Tüm status kodlarını kabul et
+        }
+      );
+
+      results.push({
+        format: 'Format 1: GSM (string) JSON',
+        status: response1.status,
+        statusText: response1.statusText,
+        data: response1.data,
+        headers: response1.headers,
+        success: response1.status === 200 || response1.status === 201,
+      });
+    } catch (error: any) {
+      results.push({
+        format: 'Format 1: GSM (string) JSON',
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        success: false,
+      });
     }
 
-    // API Key oluştur veya mevcut olanı al
-    const apiKey = crypto.randomBytes(32).toString('hex');
-    const apiSecret = crypto.randomBytes(32).toString('hex');
-
-    let { data: existingKey } = await supabaseServer
-      .from('api_keys')
-      .select('id, api_key, api_secret, key_name')
-      .eq('user_id', userId)
-      .eq('key_name', 'Demo API Key - Test')
-      .single();
-
-    let finalApiKey: string;
-    let finalApiSecret: string;
-    let isNewKey = false;
-
-    if (existingKey) {
-      finalApiKey = existingKey.api_key;
-      finalApiSecret = existingKey.api_secret;
-    } else {
-      const { data: apiKeyData, error: keyError } = await supabaseServer
-        .from('api_keys')
-        .insert({
-          user_id: userId,
-          api_key: apiKey,
-          api_secret: apiSecret,
-          key_name: 'Demo API Key - Test',
-          description: 'API testleri için oluşturulan demo API key',
-          is_active: true,
-        })
-        .select('api_key, api_secret')
-        .single();
-
-      if (keyError || !apiKeyData) {
-        return NextResponse.json(
-          { success: false, message: `API Key oluşturulamadı: ${keyError?.message}` },
-          { status: 500 }
-        );
+    // Format 2: Numbers (array) JSON
+    try {
+      console.log('[Test] Format 2: Numbers (array) JSON');
+      const requestData2: any = {
+        User: CEPSMS_USERNAME,
+        Pass: CEPSMS_PASSWORD,
+        Message: testMessage,
+        Numbers: [testPhone],
+      };
+      if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+        requestData2.From = CEPSMS_FROM;
       }
 
-      finalApiKey = apiKeyData.api_key;
-      finalApiSecret = apiKeyData.api_secret;
-      isNewKey = true;
-    }
-
-    // Test sonuçları
-    const testResults: any[] = [];
-    
-    // Test için doğrudan API endpoint'lerini import edip çağıracağız
-    // Ancak server-side'da fetch kullanmak daha güvenli
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                    'http://localhost:3000';
-
-    // Test 1: Send SMS Simple
-    try {
-      const test1Request = createNextRequest(
-        `${baseUrl}/api/v1/sms/send`,
-        'POST',
+      const response2 = await axios.post(
+        CEPSMS_API_URL,
+        requestData2,
         {
-          User: finalApiKey,
-          Pass: finalApiSecret,
-          Message: 'Test mesajı - API Test 1 (Simple)',
-          Numbers: ['905321234567'],
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000,
+          validateStatus: () => true,
         }
       );
-      
-      // Doğrudan handler'ı çağır
-      const { POST: sendHandler } = await import('@/app/api/v1/sms/send/route');
-      const test1Response = await sendHandler(test1Request);
-      const test1Data = await test1Response.json();
-      
-      testResults.push({
-        name: 'Send SMS Simple',
-        endpoint: '/api/v1/sms/send',
-        success: test1Response.ok && test1Data.Status === 'OK',
-        status: test1Response.status,
-        response: test1Data,
-        messageId: test1Data.MessageId,
+
+      results.push({
+        format: 'Format 2: Numbers (array) JSON',
+        status: response2.status,
+        statusText: response2.statusText,
+        data: response2.data,
+        headers: response2.headers,
+        success: response2.status === 200 || response2.status === 201,
       });
     } catch (error: any) {
-      testResults.push({
-        name: 'Send SMS Simple',
-        endpoint: '/api/v1/sms/send',
-        success: false,
+      results.push({
+        format: 'Format 2: Numbers (array) JSON',
         error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        success: false,
       });
     }
 
-    // Test 2: Send SMS Advanced
+    // Format 3: Form-Data (URL-encoded)
     try {
-      const test2Request = createNextRequest(
-        `${baseUrl}/api/v1/sms/send-advanced`,
-        'POST',
-        {
-          From: 'FinSMS',
-          User: finalApiKey,
-          Pass: finalApiSecret,
-          Message: 'Test mesajı - API Test 2 (Advanced)',
-          Coding: 'turkish',
-          Numbers: ['905321234567'],
-        }
-      );
-      const { POST: sendAdvancedHandler } = await import('@/app/api/v1/sms/send-advanced/route');
-      const test2Response = await sendAdvancedHandler(test2Request);
-      const test2Data = await test2Response.json();
-      testResults.push({
-        name: 'Send SMS Advanced',
-        endpoint: '/api/v1/sms/send-advanced',
-        success: test2Response.ok && test2Data.Status === 'OK',
-        status: test2Response.status,
-        response: test2Data,
-        messageId: test2Data.MessageId,
-      });
-    } catch (error: any) {
-      testResults.push({
-        name: 'Send SMS Advanced',
-        endpoint: '/api/v1/sms/send-advanced',
-        success: false,
-        error: error.message,
-      });
-    }
-
-    // Test 3: Send SMS Multi
-    try {
-      const test3Request = createNextRequest(
-        `${baseUrl}/api/v1/sms/send-multi`,
-        'POST',
-        {
-          From: 'FinSMS',
-          User: finalApiKey,
-          Pass: finalApiSecret,
-          Coding: 'default',
-          Messages: [
-            { Message: 'Test mesajı 1 - Multi', GSM: '905321234567' },
-            { Message: 'Test mesajı 2 - Multi', GSM: '905321234568' },
-          ],
-        }
-      );
-      const { POST: sendMultiHandler } = await import('@/app/api/v1/sms/send-multi/route');
-      const test3Response = await sendMultiHandler(test3Request);
-      const test3Data = await test3Response.json();
-      testResults.push({
-        name: 'Send SMS Multi',
-        endpoint: '/api/v1/sms/send-multi',
-        success: test3Response.ok && (test3Data.Status === 'OK' || test3Data.MessageIds),
-        status: test3Response.status,
-        response: test3Data,
-        messageIds: test3Data.MessageIds || (test3Data.MessageId ? [test3Data.MessageId] : []),
-      });
-    } catch (error: any) {
-      testResults.push({
-        name: 'Send SMS Multi',
-        endpoint: '/api/v1/sms/send-multi',
-        success: false,
-        error: error.message,
-      });
-    }
-
-    // Test 4: SMS Report (İlk başarılı testin MessageId'sini kullan)
-    const firstSuccessMessageId = testResults.find((t) => t.messageId)?.messageId;
-    if (firstSuccessMessageId) {
-      try {
-        const test4Request = createNextRequest(
-          `${baseUrl}/api/v1/sms/report`,
-          'POST',
-          {
-            User: finalApiKey,
-            Pass: finalApiSecret,
-            MessageId: firstSuccessMessageId,
-          }
-        );
-        const { POST: reportHandler } = await import('@/app/api/v1/sms/report/route');
-        const test4Response = await reportHandler(test4Request);
-        const test4Data = await test4Response.json();
-        testResults.push({
-          name: 'SMS Report',
-          endpoint: '/api/v1/sms/report',
-          success: test4Response.ok && test4Data.Status === 'OK',
-          status: test4Response.status,
-          response: test4Data,
-          report: test4Data.Report || [],
-        });
-      } catch (error: any) {
-        testResults.push({
-          name: 'SMS Report',
-          endpoint: '/api/v1/sms/report',
-          success: false,
-          error: error.message,
-        });
+      console.log('[Test] Format 3: Form-Data (URL-encoded)');
+      const formData = new FormData();
+      formData.append('User', CEPSMS_USERNAME);
+      formData.append('Pass', CEPSMS_PASSWORD);
+      formData.append('Message', testMessage);
+      formData.append('GSM', testPhone);
+      if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+        formData.append('From', CEPSMS_FROM);
       }
-    }
 
-    // Test 5: Invalid API Key
-    try {
-      const test5Request = createNextRequest(
-        `${baseUrl}/api/v1/sms/send`,
-        'POST',
+      const response3 = await axios.post(
+        CEPSMS_API_URL,
+        formData,
         {
-          User: 'invalid_key',
-          Pass: 'invalid_secret',
-          Message: 'Test',
-          Numbers: ['905321234567'],
+          headers: {
+            ...formData.getHeaders(),
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000,
+          validateStatus: () => true,
         }
       );
-      const { POST: sendHandler } = await import('@/app/api/v1/sms/send/route');
-      const test5Response = await sendHandler(test5Request);
-      const test5Data = await test5Response.json();
-      testResults.push({
-        name: 'Invalid API Key Test',
-        endpoint: '/api/v1/sms/send',
-        success: test5Response.status === 401,
-        status: test5Response.status,
-        response: test5Data,
-        expectedStatus: 401,
+
+      results.push({
+        format: 'Format 3: Form-Data (URL-encoded)',
+        status: response3.status,
+        statusText: response3.statusText,
+        data: response3.data,
+        headers: response3.headers,
+        success: response3.status === 200 || response3.status === 201,
       });
     } catch (error: any) {
-      testResults.push({
-        name: 'Invalid API Key Test',
-        endpoint: '/api/v1/sms/send',
-        success: false,
+      results.push({
+        format: 'Format 3: Form-Data (URL-encoded)',
         error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        success: false,
       });
     }
 
-    // Test 6: Missing Parameters
+    // Format 4: Query Parameters (GET) - bazı eski API'ler böyle çalışır
     try {
-      const test6Request = createNextRequest(
-        `${baseUrl}/api/v1/sms/send`,
-        'POST',
+      console.log('[Test] Format 4: Query Parameters (GET)');
+      const params = new URLSearchParams({
+        User: CEPSMS_USERNAME,
+        Pass: CEPSMS_PASSWORD,
+        Message: testMessage,
+        GSM: testPhone,
+      });
+      if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+        params.append('From', CEPSMS_FROM);
+      }
+
+      const response4 = await axios.get(
+        `${CEPSMS_API_URL}?${params.toString()}`,
         {
-          User: finalApiKey,
-          Pass: finalApiSecret,
-          // Message ve Numbers eksik
+          headers: {
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000,
+          validateStatus: () => true,
         }
       );
-      const { POST: sendHandler } = await import('@/app/api/v1/sms/send/route');
-      const test6Response = await sendHandler(test6Request);
-      const test6Data = await test6Response.json();
-      testResults.push({
-        name: 'Missing Parameters Test',
-        endpoint: '/api/v1/sms/send',
-        success: test6Response.status === 400,
-        status: test6Response.status,
-        response: test6Data,
-        expectedStatus: 400,
+
+      results.push({
+        format: 'Format 4: Query Parameters (GET)',
+        status: response4.status,
+        statusText: response4.statusText,
+        data: response4.data,
+        headers: response4.headers,
+        success: response4.status === 200 || response4.status === 201,
       });
     } catch (error: any) {
-      testResults.push({
-        name: 'Missing Parameters Test',
-        endpoint: '/api/v1/sms/send',
-        success: false,
+      results.push({
+        format: 'Format 4: Query Parameters (GET)',
         error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        success: false,
       });
     }
 
-    // Kullanıcı bilgilerini güncelle (kredi durumu)
-    const { data: userData } = await supabaseServer
-      .from('users')
-      .select('credit')
-      .eq('id', userId)
-      .single();
+    // Format 5: URL-encoded POST
+    try {
+      console.log('[Test] Format 5: URL-encoded POST');
+      const params = new URLSearchParams({
+        User: CEPSMS_USERNAME,
+        Pass: CEPSMS_PASSWORD,
+        Message: testMessage,
+        GSM: testPhone,
+      });
+      if (CEPSMS_FROM && CEPSMS_FROM.trim() !== '' && CEPSMS_FROM !== 'CepSMS') {
+        params.append('From', CEPSMS_FROM);
+      }
 
-    // Özet
-    const successCount = testResults.filter((t) => t.success).length;
-    const totalCount = testResults.length;
+      const response5 = await axios.post(
+        CEPSMS_API_URL,
+        params.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          httpsAgent: httpsAgent,
+          timeout: 30000,
+          validateStatus: () => true,
+        }
+      );
+
+      results.push({
+        format: 'Format 5: URL-encoded POST',
+        status: response5.status,
+        statusText: response5.statusText,
+        data: response5.data,
+        headers: response5.headers,
+        success: response5.status === 200 || response5.status === 201,
+      });
+    } catch (error: any) {
+      results.push({
+        format: 'Format 5: URL-encoded POST',
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        success: false,
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'API testleri tamamlandı',
-      data: {
-        demo: {
-          userId,
-          username: demoUsername,
-          email: demoEmail,
-          credit: userData?.credit || 0,
-          apiKey: finalApiKey.substring(0, 16) + '...',
-          apiSecret: finalApiSecret.substring(0, 16) + '...',
-          isNewUser,
-          isNewKey,
-        },
-        tests: testResults,
-        summary: {
-          total: totalCount,
-          success: successCount,
-          failed: totalCount - successCount,
-          successRate: totalCount > 0 ? ((successCount / totalCount) * 100).toFixed(1) : 0,
-        },
+      apiUrl: CEPSMS_API_URL,
+      username: CEPSMS_USERNAME,
+      from: CEPSMS_FROM,
+      testPhone,
+      testMessage,
+      results,
+      summary: {
+        total: results.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
       },
     });
   } catch (error: any) {
-    console.error('API test error:', error);
+    console.error('[Test API] Error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'API testleri çalıştırılırken hata oluştu' },
+      {
+        success: false,
+        error: error.message || 'Test hatası',
+      },
       { status: 500 }
     );
   }
 }
-

@@ -21,8 +21,8 @@ interface SendSMSResult {
   error?: string;
 }
 
-const CEPSMS_USERNAME = process.env.CEPSMS_USERNAME || 'Testfn';
-const CEPSMS_PASSWORD = process.env.CEPSMS_PASSWORD || 'Qaswed';
+const CEPSMS_USERNAME = process.env.CEPSMS_USERNAME || 'Szxx';
+const CEPSMS_PASSWORD = process.env.CEPSMS_PASSWORD || 'KepdaKeoz7289';
 const CEPSMS_FROM = process.env.CEPSMS_FROM || 'CepSMS';
 const CEPSMS_API_URL = 'https://panel4.cepsms.com/smsapi';
 // CepSMS MULTI endpoint - aynı endpoint, sadece format farklı (Messages array kullanılıyor)
