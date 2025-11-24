@@ -1,4 +1,4 @@
-import { supabaseServer } from '@/lib/supabase-server';
+import { getSupabaseServer } from '@/lib/supabase-server';
 
 export interface SMSLogEntry {
   id?: string;
@@ -53,6 +53,7 @@ export async function createSMSLog(logEntry: SMSLogEntry): Promise<string | null
       created_at: new Date().toISOString(),
     };
 
+    const supabaseServer = getSupabaseServer();
     const { data, error } = await supabaseServer
       .from('sms_logs')
       .insert(logData)
@@ -320,6 +321,7 @@ export async function createBulkSMSLogs(logEntries: SMSLogEntry[]): Promise<numb
       created_at: new Date().toISOString(),
     }));
 
+    const supabaseServer = getSupabaseServer();
     const { data, error } = await supabaseServer
       .from('sms_logs')
       .insert(logData)

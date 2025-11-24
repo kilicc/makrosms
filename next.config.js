@@ -5,6 +5,20 @@ const nextConfig = {
   experimental: {
     // Next.js 16 özellikleri
   },
+  // Build optimizasyonları
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  // TypeScript ve ESLint'i build sırasında atla (hızlı build için)
+  typescript: {
+    ignoreBuildErrors: false, // TypeScript hatalarını göster
+  },
+  eslint: {
+    ignoreDuringBuilds: false, // ESLint hatalarını göster
+  },
   env: {
     // Environment variables
   },
