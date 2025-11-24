@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, Delete, VpnKey, ContentCopy, Refresh } from '@mui/icons-material';
+import { AdminPanelSettings, People, Sms, AccountBalanceWallet, Add, Assessment, ExpandMore, PersonAdd, Visibility, Search, FilterList, Delete, VpnKey, ContentCopy, Refresh, List, BugReport } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import { useRouter } from 'next/navigation';
 import ClientDate from '@/components/ClientDate';
@@ -108,6 +108,24 @@ export default function AdminDashboardPage() {
   const [apiKeyDetailDialogOpen, setApiKeyDetailDialogOpen] = useState(false);
   const [selectedApiKeyDetail, setSelectedApiKeyDetail] = useState<any | null>(null);
   
+  // SMS Logs states
+  const [smsLogs, setSmsLogs] = useState<any[]>([]);
+  const [loadingSmsLogs, setLoadingSmsLogs] = useState(false);
+  const [smsLogsPage, setSmsLogsPage] = useState(1);
+  const [smsLogsTotal, setSmsLogsTotal] = useState(0);
+  const [smsLogsFilters, setSmsLogsFilters] = useState({
+    startDate: '',
+    endDate: '',
+    userId: '',
+    logType: '',
+    logLevel: '',
+    phoneNumber: '',
+    status: '',
+    search: '',
+  });
+  const [smsLogDetailDialogOpen, setSmsLogDetailDialogOpen] = useState(false);
+  const [selectedSmsLog, setSelectedSmsLog] = useState<any | null>(null);
+  
   // User management search and filter
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
@@ -153,6 +171,9 @@ export default function AdminDashboardPage() {
         loadApiKeys();
         loadUsers(); // Kullanıcı listesi API key oluşturma için gerekli
       }
+      if (tabValue === 5) {
+        loadSmsLogs();
+      }
     }
   }, [user, tabValue, selectedDate]);
 
@@ -175,6 +196,40 @@ export default function AdminDashboardPage() {
       }
     } catch (error) {
       console.error('Users load error:', error);
+    }
+  };
+
+  const loadSmsLogs = async () => {
+    try {
+      setLoadingSmsLogs(true);
+      setError('');
+      const params: any = {
+        page: smsLogsPage,
+        limit: 50,
+      };
+      
+      if (smsLogsFilters.startDate) params.startDate = smsLogsFilters.startDate;
+      if (smsLogsFilters.endDate) params.endDate = smsLogsFilters.endDate;
+      if (smsLogsFilters.userId) params.userId = smsLogsFilters.userId;
+      if (smsLogsFilters.logType) params.logType = smsLogsFilters.logType;
+      if (smsLogsFilters.logLevel) params.logLevel = smsLogsFilters.logLevel;
+      if (smsLogsFilters.phoneNumber) params.phoneNumber = smsLogsFilters.phoneNumber;
+      if (smsLogsFilters.status) params.status = smsLogsFilters.status;
+      if (smsLogsFilters.search) params.search = smsLogsFilters.search;
+      
+      const response = await api.get('/admin/sms-logs', { params });
+      if (response.data.success) {
+        setSmsLogs(response.data.data.logs || []);
+        setSmsLogsTotal(response.data.data.pagination?.total || 0);
+      } else {
+        setError(response.data.message || 'SMS logları yüklenirken bir hata oluştu');
+      }
+    } catch (error: any) {
+      console.error('SMS logs load error:', error);
+      setError(error.response?.data?.message || 'SMS logları yüklenirken bir hata oluştu');
+      setSmsLogs([]);
+    } finally {
+      setLoadingSmsLogs(false);
     }
   };
 
@@ -600,6 +655,7 @@ export default function AdminDashboardPage() {
                 <Tab icon={<Assessment />} label="İade Raporu" />
                 <Tab icon={<AccountBalanceWallet />} label="Ödeme Talepleri" />
                 <Tab icon={<VpnKey />} label="API Kullanıcıları" />
+                <Tab icon={<BugReport />} label="SMS Logları" />
               </Tabs>
             </Paper>
 
@@ -2443,6 +2499,416 @@ export default function AdminDashboardPage() {
             </DialogContent>
             <DialogActions sx={{ px: 2, pb: 1.5 }}>
               <Button size="small" onClick={() => setApiKeyDetailDialogOpen(false)} sx={{ fontSize: '12px' }}>
+                Kapat
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* SMS Logs Tab */}
+          {tabValue === 5 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 600 }}>
+                  SMS Logları - Detaylı İzleme
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<Refresh />}
+                  onClick={loadSmsLogs}
+                  disabled={loadingSmsLogs}
+                  sx={{ fontSize: '12px', textTransform: 'none' }}
+                >
+                  Yenile
+                </Button>
+              </Box>
+
+              {/* Filtreler */}
+              <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Başlangıç Tarihi"
+                      type="date"
+                      value={smsLogsFilters.startDate}
+                      onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, startDate: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{ fontSize: '12px' }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Bitiş Tarihi"
+                      type="date"
+                      value={smsLogsFilters.endDate}
+                      onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, endDate: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{ fontSize: '12px' }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel sx={{ fontSize: '12px' }}>Log Tipi</InputLabel>
+                      <Select
+                        value={smsLogsFilters.logType}
+                        onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, logType: e.target.value })}
+                        label="Log Tipi"
+                        sx={{ fontSize: '12px' }}
+                      >
+                        <MenuItem value="">Tümü</MenuItem>
+                        <MenuItem value="send_request">Gönderim İsteği</MenuItem>
+                        <MenuItem value="send_response">Gönderim Yanıtı</MenuItem>
+                        <MenuItem value="send_error">Gönderim Hatası</MenuItem>
+                        <MenuItem value="credit_deduction">Kredi Düşme</MenuItem>
+                        <MenuItem value="credit_refund">Kredi İade</MenuItem>
+                        <MenuItem value="status_check">Durum Kontrolü</MenuItem>
+                        <MenuItem value="status_update">Durum Güncelleme</MenuItem>
+                        <MenuItem value="database_insert">Veritabanı Ekleme</MenuItem>
+                        <MenuItem value="database_error">Veritabanı Hatası</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel sx={{ fontSize: '12px' }}>Log Seviyesi</InputLabel>
+                      <Select
+                        value={smsLogsFilters.logLevel}
+                        onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, logLevel: e.target.value })}
+                        label="Log Seviyesi"
+                        sx={{ fontSize: '12px' }}
+                      >
+                        <MenuItem value="">Tümü</MenuItem>
+                        <MenuItem value="info">Bilgi</MenuItem>
+                        <MenuItem value="success">Başarılı</MenuItem>
+                        <MenuItem value="warning">Uyarı</MenuItem>
+                        <MenuItem value="error">Hata</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Telefon Numarası"
+                      value={smsLogsFilters.phoneNumber}
+                      onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, phoneNumber: e.target.value })}
+                      placeholder="905551234567"
+                      sx={{ fontSize: '12px' }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Genel Arama"
+                      value={smsLogsFilters.search}
+                      onChange={(e) => setSmsLogsFilters({ ...smsLogsFilters, search: e.target.value })}
+                      placeholder="Mesaj, telefon, hata..."
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search sx={{ fontSize: 18 }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ fontSize: '12px' }}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', height: '100%' }}>
+                      <Button
+                        variant="contained"
+                        onClick={loadSmsLogs}
+                        disabled={loadingSmsLogs}
+                        sx={{ fontSize: '12px', textTransform: 'none' }}
+                      >
+                        Filtrele
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setSmsLogsFilters({
+                            startDate: '',
+                            endDate: '',
+                            userId: '',
+                            logType: '',
+                            logLevel: '',
+                            phoneNumber: '',
+                            status: '',
+                            search: '',
+                          });
+                          loadSmsLogs();
+                        }}
+                        sx={{ fontSize: '12px', textTransform: 'none' }}
+                      >
+                        Temizle
+                      </Button>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {loadingSmsLogs ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : smsLogs.length === 0 ? (
+                <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    SMS logu bulunamadı
+                  </Typography>
+                </Paper>
+              ) : (
+                <>
+                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxHeight: 600 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Tarih</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Tip</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Seviye</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Telefon</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Kullanıcı</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Mesaj</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }}>Süre</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600 }} align="center">İşlemler</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {smsLogs.map((log) => (
+                          <TableRow key={log.id} hover>
+                            <TableCell sx={{ fontSize: '11px' }}>
+                              <ClientDate date={log.createdAt} />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={log.logType.replace('_', ' ')}
+                                size="small"
+                                sx={{ fontSize: '0.65rem', height: 20 }}
+                                color={
+                                  log.logType.includes('error') || log.logType.includes('failed')
+                                    ? 'error'
+                                    : log.logType.includes('success') || log.logType.includes('response')
+                                    ? 'success'
+                                    : 'default'
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={log.logLevel}
+                                size="small"
+                                sx={{ fontSize: '0.65rem', height: 20 }}
+                                color={
+                                  log.logLevel === 'error'
+                                    ? 'error'
+                                    : log.logLevel === 'success'
+                                    ? 'success'
+                                    : log.logLevel === 'warning'
+                                    ? 'warning'
+                                    : 'default'
+                                }
+                              />
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                              {log.phoneNumber}
+                            </TableCell>
+                            <TableCell>
+                              {log.status && (
+                                <Chip
+                                  label={log.status}
+                                  size="small"
+                                  sx={{ fontSize: '0.65rem', height: 20 }}
+                                  color={
+                                    log.status === 'iletildi' || log.status === 'delivered'
+                                      ? 'success'
+                                      : log.status === 'iletilmedi' || log.status === 'failed'
+                                      ? 'error'
+                                      : 'warning'
+                                  }
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '11px' }}>
+                              {log.user?.username || '-'}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '11px', maxWidth: 200 }}>
+                              {log.messagePreview || (log.message ? log.message.substring(0, 50) + '...' : '-')}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '11px' }}>
+                              {log.durationMs ? `${log.durationMs}ms` : '-'}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<Visibility />}
+                                onClick={() => {
+                                  setSelectedSmsLog(log);
+                                  setSmsLogDetailDialogOpen(true);
+                                }}
+                                sx={{ fontSize: '11px', textTransform: 'none' }}
+                              >
+                                Detay
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                    <Pagination
+                      count={Math.ceil(smsLogsTotal / 50)}
+                      page={smsLogsPage}
+                      onChange={(e, value) => {
+                        setSmsLogsPage(value);
+                        loadSmsLogs();
+                      }}
+                      size="small"
+                      color="primary"
+                    />
+                  </Box>
+                </>
+              )}
+            </Box>
+          )}
+
+          {/* SMS Log Detail Dialog */}
+          <Dialog
+            open={smsLogDetailDialogOpen}
+            onClose={() => setSmsLogDetailDialogOpen(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle sx={{ fontSize: '16px', fontWeight: 600 }}>
+              SMS Log Detayı
+            </DialogTitle>
+            <DialogContent>
+              {selectedSmsLog && (
+                <Box>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>ID:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                        {selectedSmsLog.id}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Tarih:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '12px' }}>
+                        <ClientDate date={selectedSmsLog.createdAt} />
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Kullanıcı:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '12px' }}>
+                        {selectedSmsLog.user?.username || '-'} ({selectedSmsLog.user?.email || '-'})
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Telefon:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                        {selectedSmsLog.phoneNumber}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Log Tipi:</Typography>
+                      <Chip label={selectedSmsLog.logType} size="small" />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Log Seviyesi:</Typography>
+                      <Chip
+                        label={selectedSmsLog.logLevel}
+                        size="small"
+                        color={
+                          selectedSmsLog.logLevel === 'error'
+                            ? 'error'
+                            : selectedSmsLog.logLevel === 'success'
+                            ? 'success'
+                            : selectedSmsLog.logLevel === 'warning'
+                            ? 'warning'
+                            : 'default'
+                        }
+                      />
+                    </Grid>
+                    {selectedSmsLog.cepSmsMessageId && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>CepSMS Message ID:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                          {selectedSmsLog.cepSmsMessageId}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.message && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Mesaj:</Typography>
+                        <Paper sx={{ p: 1, bgcolor: 'background.default', fontSize: '12px' }}>
+                          {selectedSmsLog.message}
+                        </Paper>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.errorMessage && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, color: 'error.main' }}>
+                          Hata Mesajı:
+                        </Typography>
+                        <Paper sx={{ p: 1, bgcolor: 'error.light', color: 'error.contrastText', fontSize: '12px' }}>
+                          {selectedSmsLog.errorMessage}
+                        </Paper>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.requestData && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Request Data:</Typography>
+                        <Paper sx={{ p: 1, bgcolor: 'background.default', fontSize: '11px', fontFamily: 'monospace', maxHeight: 200, overflow: 'auto' }}>
+                          <pre>{JSON.stringify(selectedSmsLog.requestData, null, 2)}</pre>
+                        </Paper>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.responseData && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Response Data:</Typography>
+                        <Paper sx={{ p: 1, bgcolor: 'background.default', fontSize: '11px', fontFamily: 'monospace', maxHeight: 200, overflow: 'auto' }}>
+                          <pre>{JSON.stringify(selectedSmsLog.responseData, null, 2)}</pre>
+                        </Paper>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.metadata && (
+                      <Grid size={{ xs: 12 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Metadata:</Typography>
+                        <Paper sx={{ p: 1, bgcolor: 'background.default', fontSize: '11px', fontFamily: 'monospace', maxHeight: 200, overflow: 'auto' }}>
+                          <pre>{JSON.stringify(selectedSmsLog.metadata, null, 2)}</pre>
+                        </Paper>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.ipAddress && (
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>IP Adresi:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                          {selectedSmsLog.ipAddress}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {selectedSmsLog.endpoint && (
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>Endpoint:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '12px' }}>
+                          {selectedSmsLog.endpoint}
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button size="small" onClick={() => setSmsLogDetailDialogOpen(false)} sx={{ fontSize: '12px' }}>
                 Kapat
               </Button>
             </DialogActions>

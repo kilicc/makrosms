@@ -29,6 +29,7 @@ model User {
   refunds                 Refund[]
   smsMessages             SmsMessage[]
   smsTemplates            SmsTemplate[]
+  smsLogs                 SmsLog[]
   apiKeys                 ApiKey[]
   shortLinks              ShortLink[]
 
@@ -104,6 +105,7 @@ model SmsMessage {
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   refunds         Refund[]
+  smsLogs         SmsLog[]
   contact         Contact?  @relation(fields: [contactId], references: [id], onUpdate: NoAction)
   user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -133,6 +135,42 @@ model SmsTemplate {
   @@index([usageCount], map: "idx_sms_templates_usage_count")
   @@index([userId], map: "idx_sms_templates_user_id")
   @@map("sms_templates")
+}
+
+model SmsLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  smsMessageId    String?   @map("sms_message_id") @db.Uuid
+  userId          String?   @map("user_id") @db.Uuid
+  phoneNumber     String    @map("phone_number") @db.VarChar(20)
+  message         String?   @db.Text
+  messagePreview  String?   @map("message_preview") @db.VarChar(100)
+  logType         String    @map("log_type") @db.VarChar(50)
+  logLevel        String    @map("log_level") @db.VarChar(20)
+  status          String?   @db.VarChar(20)
+  cepSmsMessageId String?   @map("cep_sms_message_id") @db.VarChar(100)
+  creditAmount    Decimal?  @map("credit_amount") @db.Decimal(10, 2)
+  requestData     Json?     @map("request_data")
+  responseData    Json?     @map("response_data")
+  errorMessage    String?   @map("error_message") @db.Text
+  errorStack      String?   @map("error_stack") @db.Text
+  durationMs      Int?      @map("duration_ms")
+  endpoint        String?   @db.VarChar(255)
+  ipAddress       String?   @map("ip_address") @db.VarChar(45)
+  userAgent       String?   @map("user_agent") @db.Text
+  metadata        Json?     @db.JsonB
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  smsMessage      SmsMessage? @relation(fields: [smsMessageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([smsMessageId], map: "idx_sms_logs_sms_message_id")
+  @@index([userId], map: "idx_sms_logs_user_id")
+  @@index([phoneNumber], map: "idx_sms_logs_phone_number")
+  @@index([logType], map: "idx_sms_logs_log_type")
+  @@index([logLevel], map: "idx_sms_logs_log_level")
+  @@index([createdAt], map: "idx_sms_logs_created_at")
+  @@index([cepSmsMessageId], map: "idx_sms_logs_cep_sms_message_id")
+  @@index([status], map: "idx_sms_logs_status")
+  @@map("sms_logs")
 }
 
 model Refund {

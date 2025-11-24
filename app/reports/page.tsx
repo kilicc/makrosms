@@ -186,7 +186,7 @@ export default function SMSReportsPage() {
   const loadBulkReports = async () => {
     try {
       setLoadingBulkReports(true);
-      const params: any = { limit: 100 };
+      const params: any = { limit: 10000 }; // 1000+ kişiye gönderimler için limit artırıldı
       if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
       if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
       if (bulkFilters.status) params.status = bulkFilters.status;

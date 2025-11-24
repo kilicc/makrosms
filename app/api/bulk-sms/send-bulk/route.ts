@@ -4,6 +4,7 @@ import { authenticateRequest } from '@/lib/middleware/auth';
 import { sendSMS, formatPhoneNumber } from '@/lib/utils/cepSMSProvider';
 import { createSMSJob, updateProgress, generateJobId, saveResults } from '@/lib/utils/smsProgress';
 import { getSystemCredit, deductFromSystemCredit, checkSystemCredit } from '@/lib/utils/systemCredit';
+import { logSendRequest, logSendResponse, logSendError, logCreditDeduction, logDatabaseOperation } from '@/lib/utils/smsLogger';
 
 // Büyük gönderimler için timeout'u arttır (600 saniye = 10 dakika)
 // CepSMS API: 50,000 SMS / 10 dakika = ~83 SMS/saniye
@@ -24,6 +25,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { contactIds, message, templateId, sender } = body;
+    
+    // IP adresi ve User-Agent bilgilerini al (loglama için)
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return NextResponse.json(
@@ -75,11 +80,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Debug: Kaç kişi seçildi?
+    console.log(`[Bulk SMS Send] Seçilen kişi sayısı: ${uniqueContactIds.length}, Veritabanından bulunan: ${contacts.length}`);
+    
     // Kredi hesaplama: 180 karakter = 1 kredi
     // Her numara için mesaj uzunluğuna göre kredi hesaplanır
     const messageLength = message.length;
     creditPerMessage = Math.ceil(messageLength / 180) || 1; // En az 1 kredi
     requiredCredit = contacts.length * creditPerMessage; // Her numara için kredi
+    
+    // Debug: Kredi hesaplama detayları
+    console.log(`[Bulk SMS Send] Mesaj uzunluğu: ${messageLength}, Mesaj başına kredi: ${creditPerMessage}, Toplam kişi: ${contacts.length}, Toplam gerekli kredi: ${requiredCredit}`);
     
     if (!isAdmin) {
       // Normal kullanıcılar için hem kullanıcı kredisinden hem de sistem kredisinden kontrol ve düş
@@ -135,6 +146,14 @@ export async function POST(request: NextRequest) {
 
       if (updateUserError) {
         console.error(`[Bulk SMS Send] Kullanıcı kredisi düşülemedi!`, updateUserError);
+        // Log error
+        await logCreditDeduction({
+          userId: auth.user.userId,
+          amount: requiredCredit,
+          beforeCredit: userCredit,
+          afterCredit: userCredit,
+          metadata: { error: updateUserError.message, contactsCount: contacts.length },
+        });
         return NextResponse.json(
           { success: false, message: updateUserError.message || 'Kredi güncellenemedi' },
           { status: 500 }
@@ -155,6 +174,18 @@ export async function POST(request: NextRequest) {
           .from('users')
           .update({ credit: userCredit })
           .eq('id', auth.user.userId);
+        
+        // Log error
+        await logCreditDeduction({
+          userId: auth.user.userId,
+          amount: requiredCredit,
+          beforeCredit: userCredit,
+          afterCredit: userCredit,
+          systemCreditBefore: currentCreditBefore,
+          systemCreditAfter: currentCreditBefore,
+          metadata: { error: 'Sistem kredisi düşülemedi, iade edildi', contactsCount: contacts.length },
+        });
+        
         return NextResponse.json(
           {
             success: false,
@@ -166,6 +197,17 @@ export async function POST(request: NextRequest) {
       
       const currentCreditAfter = await getSystemCredit();
       console.log(`[Bulk SMS Send] Sistem kredisi düşürüldü: ${currentCreditBefore} -> ${currentCreditAfter} (${requiredCredit} kredi düşüldü)`);
+      
+      // Log successful credit deduction
+      await logCreditDeduction({
+        userId: auth.user.userId,
+        amount: requiredCredit,
+        beforeCredit: userCredit,
+        afterCredit: userCredit - requiredCredit,
+        systemCreditBefore: currentCreditBefore,
+        systemCreditAfter: currentCreditAfter,
+        metadata: { contactsCount: contacts.length, creditPerMessage, messageLength: message.length },
+      });
     } else {
       // Admin kullanıcıları için sadece sistem kredisinden düş
       const systemCreditAvailable = await checkSystemCredit(requiredCredit);
@@ -229,16 +271,43 @@ export async function POST(request: NextRequest) {
       for (let i = 0; i < batch.length; i += CONCURRENT_LIMIT) {
         const concurrentBatch = batch.slice(i, i + CONCURRENT_LIMIT);
         const concurrentPromises = concurrentBatch.map(async (contact, idx) => {
+          const startTime = Date.now();
+          let requestLogId: string | null = null;
+          
           try {
             // Her SMS arasında küçük bir delay (rate limiting)
             if (idx > 0) {
               await new Promise(resolve => setTimeout(resolve, 10));
             }
             
+            // Request log
+            requestLogId = await logSendRequest({
+              userId: auth.user!.userId,
+              phoneNumber: contact.phone,
+              message,
+              endpoint: '/api/bulk-sms/send-bulk',
+              requestData: { contactId: contact.id, batchIndex, concurrentIndex: idx },
+              ipAddress,
+              userAgent,
+            });
+            
             // Her numara için SMS gönder
             const smsResult = await sendSMS(contact.phone, message);
+            const durationMs = Date.now() - startTime;
 
             if (smsResult.success && smsResult.messageId) {
+              // Response log (success)
+              await logSendResponse({
+                userId: auth.user!.userId,
+                phoneNumber: contact.phone,
+                message,
+                status: 'gönderildi',
+                cepSmsMessageId: smsResult.messageId,
+                responseData: { messageId: smsResult.messageId },
+                durationMs,
+                success: true,
+              });
+              
               // Create SMS message record using Supabase
               // Her SMS kaydı = 1 kredi (cost: 1)
               const { data: smsMessageData, error: createError } = await supabaseServer
@@ -258,6 +327,15 @@ export async function POST(request: NextRequest) {
                 .single();
 
               if (!createError && smsMessageData) {
+                // Database operation log (success)
+                await logDatabaseOperation({
+                  operation: 'insert',
+                  smsMessageId: smsMessageData.id,
+                  userId: auth.user!.userId,
+                  phoneNumber: contact.phone,
+                  success: true,
+                  metadata: { contactId: contact.id },
+                });
                 // Update contact last contacted using Supabase
                 const { data: contactData } = await supabaseServer
                   .from('contacts')
@@ -277,6 +355,16 @@ export async function POST(request: NextRequest) {
 
                 return { success: true, contact, smsMessageData };
               } else {
+                // Database operation log (error)
+                await logDatabaseOperation({
+                  operation: 'insert',
+                  userId: auth.user!.userId,
+                  phoneNumber: contact.phone,
+                  success: false,
+                  error: createError?.message || 'SMS kaydı oluşturulamadı',
+                  metadata: { contactId: contact.id, cepSmsMessageId: smsResult.messageId },
+                });
+                
                 // SMS kaydı oluşturulamadı ama kredi düşüldü, otomatik iade oluştur
                 const { data: failedSmsData, error: failedError } = await supabaseServer
                   .from('sms_messages')
@@ -309,6 +397,26 @@ export async function POST(request: NextRequest) {
                 return { success: false, contact, error: 'SMS kaydı oluşturulamadı' };
               }
             } else {
+              // Response log (error)
+              await logSendResponse({
+                userId: auth.user!.userId,
+                phoneNumber: contact.phone,
+                message,
+                status: 'failed',
+                responseData: { error: smsResult.error },
+                durationMs: Date.now() - startTime,
+                success: false,
+              });
+              
+              // Send error log
+              await logSendError({
+                userId: auth.user!.userId,
+                phoneNumber: contact.phone,
+                message,
+                error: smsResult.error || 'SMS gönderim başarısız',
+                endpoint: '/api/bulk-sms/send-bulk',
+              });
+              
               // SMS gönderim başarısız - kredi düşüldü, otomatik iade oluştur (48 saat sonra iade edilecek)
               const { data: failedSmsData, error: failedError } = await supabaseServer
                 .from('sms_messages')
@@ -341,6 +449,15 @@ export async function POST(request: NextRequest) {
               return { success: false, contact, error: smsResult.error || 'Bilinmeyen hata' };
             }
           } catch (error: any) {
+            // Exception error log
+            await logSendError({
+              userId: auth.user!.userId,
+              phoneNumber: contact.phone,
+              message,
+              error: error instanceof Error ? error : new Error(String(error)),
+              endpoint: '/api/bulk-sms/send-bulk',
+            });
+            
             return { success: false, contact, error: error.message };
           }
         });
