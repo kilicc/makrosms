@@ -21,11 +21,27 @@ export async function POST(request: NextRequest) {
     const nameColumn = formData.get('nameColumn') as string | null;
     const phoneColumn = formData.get('phoneColumn') as string | null;
     
-    // Normalize groupId: empty string becomes null
-    const groupId = (groupIdRaw && groupIdRaw.toString().trim() !== "") ? groupIdRaw.toString().trim() : null;
+    // Normalize groupId: empty string, null, or undefined becomes null
+    let groupId: string | null = null;
+    if (groupIdRaw) {
+      const trimmed = groupIdRaw.toString().trim();
+      if (trimmed !== '') {
+        groupId = trimmed;
+      }
+    }
 
-    console.log('[Import] Received params - raw:', { groupIdRaw, nameColumn, phoneColumn });
-    console.log('[Import] Received params - normalized:', { groupId, nameColumn, phoneColumn });
+    console.log('[Import] Received params - raw:', { 
+      groupIdRaw, 
+      groupIdRawType: typeof groupIdRaw,
+      nameColumn, 
+      phoneColumn 
+    });
+    console.log('[Import] Received params - normalized:', { 
+      groupId, 
+      groupIdType: typeof groupId,
+      nameColumn, 
+      phoneColumn 
+    });
 
     if (!file) {
       return NextResponse.json(
@@ -289,14 +305,26 @@ export async function POST(request: NextRequest) {
         }
         
         // Use normalized groupId (already handled at top)
-        contactsToInsert.push({
+        const contactToInsert = {
           user_id: auth.user.userId,
           name: finalName,
           phone,
           email: null,
           notes: null,
           group_id: groupId,
-        });
+        };
+        
+        // Debug: Log first contact's group_id
+        if (i === 0) {
+          console.log('[Import] First contact being inserted:', {
+            name: finalName,
+            phone,
+            group_id: groupId,
+            group_id_type: typeof groupId
+          });
+        }
+        
+        contactsToInsert.push(contactToInsert);
         
         existingPhones.add(phone);
         results.success++;

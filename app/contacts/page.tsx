@@ -225,7 +225,15 @@ export default function ContactsPage() {
       
       const formData = new FormData();
       formData.append('file', importFile);
-      formData.append('groupId', selectedGroupForImport || '');
+      
+      // Debug: Log selected group before sending
+      console.log('[Frontend Import] Selected group for import:', selectedGroupForImport);
+      
+      // Only append groupId if it's not empty
+      if (selectedGroupForImport && selectedGroupForImport.trim() !== '') {
+        formData.append('groupId', selectedGroupForImport.trim());
+      }
+      
       if (selectedNameColumn) {
         formData.append('nameColumn', selectedNameColumn);
       }
