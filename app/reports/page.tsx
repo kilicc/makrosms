@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Collapse, Pagination, Stack } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Collapse, Pagination, Stack, Tooltip } from '@mui/material';
 import { Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
@@ -353,6 +353,53 @@ export default function SMSReportsPage() {
     } catch (error: any) {
       console.error('Export error:', error);
       setError('Raporlar indirilirken bir hata oluştu');
+    }
+  };
+
+  // Export single bulk report (one row)
+  const handleExportSingleBulkReport = async (report: any, format: 'excel' | 'pdf') => {
+    try {
+      // Get all messages for this specific report (by message content)
+      const params: any = { limit: 10000 };
+      if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
+      if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
+      if (isAdmin && bulkFilters.userId) params.userId = bulkFilters.userId;
+      params.messageSearch = report.fullMessage || report.message; // Filter by exact message
+
+      const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
+      const response = await api.get(endpoint, { params });
+      
+      if (response.data.success) {
+        let messages = response.data.data.messages || [];
+        
+        // Filter messages that match this report's message exactly
+        const reportMessages = messages.filter((msg: any) => {
+          const msgText = msg.message || '';
+          return msgText === (report.fullMessage || report.message);
+        });
+
+        const exportData = reportMessages.map((msg: any) => ({
+          'Telefon': msg.phoneNumber,
+          'Kişi': msg.contact?.name || '-',
+          'Mesaj': msg.message,
+          'Durum': msg.status,
+          'Maliyet': Number(msg.cost) || 0,
+          'Operatör': msg.network || '-',
+          'Tarih': new Date(msg.sentAt).toLocaleString('tr-TR'),
+        }));
+
+        const dateStr = new Date(report.sentAt).toISOString().split('T')[0];
+        const filename = `Toplu_SMS_Detay_${dateStr}_${report.recipients}kişi`;
+
+        if (format === 'excel') {
+          await exportToExcel(exportData, filename);
+        } else {
+          await exportToPDF(exportData, `Toplu SMS Detay - ${dateStr}`, ['Telefon', 'Kişi', 'Mesaj', 'Durum', 'Maliyet', 'Operatör', 'Tarih']);
+        }
+      }
+    } catch (error: any) {
+      console.error('Export single report error:', error);
+      setError('Rapor indirilirken bir hata oluştu');
     }
   };
 
@@ -1337,9 +1384,10 @@ export default function SMSReportsPage() {
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarılı</TableCell>
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarısız</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
-                        </TableRow>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }} align="center">İşlemler</TableCell>
+                          </TableRow>
                       </TableHead>
                       <TableBody>
                         {bulkSmsReports.map((report, index) => {
@@ -1372,29 +1420,42 @@ export default function SMSReportsPage() {
                           return (
                             <TableRow 
                               key={index}
-                              onClick={() => handleViewBulkReportDetails(report)}
                               sx={{
-                                cursor: 'pointer',
                                 '&:hover': {
                                   backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
                                 },
                               }}
                             >
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 <Typography variant="body2" sx={{ fontSize: '12px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {report.fullMessage || report.message}
                                 </Typography>
                               </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 {report.recipients} kişi
                               </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75, color: '#4caf50', fontWeight: 600 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, color: '#4caf50', fontWeight: 600, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 {report.successCount}
                               </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75, color: '#f44336', fontWeight: 600 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, color: '#f44336', fontWeight: 600, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 {report.failedCount}
                               </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 <Chip
                                   label={getStatusLabel(report.status)}
                                   color={getStatusColor(report.status)}
@@ -1406,8 +1467,47 @@ export default function SMSReportsPage() {
                                   }}
                                 />
                               </TableCell>
-                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75, cursor: 'pointer' }}
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
                                 <ClientDate date={report.sentAt} />
+                              </TableCell>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75 }}
+                                align="center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Stack direction="row" spacing={0.5} justifyContent="center">
+                                  <Tooltip title="Excel İndir">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleExportSingleBulkReport(report, 'excel')}
+                                      sx={{
+                                        color: 'success.main',
+                                        '&:hover': {
+                                          backgroundColor: 'success.light',
+                                        },
+                                      }}
+                                    >
+                                      <Download fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="PDF İndir">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleExportSingleBulkReport(report, 'pdf')}
+                                      sx={{
+                                        color: 'error.main',
+                                        '&:hover': {
+                                          backgroundColor: 'error.light',
+                                        },
+                                      }}
+                                    >
+                                      <PictureAsPdf fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Stack>
                               </TableCell>
                             </TableRow>
                           );
