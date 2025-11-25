@@ -341,8 +341,8 @@ export default function ContactsPage() {
 
             {/* Filters */}
             <Paper sx={{ p: 2, mb: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box sx={{ flex: 1 }} md={6}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+                <Box sx={{ flex: 1 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -357,8 +357,8 @@ export default function ContactsPage() {
                       ),
                     }}
                   />
-                </Stack>
-                <Box sx={{ flex: 1 }} md={6}>
+                </Box>
+                <Box sx={{ flex: 1 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Grup Filtresi</InputLabel>
                     <Select
@@ -375,7 +375,7 @@ export default function ContactsPage() {
                       ))}
                     </Select>
                   </FormControl>
-                </Stack>
+                </Box>
               </Stack>
             </Paper>
 
