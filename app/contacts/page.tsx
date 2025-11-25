@@ -6,7 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, 
   Alert, Chip, FormControl, InputLabel, Select, MenuItem, 
   CircularProgress, IconButton, InputAdornment, Tooltip,
-  Stack
+  Stack, Tabs, Tab, Card, CardContent
 } from '@mui/material';
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
@@ -15,7 +15,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Add, Edit, Delete, Phone, Email, 
-  Search, CheckCircle, ImportExport, FileUpload
+  Search, CheckCircle, ImportExport, FileUpload,
+  Group, People
 } from '@mui/icons-material';
 
 interface Contact {
@@ -49,6 +50,9 @@ export default function ContactsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  // Tabs
+  const [tabValue, setTabValue] = useState(0);
+  
   // Search and filter
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -56,13 +60,21 @@ export default function ContactsPage() {
   // Dialogs
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [editingGroup, setEditingGroup] = useState<ContactGroup | null>(null);
   const [contactForm, setContactForm] = useState({
     name: '',
     phone: '',
     email: '',
     notes: '',
     groupId: '',
+  });
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    description: '',
+    color: '#8B5CF6',
+    icon: 'group',
   });
 
   // Import state
@@ -287,6 +299,56 @@ export default function ContactsPage() {
     setContactDialogOpen(true);
   };
 
+  const handleGroupSubmit = async () => {
+    try {
+      setError('');
+      if (editingGroup) {
+        await api.put(`/contact-groups/${editingGroup.id}`, groupForm);
+        setSuccess('Grup güncellendi');
+      } else {
+        await api.post('/contact-groups', groupForm);
+        setSuccess('Grup oluşturuldu');
+      }
+      setGroupDialogOpen(false);
+      setGroupForm({ name: '', description: '', color: '#8B5CF6', icon: 'group' });
+      setEditingGroup(null);
+      await loadGroups();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'İşlem hatası');
+    }
+  };
+
+  const handleDeleteGroup = async (id: string) => {
+    if (!confirm('Bu grubu silmek istediğinizden emin misiniz? Gruba ait kişiler grupsuz olacak.')) return;
+    
+    try {
+      await api.delete(`/contact-groups/${id}`);
+      setSuccess('Grup silindi');
+      await Promise.all([loadContacts(), loadGroups()]);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Silme hatası');
+    }
+  };
+
+  const openEditGroupDialog = (group: ContactGroup) => {
+    setEditingGroup(group);
+    setGroupForm({
+      name: group.name,
+      description: '',
+      color: group.color,
+      icon: group.icon,
+    });
+    setGroupDialogOpen(true);
+  };
+
+  const openNewGroupDialog = () => {
+    setEditingGroup(null);
+    setGroupForm({ name: '', description: '', color: '#8B5CF6', icon: 'group' });
+    setGroupDialogOpen(true);
+  };
+
   return (
     <ProtectedRoute>
       <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5' }}>
@@ -294,45 +356,16 @@ export default function ContactsPage() {
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
           <Container maxWidth="xl">
             {/* Header */}
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  Rehber
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {filteredContacts.length} kişi
-                </Typography>
-              </Box>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+                Rehber
+              </Typography>
               
-              <Stack direction="row" spacing={2}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                />
-                <Button
-                  variant="outlined"
-                  startIcon={<FileUpload />}
-                  onClick={() => fileInputRef.current?.click()}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Excel Import
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => {
-                    setEditingContact(null);
-                    setContactForm({ name: '', phone: '', email: '', notes: '', groupId: '' });
-                    setContactDialogOpen(true);
-                  }}
-                  sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-                >
-                  Yeni Kişi
-                </Button>
-              </Stack>
+              {/* Tabs */}
+              <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} sx={{ mb: 3 }}>
+                <Tab icon={<People />} label="Kişiler" />
+                <Tab icon={<Group />} label="Gruplar" />
+              </Tabs>
             </Box>
 
             {/* Alerts */}
@@ -347,47 +380,88 @@ export default function ContactsPage() {
               </Alert>
             )}
 
-            {/* Filters */}
-            <Paper sx={{ p: 2, mb: 3 }}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="İsim, telefon veya email ile ara..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Grup Filtresi</InputLabel>
-                    <Select
-                      value={groupFilter}
-                      label="Grup Filtresi"
-                      onChange={(e) => setGroupFilter(e.target.value)}
+            {/* Tab Content */}
+            {tabValue === 0 && (
+              <>
+                {/* Contacts Header */}
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {filteredContacts.length} kişi
+                  </Typography>
+                  
+                  <Stack direction="row" spacing={2}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleFileSelect}
+                      aria-label="Excel dosyası seç"
+                      style={{ display: 'none' }}
+                    />
+                    <Button
+                      variant="outlined"
+                      startIcon={<FileUpload />}
+                      onClick={() => fileInputRef.current?.click()}
+                      sx={{ textTransform: 'none' }}
                     >
-                      <MenuItem value="all">Tüm Gruplar</MenuItem>
-                      <MenuItem value="none">Grupsuz</MenuItem>
-                      {groups.map((group) => (
-                        <MenuItem key={group.id} value={group.id}>
-                          {group.name} ({group.contactCount})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                      Excel Import
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={() => {
+                        setEditingContact(null);
+                        setContactForm({ name: '', phone: '', email: '', notes: '', groupId: '' });
+                        setContactDialogOpen(true);
+                      }}
+                      sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                    >
+                      Yeni Kişi
+                    </Button>
+                  </Stack>
                 </Box>
-              </Stack>
-            </Paper>
 
-            {/* Contacts Table */}
+                {/* Filters */}
+                <Paper sx={{ p: 2, mb: 3 }}>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+                    <Box sx={{ flex: 1 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="İsim, telefon veya email ile ara..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Grup Filtresi</InputLabel>
+                        <Select
+                          value={groupFilter}
+                          label="Grup Filtresi"
+                          onChange={(e) => setGroupFilter(e.target.value)}
+                        >
+                          <MenuItem value="all">Tüm Gruplar</MenuItem>
+                          <MenuItem value="none">Grupsuz</MenuItem>
+                          {groups.map((group) => (
+                            <MenuItem key={group.id} value={group.id}>
+                              {group.name} ({group.contactCount})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  </Stack>
+                </Paper>
+
+                {/* Contacts Table */}
             <Paper>
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -474,6 +548,106 @@ export default function ContactsPage() {
                 </TableContainer>
               )}
             </Paper>
+              </>
+            )}
+
+            {/* Groups Tab */}
+            {tabValue === 1 && (
+              <>
+                {/* Groups Header */}
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {groups.length} grup
+                  </Typography>
+                  
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={openNewGroupDialog}
+                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                  >
+                    Yeni Grup
+                  </Button>
+                </Box>
+
+                {/* Groups Grid */}
+                {groups.length === 0 ? (
+                  <Paper sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Henüz grup oluşturulmamış
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Kişilerinizi organize etmek için gruplar oluşturun
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={openNewGroupDialog}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      İlk Grubu Oluştur
+                    </Button>
+                  </Paper>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+                    {groups.map((group) => (
+                      <Card key={group.id}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: '50%',
+                                  bgcolor: group.color,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                <Group />
+                              </Box>
+                              <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {group.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {group.contactCount} kişi
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Stack direction="row" spacing={0.5}>
+                              <Tooltip title="Düzenle">
+                                <IconButton size="small" onClick={() => openEditGroupDialog(group)}>
+                                  <Edit fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Sil">
+                                <IconButton size="small" color="error" onClick={() => handleDeleteGroup(group.id)}>
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </Box>
+                          <Chip
+                            label={group.name}
+                            size="small"
+                            sx={{
+                              bgcolor: group.color,
+                              color: 'white',
+                              fontWeight: 500,
+                            }}
+                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+              </>
+            )}
 
             {/* Contact Dialog */}
             <Dialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -665,6 +839,55 @@ export default function ContactsPage() {
                   startIcon={importing ? <CircularProgress size={20} /> : <CheckCircle />}
                 >
                   {importing ? 'Import Ediliyor...' : 'Import Et'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Group Dialog */}
+            <Dialog open={groupDialogOpen} onClose={() => setGroupDialogOpen(false)} maxWidth="sm" fullWidth>
+              <DialogTitle>
+                {editingGroup ? 'Grup Düzenle' : 'Yeni Grup Oluştur'}
+              </DialogTitle>
+              <DialogContent>
+                <Stack spacing={2} sx={{ mt: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="Grup Adı *"
+                    value={groupForm.name}
+                    onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                    required
+                  />
+                  <TextField
+                    fullWidth
+                    label="Açıklama"
+                    multiline
+                    rows={2}
+                    value={groupForm.description}
+                    onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Renk</InputLabel>
+                    <Select
+                      value={groupForm.color}
+                      label="Renk"
+                      onChange={(e) => setGroupForm({ ...groupForm, color: e.target.value })}
+                    >
+                      <MenuItem value="#8B5CF6">Mor</MenuItem>
+                      <MenuItem value="#2196F3">Mavi</MenuItem>
+                      <MenuItem value="#4CAF50">Yeşil</MenuItem>
+                      <MenuItem value="#FF9800">Turuncu</MenuItem>
+                      <MenuItem value="#F44336">Kırmızı</MenuItem>
+                      <MenuItem value="#9C27B0">Pembe</MenuItem>
+                      <MenuItem value="#00BCD4">Cyan</MenuItem>
+                      <MenuItem value="#795548">Kahverengi</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setGroupDialogOpen(false)}>İptal</Button>
+                <Button onClick={handleGroupSubmit} variant="contained" disabled={!groupForm.name}>
+                  {editingGroup ? 'Güncelle' : 'Oluştur'}
                 </Button>
               </DialogActions>
             </Dialog>
