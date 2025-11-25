@@ -105,6 +105,16 @@ export default function SMSReportsPage() {
   const [bulkDetailTotal, setBulkDetailTotal] = useState(0);
   const [bulkDetailTotalPages, setBulkDetailTotalPages] = useState(0);
   
+  // Bulk Detail Filters
+  const [bulkDetailFilters, setBulkDetailFilters] = useState({
+    phoneNumber: '',
+    status: '',
+    network: '',
+  });
+  
+  // Store all details for filtering
+  const [allBulkReportDetails, setAllBulkReportDetails] = useState<any[]>([]);
+  
   // Pagination states
   const [smsPage, setSmsPage] = useState(1);
   const [smsLimit] = useState(50);
@@ -306,10 +316,41 @@ export default function SMSReportsPage() {
     }
   };
 
+  const applyBulkDetailFilters = (details: any[]) => {
+    let filtered = [...details];
+    
+    // Phone number filter
+    if (bulkDetailFilters.phoneNumber) {
+      filtered = filtered.filter((detail: any) => 
+        (detail.phoneNumber || detail.phone_number || '').includes(bulkDetailFilters.phoneNumber)
+      );
+    }
+    
+    // Status filter
+    if (bulkDetailFilters.status) {
+      filtered = filtered.filter((detail: any) => 
+        (detail.status || '').toLowerCase() === bulkDetailFilters.status.toLowerCase()
+      );
+    }
+    
+    // Network filter
+    if (bulkDetailFilters.network) {
+      filtered = filtered.filter((detail: any) => 
+        (detail.network || '').toLowerCase().includes(bulkDetailFilters.network.toLowerCase())
+      );
+    }
+    
+    setBulkReportDetails(filtered);
+    setBulkDetailTotal(filtered.length);
+    setBulkDetailTotalPages(Math.ceil(filtered.length / bulkDetailLimit));
+    setBulkDetailPage(1); // Reset to first page when filters change
+  };
+  
   const handleViewBulkReportDetails = async (report: any) => {
     setSelectedBulkReport(report);
     setBulkDetailDialogOpen(true);
     setBulkDetailPage(1); // Reset to first page when opening dialog
+    setBulkDetailFilters({ phoneNumber: '', status: '', network: '' }); // Reset filters
     setLoadingBulkDetails(true);
     
     try {
@@ -326,16 +367,22 @@ export default function SMSReportsPage() {
           const msgText = msg.message || '';
           const reportText = report.fullMessage || report.message || '';
           return msgText === reportText;
-        }).map((msg: any) => ({
-          ...msg,
-          phoneNumber: msg.phoneNumber || msg.phone_number,
-          sentAt: msg.sentAt || msg.sent_at,
-          network: msg.network || null,
-          cost: msg.cost || 0, // Ensure cost is included
-        }));
-        setBulkReportDetails(filtered);
-        setBulkDetailTotal(filtered.length);
-        setBulkDetailTotalPages(Math.ceil(filtered.length / bulkDetailLimit));
+        }).map((msg: any) => {
+          // Debug cost field
+          console.log('Message cost:', msg.cost, typeof msg.cost, 'Message ID:', msg.id);
+          return {
+            ...msg,
+            phoneNumber: msg.phoneNumber || msg.phone_number,
+            sentAt: msg.sentAt || msg.sent_at,
+            network: msg.network || null,
+            cost: Number(msg.cost) || Number(msg.cost_amount) || 0, // Try multiple cost fields
+          };
+        });
+        console.log('Total details:', filtered.length, 'Total cost:', filtered.reduce((sum: number, d: any) => sum + (Number(d.cost) || 0), 0));
+        // Store all details for filtering
+        setAllBulkReportDetails(filtered);
+        // Apply filters
+        applyBulkDetailFilters(filtered);
       }
     } catch (error: any) {
       console.error('Bulk report details load error:', error);
@@ -487,6 +534,14 @@ export default function SMSReportsPage() {
       setPaymentPage(1);
     }
   }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId]);
+  
+  // Apply bulk detail filters when they change
+  useEffect(() => {
+    if (allBulkReportDetails.length > 0) {
+      applyBulkDetailFilters(allBulkReportDetails);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkDetailFilters.phoneNumber, bulkDetailFilters.status, bulkDetailFilters.network]);
 
   return (
     <ProtectedRoute>
@@ -1189,17 +1244,23 @@ export default function SMSReportsPage() {
                         </Typography>
                       </Grid>
                     </Grid>
-                    {bulkReportDetails.length > 0 && (
+                    {allBulkReportDetails.length > 0 && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
                           Toplam Maliyet
                         </Typography>
                         <Typography variant="body2" sx={{ fontSize: '14px', fontWeight: 600 }}>
-                          {bulkReportDetails.reduce((sum: number, detail: any) => {
-                            const cost = Number(detail.cost) || 0;
+                          {allBulkReportDetails.reduce((sum: number, detail: any) => {
+                            // Try multiple possible cost field names
+                            const cost = Number(detail.cost) || Number(detail.cost_amount) || 0;
                             return sum + cost;
                           }, 0).toFixed(2)} kredi
                         </Typography>
+                        {allBulkReportDetails.length > 0 && allBulkReportDetails.every((d: any) => !d.cost || Number(d.cost) === 0) && (
+                          <Typography variant="caption" sx={{ fontSize: '10px', color: 'warning.main', display: 'block', mt: 0.5 }}>
+                            ⚠️ Maliyet bilgisi veritabanında kayıtlı değil. SMS gönderim sırasında maliyet kaydedilmemiş olabilir.
+                          </Typography>
+                        )}
                       </Box>
                     )}
                   </Box>
@@ -1208,6 +1269,67 @@ export default function SMSReportsPage() {
                 <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '13px', fontWeight: 600, color: 'text.secondary' }}>
                   Alıcı Detayları
                 </Typography>
+                
+                {/* Bulk Detail Filters */}
+                {allBulkReportDetails.length > 0 && (
+                  <Paper sx={{ p: 1.5, mb: 1.5, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    <Grid container spacing={1.5} alignItems="center">
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Telefon Numarası"
+                          value={bulkDetailFilters.phoneNumber}
+                          onChange={(e) => setBulkDetailFilters({ ...bulkDetailFilters, phoneNumber: e.target.value })}
+                          placeholder="Ara..."
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel sx={{ fontSize: '12px' }}>Durum</InputLabel>
+                          <Select
+                            value={bulkDetailFilters.status}
+                            onChange={(e) => setBulkDetailFilters({ ...bulkDetailFilters, status: e.target.value })}
+                            label="Durum"
+                            sx={{
+                              fontSize: '12px',
+                              borderRadius: 1.5,
+                            }}
+                          >
+                            <MenuItem value="" sx={{ fontSize: '12px' }}>Tümü</MenuItem>
+                            <MenuItem value="iletildi" sx={{ fontSize: '12px' }}>İletildi</MenuItem>
+                            <MenuItem value="iletilmedi" sx={{ fontSize: '12px' }}>İletilmedi</MenuItem>
+                            <MenuItem value="zaman_aşımı" sx={{ fontSize: '12px' }}>Zaman Aşımı</MenuItem>
+                            <MenuItem value="rapor_bekliyor" sx={{ fontSize: '12px' }}>Rapor Bekliyor</MenuItem>
+                            <MenuItem value="gönderildi" sx={{ fontSize: '12px' }}>Gönderildi</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Operatör"
+                          value={bulkDetailFilters.network}
+                          onChange={(e) => setBulkDetailFilters({ ...bulkDetailFilters, network: e.target.value })}
+                          placeholder="Ara..."
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5,
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )}
                 
                 {loadingBulkDetails ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
