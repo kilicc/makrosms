@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
     const phoneColumn = formData.get('phoneColumn') as string | null;
     
     // Normalize groupId: empty string becomes null
-    const groupId = (groupIdRaw && groupIdRaw.trim() !== "") ? groupIdRaw : null;
+    const groupId = (groupIdRaw && groupIdRaw.toString().trim() !== "") ? groupIdRaw.toString().trim() : null;
 
-    console.log('[Import] Received params:', { groupId, nameColumn, phoneColumn });
+    console.log('[Import] Received params - raw:', { groupIdRaw, nameColumn, phoneColumn });
+    console.log('[Import] Received params - normalized:', { groupId, nameColumn, phoneColumn });
 
     if (!file) {
       return NextResponse.json(
@@ -308,7 +309,9 @@ export async function POST(request: NextRequest) {
     // Bulk insert contacts
     if (contactsToInsert.length > 0) {
       console.log('[Import] Inserting', contactsToInsert.length, 'contacts');
-      console.log('[Import] First contact sample:', contactsToInsert[0]);
+      console.log('[Import] GroupId being used:', groupId);
+      console.log('[Import] First contact sample:', JSON.stringify(contactsToInsert[0], null, 2));
+      console.log('[Import] Sample contacts with group_id:', contactsToInsert.slice(0, 3).map(c => ({ name: c.name, phone: c.phone, group_id: c.group_id })));
       
       const { error: insertError } = await supabaseServer
         .from('contacts')

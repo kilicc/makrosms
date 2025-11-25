@@ -321,9 +321,8 @@ export default function ContactsPage() {
       
       const formData = new FormData();
       formData.append('file', importFile);
-      if (selectedGroupForImport) {
-        formData.append('groupId', selectedGroupForImport);
-      }
+      // Always send groupId (even if empty), backend will normalize
+      formData.append('groupId', selectedGroupForImport || '');
       if (selectedNameColumn) {
         formData.append('nameColumn', selectedNameColumn);
       }
