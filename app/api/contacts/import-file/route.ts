@@ -192,6 +192,9 @@ export async function POST(request: NextRequest) {
       .eq('user_id', auth.user.userId);
 
     const existingPhones = new Set((existingContacts || []).map((c: any) => c.phone));
+    
+    // Track phones processed in this batch to prevent duplicates within the same import
+    const processedPhonesInBatch = new Set<string>();
 
     const contactsToInsert: any[] = [];
     const results = {
@@ -297,10 +300,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        // Check if phone already exists
+        // Check if phone already exists in database
         if (existingPhones.has(phone)) {
           results.failed++;
-          results.errors.push(`Satır ${i + 1}: ${phoneValue} (${phone}) - Zaten kayıtlı`);
+          results.errors.push(`Satır ${i + 1}: ${phoneValue} (${phone}) - Veritabanında zaten kayıtlı`);
+          continue;
+        }
+        
+        // Check if phone is duplicate within this import batch
+        if (processedPhonesInBatch.has(phone)) {
+          results.failed++;
+          results.errors.push(`Satır ${i + 1}: ${phoneValue} (${phone}) - Bu dosyada daha önce işlendi (duplicate)`);
           continue;
         }
         
@@ -326,6 +336,9 @@ export async function POST(request: NextRequest) {
         
         contactsToInsert.push(contactToInsert);
         
+        // Mark this phone as processed in this batch
+        processedPhonesInBatch.add(phone);
+        // Also add to existingPhones to prevent duplicates in subsequent rows
         existingPhones.add(phone);
         results.success++;
       } catch (error: any) {
@@ -347,6 +360,21 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error('[Import] Insert error:', insertError);
+        
+        // Check if it's a duplicate key error
+        if (insertError.message && insertError.message.includes('duplicate key') && insertError.message.includes('contacts_user_id_phone_key')) {
+          // This shouldn't happen if our duplicate check worked, but handle it gracefully
+          const duplicatePhones = contactsToInsert.map(c => c.phone).filter((phone, index, self) => self.indexOf(phone) !== index);
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: `Duplicate telefon numarası tespit edildi. Lütfen dosyanızı kontrol edin. Duplicate numaralar: ${duplicatePhones.slice(0, 5).join(', ')}${duplicatePhones.length > 5 ? '...' : ''}`,
+              data: { errors: [`Duplicate key hatası: ${insertError.message}`] }
+            },
+            { status: 400 }
+          );
+        }
+        
         return NextResponse.json(
           { success: false, message: insertError.message || 'Kişiler import edilemedi' },
           { status: 500 }
