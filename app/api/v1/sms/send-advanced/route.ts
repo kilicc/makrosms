@@ -387,7 +387,7 @@ export async function POST(request: NextRequest) {
           message: Message,
           sender: From || null,
           status: 'gönderildi',
-          cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor
+          cost: 1, // Her SMS için 1 kredi (gönderilen numara adedi kadar)
           cep_sms_message_id: result.messageId,
           sent_at: StartDate ? new Date(StartDate).toISOString() : new Date().toISOString(),
         }));
@@ -439,7 +439,7 @@ export async function POST(request: NextRequest) {
           message: Message,
           sender: From || null,
           status: 'failed',
-          cost: creditPerMessage,
+          cost: 1, // Her SMS için 1 kredi (gönderilen numara adedi kadar)
           failed_at: new Date().toISOString(),
         }));
         
@@ -455,8 +455,8 @@ export async function POST(request: NextRequest) {
             return {
               user_id: auth.user!.id,
               sms_id: failedSmsData.id,
-              original_cost: creditPerMessage,
-              refund_amount: creditPerMessage,
+              original_cost: 1, // Her SMS için 1 kredi
+              refund_amount: 1, // Her SMS için 1 kredi
               reason: `SMS gönderim başarısız - Otomatik iade (48 saat) - Telefon: ${failedBatchSends[index].phone} - Hata: ${errorDetail}`,
               status: 'pending',
             };

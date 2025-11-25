@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
               });
               
               // Create SMS message record using Supabase
-              // Her SMS kaydı = 1 kredi (cost: 1)
+              // Her SMS kaydı = 1 kredi (cost: 1) - Gönderilen numara adedi kadar kredi
               const { data: smsMessageData, error: createError } = await supabaseServer
                 .from('sms_messages')
                 .insert({
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
                   message,
                   sender: sender || null,
                   status: 'gönderildi',
-                  cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor 
+                  cost: 1, // Her SMS için 1 kredi (gönderilen numara adedi kadar)
                   cep_sms_message_id: smsResult.messageId,
                   sent_at: new Date().toISOString(),
                 })
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
                     message,
                     sender: sender || null,
                     status: 'failed',
-                    cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor
+                    cost: 1, // Her SMS için 1 kredi (gönderilen numara adedi kadar)
                     failed_at: new Date().toISOString(),
                   })
                   .select()
@@ -387,8 +387,8 @@ export async function POST(request: NextRequest) {
                     .insert({
                       user_id: auth.user!.userId,
                       sms_id: failedSmsData.id,
-                      original_cost: creditPerMessage,
-                      refund_amount: creditPerMessage,
+                      original_cost: 1, // Her SMS için 1 kredi
+                      refund_amount: 1, // Her SMS için 1 kredi
                       reason: 'SMS kaydı oluşturulamadı - Otomatik iade (48 saat)',
                       status: 'pending',
                     });
