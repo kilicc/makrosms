@@ -199,14 +199,24 @@ export async function POST(request: NextRequest) {
         let nameField: string | null = null;
         let phoneField: string | null = null;
         
-        // Find phone column - try exact match first, then case-insensitive
+        // Find phone column - try multiple matching strategies
         if (phoneColumn) {
+          // 1. Exact match
           if (availableKeys.includes(phoneColumn)) {
             phoneField = phoneColumn;
           } else {
+            // 2. Case-insensitive match
             phoneField = availableKeys.find(
               key => key.toLowerCase().trim() === phoneColumn.toLowerCase().trim()
             ) || null;
+            
+            // 3. Normalized match (remove special chars, spaces)
+            if (!phoneField) {
+              const normalizedPhone = phoneColumn.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              phoneField = availableKeys.find(
+                key => key.toLowerCase().trim().replace(/[^a-z0-9]/g, '') === normalizedPhone
+              ) || null;
+            }
           }
         }
         
@@ -274,8 +284,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        // Use selected groupId
-        const finalGroupId = groupId || null;
+        // Use selected groupId (handle empty string)
+        const finalGroupId = (groupId && groupId.trim() !== "") ? groupId : null;
         
         contactsToInsert.push({
           user_id: auth.user.userId,

@@ -43,7 +43,7 @@ export async function PUT(
     if (email !== undefined) updateData.email = email;
     if (notes !== undefined) updateData.notes = notes;
     if (tags) updateData.tags = tags;
-    if (groupId !== undefined) updateData.group_id = groupId;
+    if (groupId !== undefined) updateData.group_id = groupId || null;
 
     const { data: contactData, error: updateError } = await supabaseServer
       .from('contacts')
