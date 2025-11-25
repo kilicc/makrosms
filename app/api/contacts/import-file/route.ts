@@ -17,9 +17,12 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const groupId = formData.get('groupId') as string | null;
+    const groupIdRaw = formData.get('groupId') as string | null;
     const nameColumn = formData.get('nameColumn') as string | null;
     const phoneColumn = formData.get('phoneColumn') as string | null;
+    
+    // Normalize groupId: empty string becomes null
+    const groupId = (groupIdRaw && groupIdRaw.trim() !== "") ? groupIdRaw : null;
 
     console.log('[Import] Received params:', { groupId, nameColumn, phoneColumn });
 
@@ -284,16 +287,14 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        // Use selected groupId (handle empty string)
-        const finalGroupId = (groupId && groupId.trim() !== "") ? groupId : null;
-        
+        // Use normalized groupId (already handled at top)
         contactsToInsert.push({
           user_id: auth.user.userId,
           name: finalName,
           phone,
           email: null,
           notes: null,
-          group_id: finalGroupId,
+          group_id: groupId,
         });
         
         existingPhones.add(phone);
