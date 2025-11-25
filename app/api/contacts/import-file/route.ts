@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       contacts = parseResult.data || [];
       detectedColumns = contacts.length > 0 ? Object.keys(contacts[0]) : [];
     } else if (isExcel) {
-      // Excel parse - same logic as preview endpoint
+      // Excel parse - EXACTLY same logic as preview endpoint
       const XLSX = require('xlsx');
       const workbook = XLSX.read(fileContent, { type: 'buffer' });
       
@@ -93,41 +93,47 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Try with header first (normal case)
+      // Önce header ile dene (normal durum) - SAME AS PREVIEW
       let contactsWithHeader = XLSX.utils.sheet_to_json(worksheet, {
         raw: false,
         defval: '',
       });
       
-      // If no header or first row doesn't look like headers, try without header
+      // Eğer header yoksa veya ilk satır boşsa, header olmadan dene
       if (contactsWithHeader.length === 0 || !Object.keys(contactsWithHeader[0] || {}).length) {
-        // Try without header
+        // Header olmadan oku - ilk satırı da veri olarak al
         contacts = XLSX.utils.sheet_to_json(worksheet, {
-          header: 1, // Array of arrays
+          header: ['numara'],
           raw: false,
           defval: '',
         });
+        console.log('[Import] Excel parsed without header, contacts count:', contacts.length);
         
-        if (contacts.length > 0) {
-          // First row as header
-          const firstRow = contacts[0] as any[];
-          detectedColumns = firstRow.map((val, idx) => String(val || '').trim() || `Sütun ${idx + 1}`);
-          
-          // Remaining rows as data
-          contacts = contacts.slice(1).map((row: any[]) => {
-            const obj: any = {};
-            detectedColumns.forEach((header, idx) => {
-              obj[header] = String(row[idx] || '').trim();
-            });
-            return obj;
-          });
-        } else {
-          // Last resort: numeric keys
-          contacts = XLSX.utils.sheet_to_json(worksheet, {
+        // Eğer hala boşsa, tüm sütunları sayısal key olarak oku
+        if (contacts.length === 0) {
+          const allData = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1, // Array of arrays
             raw: false,
             defval: '',
           });
           
+          if (allData.length > 0) {
+            // İlk satırı header olarak kullan, gerisini veri - SAME AS PREVIEW
+            const firstRow = allData[0] as any[];
+            const headerRow = firstRow.map((val, idx) => String(val || '').trim() || `Sütun ${idx + 1}`);
+            detectedColumns = headerRow;
+            
+            // Kalan satırları veri olarak işle
+            contacts = allData.slice(1).map((row: any[]) => {
+              const obj: any = {};
+              headerRow.forEach((header, idx) => {
+                obj[header] = String(row[idx] || '').trim();
+              });
+              return obj;
+            });
+          }
+        } else {
+          // Numeric key'leri düzelt - SAME AS PREVIEW
           if (contacts.length > 0 && Object.keys(contacts[0] || {}).some(key => /^\d+$/.test(key))) {
             const keys = Object.keys(contacts[0]);
             detectedColumns = keys.map((_, idx) => `Sütun ${idx + 1}`);
@@ -142,9 +148,8 @@ export async function POST(request: NextRequest) {
             detectedColumns = contacts.length > 0 ? Object.keys(contacts[0]) : [];
           }
         }
-        console.log('[Import] Excel parsed without header, contacts count:', contacts.length);
       } else {
-        // Header exists
+        // Header ile başarılı okuma - SAME AS PREVIEW
         contacts = contactsWithHeader;
         detectedColumns = contacts.length > 0 ? Object.keys(contacts[0]) : [];
         console.log('[Import] Excel parsed with header, contacts count:', contacts.length);
@@ -182,24 +187,30 @@ export async function POST(request: NextRequest) {
       try {
         const availableKeys = Object.keys(contactData);
         
-        // Use user-selected columns
+        // Log first row for debugging
+        if (i === 0) {
+          console.log('[Import] Row 0 - Available columns:', availableKeys);
+          console.log('[Import] Row 0 - User selected nameColumn:', nameColumn);
+          console.log('[Import] Row 0 - User selected phoneColumn:', phoneColumn);
+          console.log('[Import] Row 0 - Sample data:', contactData);
+        }
+        
+        // Use user-selected columns - exact match or case-insensitive
         let nameField: string | null = null;
         let phoneField: string | null = null;
         
-        // Find phone column
+        // Find phone column - try exact match first, then case-insensitive
         if (phoneColumn) {
-          // Exact match first
           if (availableKeys.includes(phoneColumn)) {
             phoneField = phoneColumn;
           } else {
-            // Case-insensitive match
             phoneField = availableKeys.find(
               key => key.toLowerCase().trim() === phoneColumn.toLowerCase().trim()
             ) || null;
           }
         }
         
-        // Find name column
+        // Find name column - try exact match first, then case-insensitive
         if (nameColumn) {
           if (availableKeys.includes(nameColumn)) {
             nameField = nameColumn;
@@ -210,18 +221,17 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Log first row
+        // Log first row field matching
         if (i === 0) {
-          console.log('[Import] Available columns:', availableKeys);
-          console.log('[Import] User selected nameColumn:', nameColumn, '-> found:', nameField);
-          console.log('[Import] User selected phoneColumn:', phoneColumn, '-> found:', phoneField);
+          console.log('[Import] Row 0 - Found nameField:', nameField);
+          console.log('[Import] Row 0 - Found phoneField:', phoneField);
         }
         
-        // Get values
+        // Get values from matched fields
         const name = nameField ? String(contactData[nameField] || '').trim() : '';
         let phoneRaw = phoneField ? String(contactData[phoneField] || '').trim() : '';
         
-        // Handle empty string as null
+        // Handle empty values
         if (phoneRaw === '') {
           phoneRaw = '';
         }
@@ -229,7 +239,7 @@ export async function POST(request: NextRequest) {
         // Check if phone column was selected but value is empty
         if (!phoneRaw && phoneColumn) {
           results.failed++;
-          results.errors.push(`Satır ${i + 1}: Seçilen telefon sütunu (${phoneColumn}) boş`);
+          results.errors.push(`Satır ${i + 1}: Seçilen telefon sütunu (${phoneColumn}) boş veya bulunamadı`);
           continue;
         }
         
@@ -286,6 +296,9 @@ export async function POST(request: NextRequest) {
 
     // Bulk insert contacts
     if (contactsToInsert.length > 0) {
+      console.log('[Import] Inserting', contactsToInsert.length, 'contacts');
+      console.log('[Import] First contact sample:', contactsToInsert[0]);
+      
       const { error: insertError } = await supabaseServer
         .from('contacts')
         .insert(contactsToInsert);
@@ -300,6 +313,7 @@ export async function POST(request: NextRequest) {
       
       // Update group contact count if groupId exists
       if (groupId && results.success > 0) {
+        console.log('[Import] Updating group count for groupId:', groupId);
         const { data: groupData } = await supabaseServer
           .from('contact_groups')
           .select('contact_count')
