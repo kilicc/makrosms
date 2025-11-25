@@ -16,7 +16,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Add, Edit, Delete, Phone, Email, 
   Search, CheckCircle, ImportExport, FileUpload,
-  Group, People, Sms
+  Group, People, Sms, ArrowBack
 } from '@mui/icons-material';
 
 interface Contact {
@@ -53,6 +53,10 @@ export default function ContactsPage() {
   
   // Tabs
   const [tabValue, setTabValue] = useState(0);
+  
+  // Selected group for viewing contacts
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<ContactGroup | null>(null);
   
   // Search and filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,9 +103,14 @@ export default function ContactsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadContacts();
+    if (selectedGroupId) {
+      // When viewing a group, filter by that group
+      loadContacts();
+    } else {
+      loadContacts();
+    }
     loadGroups();
-  }, [page, searchQuery, groupFilter]);
+  }, [page, searchQuery, groupFilter, selectedGroupId]);
 
   const loadContacts = async () => {
     try {
@@ -116,7 +125,10 @@ export default function ContactsPage() {
         params.append('search', searchQuery);
       }
       
-      if (groupFilter !== 'all') {
+      // If viewing a specific group, use that group filter
+      if (selectedGroupId) {
+        params.append('group', selectedGroupId);
+      } else if (groupFilter !== 'all') {
         if (groupFilter === 'none') {
           // For "none" we need to filter client-side or use a different approach
         } else {
@@ -452,6 +464,23 @@ export default function ContactsPage() {
     setGroupDialogOpen(true);
   };
 
+  const handleGroupClick = (group: ContactGroup) => {
+    setSelectedGroupId(group.id);
+    setSelectedGroup(group);
+    setPage(1); // Reset to first page
+    setSelectedContacts([]);
+    setSelectAll(false);
+  };
+
+  const handleBackToGroups = () => {
+    setSelectedGroupId(null);
+    setSelectedGroup(null);
+    setPage(1);
+    setSelectedContacts([]);
+    setSelectAll(false);
+    setSearchQuery('');
+  };
+
   return (
     <ProtectedRoute>
       <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: mode === 'dark' ? '#121212' : '#f5f5f5' }}>
@@ -755,97 +784,336 @@ export default function ContactsPage() {
             {/* Groups Tab */}
             {tabValue === 1 && (
               <>
-                {/* Groups Header */}
-                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {groups.length} grup
-                  </Typography>
-                  
-                  <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={openNewGroupDialog}
-                    sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-                  >
-                    Yeni Grup
-                  </Button>
-                </Box>
+                {selectedGroupId ? (
+                  // Group Contacts View
+                  <>
+                    {/* Group Contacts Header */}
+                    <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<ArrowBack />}
+                          onClick={handleBackToGroups}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Gruplara Dön
+                        </Button>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                bgcolor: selectedGroup?.color || '#8B5CF6',
+                                display: 'inline-block',
+                              }}
+                            />
+                            {selectedGroup?.name || 'Grup'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {totalContacts} kişi (Sayfa {page}/{totalPages || 1})
+                          </Typography>
+                          {selectedContacts.length > 0 && (
+                            <Typography variant="body2" color="primary" sx={{ mt: 0.5 }}>
+                              {selectedContacts.length} kişi seçildi
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                      
+                      <Stack direction="row" spacing={2}>
+                        {selectedContacts.length > 0 && (
+                          <>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Delete />}
+                              onClick={handleDeleteSelected}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              Seçilenleri Sil ({selectedContacts.length})
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              onClick={() => {
+                                setSelectedContacts([]);
+                                setSelectAll(false);
+                              }}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              Seçimi Temizle
+                            </Button>
+                          </>
+                        )}
+                        {selectedContacts.length === 0 && totalContacts > limit && (
+                          <Button
+                            variant="outlined"
+                            onClick={handleSelectAllPages}
+                            disabled={loading}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Tümünü Seç ({totalContacts} kişi)
+                          </Button>
+                        )}
+                      </Stack>
+                    </Box>
 
-                {/* Groups Grid */}
-                {groups.length === 0 ? (
-                  <Paper sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      Henüz grup oluşturulmamış
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Kişilerinizi organize etmek için gruplar oluşturun
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<Add />}
-                      onClick={openNewGroupDialog}
-                      sx={{ textTransform: 'none' }}
-                    >
-                      İlk Grubu Oluştur
-                    </Button>
-                  </Paper>
-                ) : (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-                    {groups.map((group) => (
-                      <Card key={group.id}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Box
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: '50%',
-                                  bgcolor: group.color,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <Group />
-                              </Box>
-                              <Box>
-                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                  {group.name}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {group.contactCount} kişi
-                                </Typography>
-                              </Box>
-                            </Box>
-                            <Stack direction="row" spacing={0.5}>
-                              <Tooltip title="Düzenle">
-                                <IconButton size="small" onClick={() => openEditGroupDialog(group)}>
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Sil">
-                                <IconButton size="small" color="error" onClick={() => handleDeleteGroup(group.id)}>
-                                  <Delete fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </Box>
-                          <Chip
-                            label={group.name}
-                            size="small"
-                            sx={{
-                              bgcolor: group.color,
-                              color: 'white',
-                              fontWeight: 500,
+                    {/* Search Filter */}
+                    <Paper sx={{ p: 2, mb: 3 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="İsim, telefon veya email ile ara..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Paper>
+
+                    {/* Contacts Table */}
+                    <Paper>
+                      {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                          <CircularProgress />
+                        </Box>
+                      ) : filteredContacts.length === 0 ? (
+                        <Box sx={{ p: 4, textAlign: 'center' }}>
+                          <Typography variant="h6" color="text.secondary" gutterBottom>
+                            {searchQuery ? 'Kişi bulunamadı' : 'Bu grupta henüz kişi yok'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {!searchQuery && 'Yeni kişi ekleyin veya Excel dosyası import edin'}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <TableContainer>
+                          <Table>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell padding="checkbox">
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Checkbox
+                                      checked={selectAll && selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
+                                      indeterminate={selectedContacts.length > 0 && selectedContacts.length < filteredContacts.length}
+                                      onChange={handleSelectAll}
+                                    />
+                                    {totalContacts > limit && (
+                                      <Tooltip title={`Tüm sayfalardaki ${totalContacts} kişiyi seç`}>
+                                        <Typography 
+                                          variant="caption" 
+                                          sx={{ 
+                                            cursor: 'pointer', 
+                                            color: 'primary.main',
+                                            textDecoration: 'underline',
+                                            fontSize: '0.7rem'
+                                          }}
+                                          onClick={handleSelectAllPages}
+                                        >
+                                          Tümü ({totalContacts})
+                                        </Typography>
+                                      </Tooltip>
+                                    )}
+                                  </Box>
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>İsim</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Telefon</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="center">Mesaj</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }} align="right">İşlemler</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {filteredContacts.map((contact) => (
+                                <TableRow key={contact.id} hover selected={selectedContacts.includes(contact.id)}>
+                                  <TableCell padding="checkbox">
+                                    <Checkbox
+                                      checked={selectedContacts.includes(contact.id)}
+                                      onChange={() => handleSelectContact(contact.id)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {contact.name}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Phone fontSize="small" color="action" />
+                                      <Typography variant="body2">{contact.phone}</Typography>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    {contact.email ? (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Email fontSize="small" color="action" />
+                                        <Typography variant="body2">{contact.email}</Typography>
+                                      </Box>
+                                    ) : (
+                                      <Typography variant="body2" color="text.secondary">-</Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                                      <Sms fontSize="small" color="action" />
+                                      <Typography variant="body2">
+                                        {contact.contactCount || 0}
+                                      </Typography>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                      <Tooltip title="Düzenle">
+                                        <IconButton size="small" onClick={() => openEditDialog(contact)}>
+                                          <Edit fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Sil">
+                                        <IconButton size="small" color="error" onClick={() => handleDeleteContact(contact.id)}>
+                                          <Delete fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Stack>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                      
+                      {/* Pagination */}
+                      {!loading && filteredContacts.length > 0 && totalPages > 1 && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                          <Pagination
+                            count={totalPages}
+                            page={page}
+                            onChange={(e, newPage) => {
+                              setPage(newPage);
+                              setSelectedContacts([]);
+                              setSelectAll(false);
                             }}
+                            color="primary"
+                            showFirstButton
+                            showLastButton
                           />
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
+                        </Box>
+                      )}
+                    </Paper>
+                  </>
+                ) : (
+                  // Groups Grid View
+                  <>
+                    {/* Groups Header */}
+                    <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {groups.length} grup
+                      </Typography>
+                      
+                      <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={openNewGroupDialog}
+                        sx={{ textTransform: 'none', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                      >
+                        Yeni Grup
+                      </Button>
+                    </Box>
+
+                    {/* Groups Grid */}
+                    {groups.length === 0 ? (
+                      <Paper sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          Henüz grup oluşturulmamış
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          Kişilerinizi organize etmek için gruplar oluşturun
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<Add />}
+                          onClick={openNewGroupDialog}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          İlk Grubu Oluştur
+                        </Button>
+                      </Paper>
+                    ) : (
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+                        {groups.map((group) => (
+                          <Card 
+                            key={group.id}
+                            sx={{ 
+                              cursor: 'pointer',
+                              transition: 'transform 0.2s, box-shadow 0.2s',
+                              '&:hover': {
+                                transform: 'translateY(-4px)',
+                                boxShadow: 4,
+                              }
+                            }}
+                            onClick={() => handleGroupClick(group)}
+                          >
+                            <CardContent>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                                  <Box
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: '50%',
+                                      bgcolor: group.color,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: 'white',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    <Group />
+                                  </Box>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                      {group.name}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {group.contactCount} kişi
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
+                                  <Tooltip title="Düzenle">
+                                    <IconButton size="small" onClick={() => openEditGroupDialog(group)}>
+                                      <Edit fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Sil">
+                                    <IconButton size="small" color="error" onClick={() => handleDeleteGroup(group.id)}>
+                                      <Delete fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Stack>
+                              </Box>
+                              <Chip
+                                label={group.name}
+                                size="small"
+                                sx={{
+                                  bgcolor: group.color,
+                                  color: 'white',
+                                  fontWeight: 500,
+                                }}
+                              />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Box>
+                    )}
+                  </>
                 )}
               </>
             )}
