@@ -99,6 +99,12 @@ export default function SMSReportsPage() {
   const [loadingBulkDetails, setLoadingBulkDetails] = useState(false);
   const [bulkDetailDialogOpen, setBulkDetailDialogOpen] = useState(false);
   
+  // Bulk Detail Pagination states
+  const [bulkDetailPage, setBulkDetailPage] = useState(1);
+  const [bulkDetailLimit] = useState(50);
+  const [bulkDetailTotal, setBulkDetailTotal] = useState(0);
+  const [bulkDetailTotalPages, setBulkDetailTotalPages] = useState(0);
+  
   // Pagination states
   const [smsPage, setSmsPage] = useState(1);
   const [smsLimit] = useState(50);
@@ -303,11 +309,12 @@ export default function SMSReportsPage() {
   const handleViewBulkReportDetails = async (report: any) => {
     setSelectedBulkReport(report);
     setBulkDetailDialogOpen(true);
+    setBulkDetailPage(1); // Reset to first page when opening dialog
     setLoadingBulkDetails(true);
     
     try {
-      // Mesaj içeriğine göre filtrele
-      const params: any = {};
+      // Mesaj içeriğine göre filtrele - Get all messages for this report
+      const params: any = { limit: 10000 }; // Get all to filter by message content
       if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
       if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
       if (bulkFilters.userId) params.userId = bulkFilters.userId;
@@ -324,8 +331,11 @@ export default function SMSReportsPage() {
           phoneNumber: msg.phoneNumber || msg.phone_number,
           sentAt: msg.sentAt || msg.sent_at,
           network: msg.network || null,
+          cost: msg.cost || 0, // Ensure cost is included
         }));
         setBulkReportDetails(filtered);
+        setBulkDetailTotal(filtered.length);
+        setBulkDetailTotalPages(Math.ceil(filtered.length / bulkDetailLimit));
       }
     } catch (error: any) {
       console.error('Bulk report details load error:', error);
@@ -1185,7 +1195,10 @@ export default function SMSReportsPage() {
                           Toplam Maliyet
                         </Typography>
                         <Typography variant="body2" sx={{ fontSize: '14px', fontWeight: 600 }}>
-                          {bulkReportDetails.reduce((sum: number, detail: any) => sum + (Number(detail.cost) || 0), 0).toFixed(2)} kredi
+                          {bulkReportDetails.reduce((sum: number, detail: any) => {
+                            const cost = Number(detail.cost) || 0;
+                            return sum + cost;
+                          }, 0).toFixed(2)} kredi
                         </Typography>
                       </Box>
                     )}
@@ -1205,55 +1218,81 @@ export default function SMSReportsPage() {
                     Detay bulunamadı
                   </Typography>
                 ) : (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Operatör</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {bulkReportDetails.map((detail: any) => (
-                          <TableRow key={detail.id}>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              {detail.phoneNumber || detail.phone_number}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              <Chip
-                                label={detail.status === 'iletildi' ? 'İletildi' : 
-                                       detail.status === 'iletilmedi' ? 'İletilmedi' : 
-                                       detail.status === 'zaman_aşımı' ? 'Zaman Aşımı' : 
-                                       detail.status === 'rapor_bekliyor' ? 'Rapor Bekliyor' : 
-                                       detail.status === 'gönderildi' ? 'Gönderildi' : 
-                                       detail.status || '-'}
-                                color={
-                                  detail.status === 'iletildi' ? 'success' : 
-                                  detail.status === 'iletilmedi' || detail.status === 'zaman_aşımı' ? 'error' : 
-                                  detail.status === 'rapor_bekliyor' ? 'warning' : 
-                                  'default'
-                                }
-                                size="small"
-                                sx={{
-                                  fontSize: '0.65rem',
-                                  fontWeight: 500,
-                                  height: 20,
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              {detail.network || '-'}
-                            </TableCell>
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              <ClientDate date={detail.sentAt || detail.sent_at} />
-                            </TableCell>
+                  <>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Operatör</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Maliyet</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                          {bulkReportDetails
+                            .slice((bulkDetailPage - 1) * bulkDetailLimit, bulkDetailPage * bulkDetailLimit)
+                            .map((detail: any) => (
+                            <TableRow key={detail.id}>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {detail.phoneNumber || detail.phone_number}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <Chip
+                                  label={detail.status === 'iletildi' ? 'İletildi' : 
+                                         detail.status === 'iletilmedi' ? 'İletilmedi' : 
+                                         detail.status === 'zaman_aşımı' ? 'Zaman Aşımı' : 
+                                         detail.status === 'rapor_bekliyor' ? 'Rapor Bekliyor' : 
+                                         detail.status === 'gönderildi' ? 'Gönderildi' : 
+                                         detail.status || '-'}
+                                  color={
+                                    detail.status === 'iletildi' ? 'success' : 
+                                    detail.status === 'iletilmedi' || detail.status === 'zaman_aşımı' ? 'error' : 
+                                    detail.status === 'rapor_bekliyor' ? 'warning' : 
+                                    'default'
+                                  }
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 500,
+                                    height: 20,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {detail.network || '-'}
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {Number(detail.cost || 0).toFixed(2)} kredi
+                              </TableCell>
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                <ClientDate date={detail.sentAt || detail.sent_at} />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    {bulkDetailTotalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                        <Stack spacing={2}>
+                          <Pagination
+                            count={bulkDetailTotalPages}
+                            page={bulkDetailPage}
+                            onChange={(e, value) => setBulkDetailPage(value)}
+                            color="primary"
+                            size="small"
+                            showFirstButton
+                            showLastButton
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                            Toplam {bulkDetailTotal} kayıt, Sayfa {bulkDetailPage} / {bulkDetailTotalPages}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                  </>
                 )}
               </DialogContent>
               <DialogActions sx={{ p: 1.5 }}>
