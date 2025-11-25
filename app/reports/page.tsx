@@ -1337,45 +1337,6 @@ export default function SMSReportsPage() {
                   </Paper>
                 ) : (
                   <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    {/* Export Buttons */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Download />}
-                        onClick={() => handleExportBulkReports('excel')}
-                        sx={{
-                          textTransform: 'none',
-                          fontSize: '12px',
-                          borderColor: 'success.main',
-                          color: 'success.main',
-                          '&:hover': {
-                            borderColor: 'success.dark',
-                            backgroundColor: 'success.light',
-                          },
-                        }}
-                      >
-                        Excel İndir
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<PictureAsPdf />}
-                        onClick={() => handleExportBulkReports('pdf')}
-                        sx={{
-                          textTransform: 'none',
-                          fontSize: '12px',
-                          borderColor: 'error.main',
-                          color: 'error.main',
-                          '&:hover': {
-                            borderColor: 'error.dark',
-                            backgroundColor: 'error.light',
-                          },
-                        }}
-                      >
-                        PDF İndir
-                      </Button>
-                    </Box>
                     <TableContainer>
                       <Table size="small">
                         <TableHead>
@@ -1386,6 +1347,7 @@ export default function SMSReportsPage() {
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarısız</TableCell>
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }} align="center">Süre</TableCell>
                             <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }} align="center">İşlemler</TableCell>
                           </TableRow>
                       </TableHead>
@@ -1416,6 +1378,26 @@ export default function SMSReportsPage() {
                                 return status;
                             }
                           };
+
+                          // Calculate hours since sent
+                          const calculateHoursSinceSent = (sentAt: string) => {
+                            const sentDate = new Date(sentAt);
+                            const now = new Date();
+                            const diffMs = now.getTime() - sentDate.getTime();
+                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                            const totalHours = diffHours + (diffMinutes / 60);
+                            const hoursFormatted = totalHours.toFixed(1);
+                            const hoursInt = Math.floor(totalHours);
+                            return {
+                              hours: hoursInt,
+                              hoursFormatted,
+                              remaining: Math.max(0, 48 - hoursInt),
+                              isExpired: hoursInt >= 48,
+                            };
+                          };
+
+                          const timeInfo = calculateHoursSinceSent(report.sentAt);
 
                           return (
                             <TableRow 
@@ -1472,6 +1454,22 @@ export default function SMSReportsPage() {
                                 onClick={() => handleViewBulkReportDetails(report)}
                               >
                                 <ClientDate date={report.sentAt} />
+                              </TableCell>
+                              <TableCell 
+                                sx={{ fontSize: '12px', py: 0.75 }}
+                                align="center"
+                                onClick={() => handleViewBulkReportDetails(report)}
+                              >
+                                <Chip
+                                  label={`${timeInfo.hours}/48 saat`}
+                                  size="small"
+                                  color={timeInfo.isExpired ? 'error' : timeInfo.hours >= 40 ? 'warning' : 'default'}
+                                  sx={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 600,
+                                    height: 20,
+                                  }}
+                                />
                               </TableCell>
                               <TableCell 
                                 sx={{ fontSize: '12px', py: 0.75 }}
