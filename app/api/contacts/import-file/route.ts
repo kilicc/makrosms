@@ -121,26 +121,41 @@ export async function POST(request: NextRequest) {
       
       // Eğer header yoksa veya ilk satır boşsa, header olmadan dene
       if (contactsWithHeader.length === 0 || !Object.keys(contactsWithHeader[0] || {}).length) {
-        // Header olmadan oku - ilk satırı da veri olarak al
-        contacts = XLSX.utils.sheet_to_json(worksheet, {
-          header: ['numara'],
+        // Önce tüm veriyi array of arrays olarak oku
+        const allData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1, // Array of arrays
           raw: false,
           defval: '',
         });
-        console.log('[Import] Excel parsed without header, contacts count:', contacts.length);
         
-        // Eğer hala boşsa, tüm sütunları sayısal key olarak oku
-        if (contacts.length === 0) {
-          const allData = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1, // Array of arrays
-            raw: false,
-            defval: '',
+        console.log('[Import] Excel parsed as array of arrays, total rows:', allData.length);
+        
+        if (allData.length > 0) {
+          // İlk satırı kontrol et - eğer telefon numarası gibi görünüyorsa header değildir
+          const firstRow = allData[0] as any[];
+          const firstRowValues = firstRow.filter(v => String(v || '').trim());
+          
+          // İlk satırın telefon numarası olup olmadığını kontrol et
+          const isFirstRowPhoneNumbers = firstRowValues.length > 0 && firstRowValues.every((val: any) => {
+            const cleaned = String(val || '').replace(/\D/g, '');
+            return cleaned.length >= 9 && cleaned.length <= 13;
           });
           
-          if (allData.length > 0) {
-            // İlk satırı header olarak kullan, gerisini veri - SAME AS PREVIEW
-            const firstRow = allData[0] as any[];
-            const headerRow = firstRow.map((val, idx) => String(val || '').trim() || `Sütun ${idx + 1}`);
+          if (isFirstRowPhoneNumbers && firstRowValues.length === 1) {
+            // İlk satır telefon numarası ise, header yok demektir
+            // Tek sütunlu telefon numaraları listesi
+            console.log('[Import] Detected single column phone numbers without header');
+            detectedColumns = ['Telefon'];
+            contacts = allData.map((row: any[]) => {
+              const phoneValue = String(row[0] || '').trim();
+              return { 'Telefon': phoneValue };
+            });
+          } else {
+            // İlk satırı header olarak kullan, gerisini veri
+            const headerRow = firstRow.map((val, idx) => {
+              const valStr = String(val || '').trim();
+              return valStr || `Sütun ${idx + 1}`;
+            });
             detectedColumns = headerRow;
             
             // Kalan satırları veri olarak işle
@@ -153,20 +168,9 @@ export async function POST(request: NextRequest) {
             });
           }
         } else {
-          // Numeric key'leri düzelt - SAME AS PREVIEW
-          if (contacts.length > 0 && Object.keys(contacts[0] || {}).some(key => /^\d+$/.test(key))) {
-            const keys = Object.keys(contacts[0]);
-            detectedColumns = keys.map((_, idx) => `Sütun ${idx + 1}`);
-            contacts = contacts.map((row: any) => {
-              const newRow: any = {};
-              keys.forEach((key, idx) => {
-                newRow[detectedColumns[idx]] = String(row[key] || '').trim();
-              });
-              return newRow;
-            });
-          } else {
-            detectedColumns = contacts.length > 0 ? Object.keys(contacts[0]) : [];
-          }
+          // Boş dosya
+          contacts = [];
+          detectedColumns = [];
         }
       } else {
         // Header ile başarılı okuma - SAME AS PREVIEW

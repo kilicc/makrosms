@@ -291,6 +291,7 @@ export async function POST(request: NextRequest) {
               await new Promise(resolve => setTimeout(resolve, 10));
             }
             
+            // Mesajı olduğu gibi gönder (kullanıcının oluşturduğu kısa link varsa, aynı şekilde tüm SMS'lere gönderilir)
             // Request log
             await logSendRequest({
               userId: auth.user!.id,
@@ -381,10 +382,13 @@ export async function POST(request: NextRequest) {
       // Her batch sonrası başarılı gönderimleri bulk insert yap
       const successfulBatchSends = batchResults.filter((r) => r.success && r.messageId);
       if (successfulBatchSends.length > 0 && auth.user) {
+        // Her SMS için gönderilen mesajı bul (kısa link ile değiştirilmiş olabilir)
+        // Not: Şu anda her SMS için ayrı mesaj kaydetmiyoruz, orijinal mesajı kaydediyoruz
+        // Eğer kısa link tracking gerekiyorsa, service_url veya service_name field'ına eklenebilir
         const bulkInsertData = successfulBatchSends.map((result) => ({
           user_id: auth.user!.id,
           phone_number: result.phone,
-          message: Message,
+          message: Message, // Orijinal mesaj (kısa link'ler zaten mesaja eklenmiş)
           sender: From || null,
           status: 'gönderildi',
           cost: 1, // Her SMS için 1 kredi (gönderilen numara adedi kadar)
