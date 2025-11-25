@@ -325,6 +325,22 @@ export async function POST(request: NextRequest) {
         );
       }
       
+      // Verify that contacts were inserted with correct group_id
+      if (groupId) {
+        const { data: insertedContacts, error: verifyError } = await supabaseServer
+          .from('contacts')
+          .select('id, name, phone, group_id')
+          .eq('user_id', auth.user.userId)
+          .eq('group_id', groupId)
+          .in('phone', contactsToInsert.map(c => c.phone).slice(0, 5)); // Check first 5
+        
+        if (!verifyError && insertedContacts) {
+          console.log('[Import] ✅ Verified inserted contacts with group_id:', insertedContacts.length, 'contacts found');
+        } else {
+          console.error('[Import] ⚠️ Verification error:', verifyError);
+        }
+      }
+      
       // Update group contact count if groupId exists
       if (groupId && results.success > 0) {
         console.log('[Import] Updating group count for groupId:', groupId);
