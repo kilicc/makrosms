@@ -118,7 +118,23 @@ export async function DELETE(
       );
     }
 
-    // Delete group using Supabase (contacts will have group_id set to null due to onDelete: SetNull)
+    // First, set all contacts in this group to have group_id = null
+    // This prevents foreign key constraint violation
+    const { error: updateContactsError } = await supabaseServer
+      .from('contacts')
+      .update({ group_id: null })
+      .eq('group_id', id)
+      .eq('user_id', auth.user.userId);
+
+    if (updateContactsError) {
+      console.error('[Delete Group] Error updating contacts:', updateContactsError);
+      return NextResponse.json(
+        { success: false, message: updateContactsError.message || 'Grup içindeki kişiler güncellenemedi' },
+        { status: 500 }
+      );
+    }
+
+    // Now delete the group
     const { error: deleteError } = await supabaseServer
       .from('contact_groups')
       .delete()
