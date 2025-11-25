@@ -185,24 +185,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get existing contacts for this user
+    // Get existing contacts for this user (with phone and group_id)
     const { data: existingContacts } = await supabaseServer
       .from('contacts')
-      .select('phone')
+      .select('phone, group_id')
       .eq('user_id', auth.user.userId);
 
     const existingPhones = new Set((existingContacts || []).map((c: any) => c.phone));
+    // Map of phone -> contact data for updates
+    const existingContactsMap = new Map((existingContacts || []).map((c: any) => [c.phone, c]));
     
     // Track phones processed in this batch to prevent duplicates within the same import
     const processedPhonesInBatch = new Set<string>();
 
     const contactsToInsert: any[] = [];
+    const contactsToUpdate: Array<{ phone: string; group_id: string | null }> = [];
     const results = {
       success: 0,
       failed: 0,
       skipped: 0, // Skipped due to duplicates or already exists
       skippedExisting: 0, // Already exists in database
       skippedDuplicate: 0, // Duplicate in this file
+      updated: 0, // Updated existing contacts with group
       errors: [] as string[],
     };
 
@@ -305,9 +309,29 @@ export async function POST(request: NextRequest) {
         
         // Check if phone already exists in database
         if (existingPhones.has(phone)) {
-          results.skipped++;
-          results.skippedExisting++;
-          continue;
+          // If group is selected and contact exists, update group if different
+          if (groupId) {
+            const existingContact = existingContactsMap.get(phone);
+            if (existingContact && existingContact.group_id !== groupId) {
+              // Group is different, add to update list
+              contactsToUpdate.push({ phone, group_id: groupId });
+              results.updated++;
+              // Mark as processed to prevent duplicates
+              processedPhonesInBatch.add(phone);
+              existingPhones.add(phone);
+              continue;
+            } else if (existingContact && existingContact.group_id === groupId) {
+              // Already in the same group, skip
+              results.skipped++;
+              results.skippedExisting++;
+              continue;
+            }
+          } else {
+            // No group selected, just skip
+            results.skipped++;
+            results.skippedExisting++;
+            continue;
+          }
         }
         
         // Check if phone is duplicate within this import batch
@@ -350,6 +374,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Update existing contacts with group if groupId is provided
+    if (contactsToUpdate.length > 0 && groupId) {
+      console.log('[Import] Updating', contactsToUpdate.length, 'existing contacts with group:', groupId);
+      
+      // Update contacts in batches to avoid too many queries
+      const batchSize = 100;
+      for (let i = 0; i < contactsToUpdate.length; i += batchSize) {
+        const batch = contactsToUpdate.slice(i, i + batchSize);
+        const phones = batch.map(c => c.phone);
+        
+        const { error: updateError } = await supabaseServer
+          .from('contacts')
+          .update({ group_id: groupId })
+          .eq('user_id', auth.user.userId)
+          .in('phone', phones);
+        
+        if (updateError) {
+          console.error('[Import] Update error for batch:', updateError);
+          results.errors.push(`Grup güncelleme hatası: ${updateError.message}`);
+        }
+      }
+      
+      console.log('[Import] ✅ Updated', contactsToUpdate.length, 'contacts with group');
+    }
+
     // Bulk insert contacts
     if (contactsToInsert.length > 0) {
       // Final duplicate check: Remove any duplicates from contactsToInsert array
@@ -361,10 +410,7 @@ export async function POST(request: NextRequest) {
         if (seenPhones.has(contact.phone)) {
           // Duplicate found in array - skip it
           duplicatePhonesInArray.push(contact.phone);
-          results.skipped++;
-          results.skippedDuplicate++;
-          // Decrease success count since this was counted as success in the loop
-          results.success--;
+          results.failed++;
           continue;
         }
         seenPhones.add(contact.phone);
@@ -376,19 +422,8 @@ export async function POST(request: NextRequest) {
         results.errors.push(`${duplicatePhonesInArray.length} duplicate telefon numarası array içinde tespit edildi ve filtrelendi`);
       }
       
-      // Ensure success count matches unique contacts to insert (already adjusted in loop above)
-      if (uniqueContactsToInsert.length !== results.success) {
-        console.warn(`[Import] Success count mismatch: ${results.success} vs ${uniqueContactsToInsert.length} unique contacts. Adjusting...`);
-        // This shouldn't happen if we adjusted correctly above, but fix it if needed
-        const adjustment = uniqueContactsToInsert.length - results.success;
-        if (adjustment !== 0) {
-          results.success = uniqueContactsToInsert.length;
-          if (adjustment < 0) {
-            results.skipped = (results.skipped || 0) - adjustment;
-            results.skippedDuplicate = (results.skippedDuplicate || 0) - adjustment;
-          }
-        }
-      }
+      // Update results.success to reflect actual unique contacts
+      results.success = uniqueContactsToInsert.length;
       
       console.log('[Import] Inserting', uniqueContactsToInsert.length, 'unique contacts (filtered from', contactsToInsert.length, 'total)');
       console.log('[Import] GroupId being used:', groupId);
@@ -523,29 +558,40 @@ export async function POST(request: NextRequest) {
       }
       
       // Update group contact count if groupId exists
-      if (groupId && results.success > 0) {
+      if (groupId && (results.success > 0 || results.updated > 0)) {
         console.log('[Import] Updating group count for groupId:', groupId);
+        // Recalculate actual count from database
+        const { count } = await supabaseServer
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', auth.user.userId)
+          .eq('group_id', groupId);
+
+        const actualCount = count || 0;
+        
         const { data: groupData } = await supabaseServer
           .from('contact_groups')
           .select('contact_count')
           .eq('id', groupId)
           .single();
 
-        if (groupData) {
+        if (groupData && groupData.contact_count !== actualCount) {
           await supabaseServer
             .from('contact_groups')
-            .update({ contact_count: (groupData.contact_count || 0) + results.success })
+            .update({ contact_count: actualCount })
             .eq('id', groupId);
+          console.log('[Import] ✅ Updated group count to:', actualCount);
         }
       }
     }
 
-    // Build final message - always show all counts
-    const totalProcessed = results.success + results.failed + (results.skipped || 0);
+    // Build final message
     let messageParts: string[] = [];
-    
     if (results.success > 0) {
-      messageParts.push(`${results.success} başarılı`);
+      messageParts.push(`${results.success} yeni kişi eklendi`);
+    }
+    if (results.updated > 0) {
+      messageParts.push(`${results.updated} kişi gruba eklendi`);
     }
     if (results.failed > 0) {
       messageParts.push(`${results.failed} başarısız`);
@@ -553,7 +599,7 @@ export async function POST(request: NextRequest) {
     if (results.skipped > 0) {
       let skipDetails: string[] = [];
       if (results.skippedExisting > 0) {
-        skipDetails.push(`${results.skippedExisting} zaten kayıtlı`);
+        skipDetails.push(`${results.skippedExisting} zaten aynı grupta`);
       }
       if (results.skippedDuplicate > 0) {
         skipDetails.push(`${results.skippedDuplicate} duplicate`);
@@ -565,15 +611,9 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // If no parts, show default message
-    if (messageParts.length === 0) {
-      messageParts.push(`${results.success} başarılı`);
-      if (results.failed > 0) {
-        messageParts.push(`${results.failed} başarısız`);
-      }
-    }
-    
-    const finalMessage = `Import tamamlandı: ${messageParts.join(', ')}${totalProcessed > 0 ? ` (Toplam ${totalProcessed} kişi işlendi)` : ''}`;
+    const finalMessage = messageParts.length > 0 
+      ? `Import tamamlandı: ${messageParts.join(', ')}`
+      : `Import tamamlandı: ${results.success} başarılı, ${results.failed} başarısız`;
 
     return NextResponse.json({
       success: true,
