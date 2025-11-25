@@ -405,7 +405,7 @@ export async function POST(request: NextRequest) {
           message,
           sender: serviceName || null,
           status: 'gönderildi',
-          cost: isAdmin ? 0 : creditPerMessage,
+          cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor
           cep_sms_message_id: result.messageId,
           sent_at: new Date().toISOString(),
         }));

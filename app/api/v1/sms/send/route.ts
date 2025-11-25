@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
           phone_number: firstPhone,
           message: Message,
           status: 'gönderildi',
-          cost: isAdmin ? 0 : requiredCredit,
+          cost: requiredCredit, // Admin'ler de sistem kredisinden düşüyor
           cep_sms_message_id: smsResult.messageId,
           sent_at: new Date().toISOString(),
         })
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           phone_number: firstPhone,
           message: Message,
           status: 'failed',
-          cost: isAdmin ? 0 : requiredCredit,
+          cost: requiredCredit, // Admin'ler de sistem kredisinden düşüyor
           failed_at: new Date().toISOString(),
         })
         .select()

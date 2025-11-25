@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
                   message,
                   sender: sender || null,
                   status: 'gönderildi',
-                  cost: isAdmin ? 0 : creditPerMessage, // Admin kullanıcıları için cost: 0
+                  cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor 
                   cep_sms_message_id: smsResult.messageId,
                   sent_at: new Date().toISOString(),
                 })
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
                     message,
                     sender: sender || null,
                     status: 'failed',
-                    cost: isAdmin ? 0 : creditPerMessage,
+                    cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor
                     failed_at: new Date().toISOString(),
                   })
                   .select()
@@ -427,7 +427,7 @@ export async function POST(request: NextRequest) {
                   message,
                   sender: sender || null,
                   status: 'failed',
-                  cost: isAdmin ? 0 : creditPerMessage,
+                  cost: creditPerMessage, // Admin'ler de sistem kredisinden düşüyor
                   failed_at: new Date().toISOString(),
                 })
                 .select()

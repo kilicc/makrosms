@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
               message: message,
               sender: From || null,
               status: 'gönderildi',
-              cost: isAdmin ? 0 : requiredCredit,
+              cost: requiredCredit, // Admin'ler de sistem kredisinden düşüyor
               cep_sms_message_id: smsResult.messageId,
               sent_at: StartDate ? new Date(StartDate).toISOString() : new Date().toISOString(),
             })
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
           if (smsMessageData) {
             messageIds.push(smsMessageData.id);
             successCount++;
-            totalCost += isAdmin ? 0 : requiredCredit;
+            totalCost += requiredCredit; // Admin'ler de sistem kredisinden düşüyor
           } else {
             failedCount++;
           }
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
               message: message,
               sender: From || null,
               status: 'failed',
-              cost: isAdmin ? 0 : requiredCredit,
+              cost: requiredCredit, // Admin'ler de sistem kredisinden düşüyor
               failed_at: new Date().toISOString(),
             })
             .select()
