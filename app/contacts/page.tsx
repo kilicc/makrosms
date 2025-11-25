@@ -46,6 +46,10 @@ export default function ContactsPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedGroupForImport, setSelectedGroupForImport] = useState<string>('');
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [selectedNameColumn, setSelectedNameColumn] = useState<string>('');
+  const [selectedPhoneColumn, setSelectedPhoneColumn] = useState<string>('');
   
   // Bulk operations
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
@@ -248,13 +252,52 @@ export default function ContactsPage() {
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
       if (fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls') {
         setImportFile(file);
         setImportDialogOpen(true);
+        setError('');
+        setImportPreview(null);
+        setSelectedNameColumn('');
+        setSelectedPhoneColumn('');
+        
+        // Önizleme al
+        try {
+          setPreviewLoading(true);
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await api.post('/contacts/import-preview', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          
+          if (response.data.success) {
+            const preview = response.data.data;
+            setImportPreview(preview);
+            
+            // Otomatik sütun seçimi
+            const nameCol = Object.entries(preview.columnAnalysis || {})
+              .find(([_, analysis]: [string, any]) => analysis.type === 'name' && analysis.confidence > 0.5)?.[0] || '';
+            const phoneCol = Object.entries(preview.columnAnalysis || {})
+              .find(([_, analysis]: [string, any]) => analysis.type === 'phone' && analysis.confidence > 0.5)?.[0] || 
+              (preview.columns.length > 1 ? preview.columns[1] : preview.columns[0] || '');
+            
+            setSelectedNameColumn(nameCol);
+            setSelectedPhoneColumn(phoneCol);
+          } else {
+            setError(response.data.message || 'Önizleme alınamadı');
+          }
+        } catch (err: any) {
+          console.error('Preview error:', err);
+          setError(err.response?.data?.message || 'Dosya analiz edilemedi');
+        } finally {
+          setPreviewLoading(false);
+        }
       } else {
         setError('Sadece CSV veya Excel dosyaları destekleniyor');
       }
@@ -267,6 +310,11 @@ export default function ContactsPage() {
       return;
     }
 
+    if (!selectedPhoneColumn) {
+      setError('Lütfen telefon numarası sütununu seçin');
+      return;
+    }
+
     try {
       setImporting(true);
       setError('');
@@ -275,6 +323,12 @@ export default function ContactsPage() {
       formData.append('file', importFile);
       if (selectedGroupForImport) {
         formData.append('groupId', selectedGroupForImport);
+      }
+      if (selectedNameColumn) {
+        formData.append('nameColumn', selectedNameColumn);
+      }
+      if (selectedPhoneColumn) {
+        formData.append('phoneColumn', selectedPhoneColumn);
       }
 
       const response = await api.post('/contacts/import-file', formData, {
@@ -301,7 +355,10 @@ export default function ContactsPage() {
         
         setImportDialogOpen(false);
         setImportFile(null);
+        setImportPreview(null);
         setSelectedGroupForImport('');
+        setSelectedNameColumn('');
+        setSelectedPhoneColumn('');
         loadContacts();
         loadGroups();
       } else {
@@ -996,85 +1053,207 @@ export default function ContactsPage() {
         </Box>
       </Box>
 
-      {/* Import Dialog */}
+            {/* Import Dialog - Yeniden tasarlandı */}
       <Dialog 
         open={importDialogOpen} 
         onClose={() => {
-          if (!importing) {
+          if (!importing && !previewLoading) {
             setImportDialogOpen(false);
             setImportFile(null);
+            setImportPreview(null);
             setSelectedGroupForImport('');
+            setSelectedNameColumn('');
+            setSelectedPhoneColumn('');
           }
         }}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ fontSize: '16px', fontWeight: 500 }}>
-          Excel Dosyası İçe Aktar
+        <DialogTitle sx={{ fontSize: '16px', fontWeight: 600 }}>
+          Excel/CSV Dosyası İçe Aktar
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 1 }}>
             {importFile && (
               <Alert severity="info" sx={{ mb: 2 }}>
-                Seçilen dosya: <strong>{importFile.name}</strong>
+                <strong>Dosya:</strong> {importFile.name}
+                {importPreview && ` • ${importPreview.totalRows} satır bulundu`}
               </Alert>
             )}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="group-select-label" sx={{ fontSize: '14px' }}>
-                Grup Seç (Opsiyonel)
-              </InputLabel>
-              <Select
-                labelId="group-select-label"
-                value={selectedGroupForImport}
-                label="Grup Seç (Opsiyonel)"
-                onChange={(e) => setSelectedGroupForImport(e.target.value)}
-                size="small"
-                sx={{ fontSize: '14px' }}
-              >
-                <MenuItem value="" sx={{ fontSize: '14px' }}>
-                  <em>Grup seçilmedi (Tüm kişiler)</em>
-                </MenuItem>
-                {groups.map((group) => (
-                  <MenuItem key={group.id} value={group.id} sx={{ fontSize: '14px' }}>
-                    {group.name} ({group.contactCount} kişi)
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 1 }}>
-              <strong>Önemli:</strong>
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
-              • Excel dosyasında <strong>İsim</strong> ve <strong>Telefon</strong> sütunları olmalıdır
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
-              • Telefon numaraları otomatik olarak doğru formata (905xxxxxxxxx) dönüştürülecektir
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px', mb: 0.5 }}>
-              • Desteklenen formatlar: 5075708797, 05075708797, 905075708797, vb.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
-              • Zaten kayıtlı numaralar atlanacaktır
-            </Typography>
+            
+            {previewLoading && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 3 }}>
+                <CircularProgress size={24} />
+                <Typography variant="body2" sx={{ ml: 2 }}>
+                  Dosya analiz ediliyor...
+                </Typography>
+              </Box>
+            )}
+            
+            {importPreview && !previewLoading && (
+              <>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, mt: 1 }}>
+                  1. Sütunları Seçin
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
+                    <FormControl fullWidth size="small" required error={!selectedPhoneColumn}>
+                      <InputLabel>Telefon Sütunu *</InputLabel>
+                      <Select
+                        value={selectedPhoneColumn}
+                        label="Telefon Sütunu *"
+                        onChange={(e) => setSelectedPhoneColumn(e.target.value)}
+                      >
+                        {importPreview.columns.map((col: string) => {
+                          const analysis = importPreview.columnAnalysis?.[col];
+                          const isPhone = analysis?.type === 'phone';
+                          return (
+                            <MenuItem key={col} value={col}>
+                              {col}
+                              {isPhone && analysis.confidence > 0.5 && (
+                                <Chip label="Otomatik" size="small" sx={{ ml: 1, height: 18 }} color="success" />
+                              )}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                      {!selectedPhoneColumn && (
+                        <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                          Telefon sütunu zorunludur
+                        </Typography>
+                      )}
+                    </FormControl>
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: { xs: '100%', sm: '300px' } }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>İsim Sütunu (Opsiyonel)</InputLabel>
+                      <Select
+                        value={selectedNameColumn}
+                        label="İsim Sütunu (Opsiyonel)"
+                        onChange={(e) => setSelectedNameColumn(e.target.value)}
+                      >
+                        <MenuItem value="">İsim Yok (Otomatik oluşturulacak)</MenuItem>
+                        {importPreview.columns.map((col: string) => {
+                          const analysis = importPreview.columnAnalysis?.[col];
+                          const isName = analysis?.type === 'name';
+                          return (
+                            <MenuItem key={col} value={col}>
+                              {col}
+                              {isName && analysis.confidence > 0.5 && (
+                                <Chip label="Otomatik" size="small" sx={{ ml: 1, height: 18 }} color="primary" />
+                              )}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Box>
+
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+                  2. Grubu Seçin (Opsiyonel)
+                </Typography>
+                <FormControl fullWidth size="small" sx={{ mb: 3 }}>
+                  <InputLabel>Grup Seç</InputLabel>
+                  <Select
+                    value={selectedGroupForImport}
+                    label="Grup Seç"
+                    onChange={(e) => setSelectedGroupForImport(e.target.value)}
+                  >
+                    <MenuItem value="">Grup Yok - Tüm Kişiler</MenuItem>
+                    {groups.map((group) => (
+                      <MenuItem key={group.id} value={group.id}>
+                        {group.name} ({group.contactCount} kişi)
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+                  3. Önizleme (İlk 5 satır)
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300, mb: 2 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600, fontSize: '12px' }}>Satır</TableCell>
+                        {importPreview.columns.map((col: string) => {
+                          const analysis = importPreview.columnAnalysis?.[col];
+                          const isSelected = col === selectedPhoneColumn || col === selectedNameColumn;
+                          return (
+                            <TableCell 
+                              key={col} 
+                              sx={{ 
+                                fontWeight: 600, 
+                                fontSize: '12px',
+                                bgcolor: isSelected ? (mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.1)') : 'transparent',
+                              }}
+                            >
+                              {col}
+                              {analysis?.type && (
+                                <Chip 
+                                  label={analysis.type} 
+                                  size="small" 
+                                  sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+                                  color={
+                                    analysis.type === 'phone' ? 'error' :
+                                    analysis.type === 'name' ? 'primary' :
+                                    'default'
+                                  }
+                                />
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {importPreview.previewRows.map((row: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell sx={{ fontSize: '12px' }}>{idx + 2}</TableCell>
+                          {importPreview.columns.map((col: string) => {
+                            const isSelected = col === selectedPhoneColumn || col === selectedNameColumn;
+                            return (
+                              <TableCell 
+                                key={col}
+                                sx={{ 
+                                  fontSize: '12px',
+                                  bgcolor: isSelected ? (mode === 'dark' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)') : 'transparent',
+                                }}
+                              >
+                                {row[col] || '-'}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button
             onClick={() => {
-              if (!importing) {
+              if (!importing && !previewLoading) {
                 setImportDialogOpen(false);
                 setImportFile(null);
+                setImportPreview(null);
                 setSelectedGroupForImport('');
+                setSelectedNameColumn('');
+                setSelectedPhoneColumn('');
               }
             }}
-            disabled={importing}
+            disabled={importing || previewLoading}
             sx={{ fontSize: '13px', textTransform: 'none' }}
           >
             İptal
           </Button>
           <Button
             onClick={handleImport}
-            disabled={importing || !importFile}
+            disabled={importing || !importFile || !selectedPhoneColumn || previewLoading}
             variant="contained"
             sx={{
               fontSize: '13px',
@@ -1086,6 +1265,7 @@ export default function ContactsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
     </ProtectedRoute>
   );
 }
