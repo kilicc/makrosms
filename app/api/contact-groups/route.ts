@@ -24,20 +24,42 @@ export async function GET(request: NextRequest) {
       throw new Error(error.message);
     }
 
-    // Format groups data
-    const groups = (groupsData || []).map((group: any) => ({
-      id: group.id,
-      userId: group.user_id,
-      name: group.name,
-      description: group.description,
-      color: group.color || '#2196F3',
-      icon: group.icon || 'group',
-      isDefault: group.is_default ?? false,
-      isActive: group.is_active ?? true,
-      contactCount: group.contact_count || 0,
-      createdAt: group.created_at,
-      updatedAt: group.updated_at,
-    }));
+    // Calculate real contact count for each group
+    const userId = auth.user.userId;
+    const groups = await Promise.all(
+      (groupsData || []).map(async (group: any) => {
+        // Get actual count of contacts in this group
+        const { count } = await supabaseServer
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('group_id', group.id);
+
+        const actualContactCount = count || 0;
+
+        // Update contact_count in database if it's different
+        if (actualContactCount !== (group.contact_count || 0)) {
+          await supabaseServer
+            .from('contact_groups')
+            .update({ contact_count: actualContactCount })
+            .eq('id', group.id);
+        }
+
+        return {
+          id: group.id,
+          userId: group.user_id,
+          name: group.name,
+          description: group.description,
+          color: group.color || '#2196F3',
+          icon: group.icon || 'group',
+          isDefault: group.is_default ?? false,
+          isActive: group.is_active ?? true,
+          contactCount: actualContactCount,
+          createdAt: group.created_at,
+          updatedAt: group.updated_at,
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,
