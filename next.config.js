@@ -2,11 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Docker için standalone output
-  experimental: {
-    // Next.js 16 özellikleri
-  },
   // Build optimizasyonları
-  swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],
@@ -15,12 +11,6 @@ const nextConfig = {
   // TypeScript ve ESLint'i build sırasında atla (hızlı build için)
   typescript: {
     ignoreBuildErrors: false, // TypeScript hatalarını göster
-  },
-  eslint: {
-    ignoreDuringBuilds: false, // ESLint hatalarını göster
-  },
-  env: {
-    // Environment variables
   },
   // Cache-busting için version
   generateBuildId: async () => {
