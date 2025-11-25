@@ -300,17 +300,15 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        // Check if phone already exists in database
+        // Check if phone already exists in database - skip silently (don't add as error)
         if (existingPhones.has(phone)) {
-          results.failed++;
-          results.errors.push(`Satır ${i + 1}: ${phoneValue} (${phone}) - Veritabanında zaten kayıtlı`);
+          // Silently skip - already exists in database
           continue;
         }
         
-        // Check if phone is duplicate within this import batch
+        // Check if phone is duplicate within this import batch - skip silently (only first occurrence will be saved)
         if (processedPhonesInBatch.has(phone)) {
-          results.failed++;
-          results.errors.push(`Satır ${i + 1}: ${phoneValue} (${phone}) - Bu dosyada daha önce işlendi (duplicate)`);
+          // Silently skip - duplicate in this file, first occurrence will be saved
           continue;
         }
         
@@ -349,30 +347,117 @@ export async function POST(request: NextRequest) {
 
     // Bulk insert contacts
     if (contactsToInsert.length > 0) {
-      console.log('[Import] Inserting', contactsToInsert.length, 'contacts');
+      // Final duplicate check: Remove any duplicates from contactsToInsert array
+      const seenPhones = new Set<string>();
+      const uniqueContactsToInsert: any[] = [];
+      const duplicatePhonesInArray: string[] = [];
+      
+      for (const contact of contactsToInsert) {
+        if (seenPhones.has(contact.phone)) {
+          // Duplicate found in array - skip it
+          duplicatePhonesInArray.push(contact.phone);
+          results.failed++;
+          continue;
+        }
+        seenPhones.add(contact.phone);
+        uniqueContactsToInsert.push(contact);
+      }
+      
+      if (duplicatePhonesInArray.length > 0) {
+        console.warn('[Import] Found duplicates in contactsToInsert array:', duplicatePhonesInArray.slice(0, 5));
+        results.errors.push(`${duplicatePhonesInArray.length} duplicate telefon numarası array içinde tespit edildi ve filtrelendi`);
+      }
+      
+      // Update results.success to reflect actual unique contacts
+      results.success = uniqueContactsToInsert.length;
+      
+      console.log('[Import] Inserting', uniqueContactsToInsert.length, 'unique contacts (filtered from', contactsToInsert.length, 'total)');
       console.log('[Import] GroupId being used:', groupId);
-      console.log('[Import] First contact sample:', JSON.stringify(contactsToInsert[0], null, 2));
-      console.log('[Import] Sample contacts with group_id:', contactsToInsert.slice(0, 3).map(c => ({ name: c.name, phone: c.phone, group_id: c.group_id })));
+      if (uniqueContactsToInsert.length > 0) {
+        console.log('[Import] First contact sample:', JSON.stringify(uniqueContactsToInsert[0], null, 2));
+        console.log('[Import] Sample contacts with group_id:', uniqueContactsToInsert.slice(0, 3).map(c => ({ name: c.name, phone: c.phone, group_id: c.group_id })));
+      }
+      
+      if (uniqueContactsToInsert.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: `Import tamamlandı: Tüm numaralar zaten kayıtlı veya duplicate. ${results.success} başarılı, ${results.failed} atlandı`,
+          data: results,
+        });
+      }
       
       const { error: insertError } = await supabaseServer
         .from('contacts')
-        .insert(contactsToInsert);
+        .insert(uniqueContactsToInsert);
 
       if (insertError) {
         console.error('[Import] Insert error:', insertError);
         
         // Check if it's a duplicate key error
         if (insertError.message && insertError.message.includes('duplicate key') && insertError.message.includes('contacts_user_id_phone_key')) {
-          // This shouldn't happen if our duplicate check worked, but handle it gracefully
-          const duplicatePhones = contactsToInsert.map(c => c.phone).filter((phone, index, self) => self.indexOf(phone) !== index);
-          return NextResponse.json(
-            { 
-              success: false, 
-              message: `Duplicate telefon numarası tespit edildi. Lütfen dosyanızı kontrol edin. Duplicate numaralar: ${duplicatePhones.slice(0, 5).join(', ')}${duplicatePhones.length > 5 ? '...' : ''}`,
-              data: { errors: [`Duplicate key hatası: ${insertError.message}`] }
-            },
-            { status: 400 }
-          );
+          // Bulk insert failed due to duplicate key - try inserting one by one
+          console.warn('[Import] Bulk insert failed due to duplicate key, trying individual inserts...');
+          
+          // Re-check existing phones before individual inserts (in case they were added during processing)
+          const { data: currentExistingContacts } = await supabaseServer
+            .from('contacts')
+            .select('phone')
+            .eq('user_id', auth.user.userId);
+          
+          const currentExistingPhones = new Set((currentExistingContacts || []).map((c: any) => c.phone));
+          
+          let individualSuccess = 0;
+          let individualFailed = 0;
+          const individualErrors: string[] = [];
+          const duplicatePhonesFound: string[] = [];
+          
+          // Try inserting each contact individually
+          for (const contact of uniqueContactsToInsert) {
+            // Check again if phone exists
+            if (currentExistingPhones.has(contact.phone)) {
+              individualFailed++;
+              duplicatePhonesFound.push(contact.phone);
+              continue;
+            }
+            
+            try {
+              const { error: individualError } = await supabaseServer
+                .from('contacts')
+                .insert(contact);
+              
+              if (individualError) {
+                if (individualError.message && individualError.message.includes('duplicate key')) {
+                  // Already exists - skip silently
+                  individualFailed++;
+                  duplicatePhonesFound.push(contact.phone);
+                  currentExistingPhones.add(contact.phone); // Add to set to prevent future duplicates
+                } else {
+                  individualFailed++;
+                  individualErrors.push(`${contact.phone}: ${individualError.message}`);
+                }
+              } else {
+                individualSuccess++;
+                currentExistingPhones.add(contact.phone); // Add to set to prevent future duplicates
+              }
+            } catch (err: any) {
+              individualFailed++;
+              individualErrors.push(`${contact.phone}: ${err.message || 'Bilinmeyen hata'}`);
+            }
+          }
+          
+          // Update results
+          results.success = individualSuccess;
+          results.failed = individualFailed;
+          if (duplicatePhonesFound.length > 0) {
+            results.errors.push(`${duplicatePhonesFound.length} numara zaten kayıtlı: ${duplicatePhonesFound.slice(0, 5).join(', ')}${duplicatePhonesFound.length > 5 ? '...' : ''}`);
+          }
+          results.errors = [...results.errors, ...individualErrors];
+          
+          return NextResponse.json({
+            success: true,
+            message: `Import tamamlandı: ${individualSuccess} başarılı, ${individualFailed} atlandı (zaten kayıtlı veya hata)`,
+            data: results,
+          });
         }
         
         return NextResponse.json(
