@@ -446,10 +446,11 @@ export default function SMSReportsPage() {
     try {
       setLoadingBulkReports(true);
       // Get all messages first (for grouping), then paginate the grouped results
+      // NOTE: Don't send status filter to API - we filter after grouping by report status
       const params: any = { limit: 10000 }; // Get all for grouping
       if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
       if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
-      if (bulkFilters.status) params.status = bulkFilters.status;
+      // Status filter is applied after grouping, not at API level
       if (isAdmin && bulkFilters.userId) params.userId = bulkFilters.userId;
       if (bulkFilters.messageSearch) params.messageSearch = bulkFilters.messageSearch;
 
@@ -741,17 +742,21 @@ export default function SMSReportsPage() {
     }
   }, [tabValue, isAdmin]);
 
-  // Filter change effects - reset page to 1 when filters change
+  // Filter change effects - reset page to 1 when filters change and reload data
   useEffect(() => {
     if (tabValue === 'sms') {
       setSmsPage(1);
+      loadHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch]);
 
   useEffect(() => {
     if (tabValue === 'bulk') {
       setBulkPage(1);
+      loadBulkReports();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch]);
 
   useEffect(() => {

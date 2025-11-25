@@ -44,8 +44,20 @@ export async function GET(request: NextRequest) {
       query = query.lte('sent_at', end.toISOString());
     }
 
+    // Status filtering - support both English and Turkish status values
     if (status) {
-      query = query.eq('status', status);
+      const statusMap: Record<string, string[]> = {
+        'sent': ['sent', 'gönderildi', 'rapor_bekliyor'],
+        'delivered': ['delivered', 'iletildi'],
+        'failed': ['failed', 'iletilmedi', 'zaman_aşımı', 'timeout'],
+      };
+      
+      const mappedStatuses = statusMap[status.toLowerCase()] || [status];
+      if (mappedStatuses.length === 1) {
+        query = query.eq('status', mappedStatuses[0]);
+      } else {
+        query = query.in('status', mappedStatuses);
+      }
     }
     
     // Phone number filtering
