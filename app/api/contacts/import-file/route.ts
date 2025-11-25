@@ -361,7 +361,10 @@ export async function POST(request: NextRequest) {
         if (seenPhones.has(contact.phone)) {
           // Duplicate found in array - skip it
           duplicatePhonesInArray.push(contact.phone);
-          results.failed++;
+          results.skipped++;
+          results.skippedDuplicate++;
+          // Decrease success count since this was counted as success in the loop
+          results.success--;
           continue;
         }
         seenPhones.add(contact.phone);
@@ -373,8 +376,19 @@ export async function POST(request: NextRequest) {
         results.errors.push(`${duplicatePhonesInArray.length} duplicate telefon numarası array içinde tespit edildi ve filtrelendi`);
       }
       
-      // Update results.success to reflect actual unique contacts
-      results.success = uniqueContactsToInsert.length;
+      // Ensure success count matches unique contacts to insert (already adjusted in loop above)
+      if (uniqueContactsToInsert.length !== results.success) {
+        console.warn(`[Import] Success count mismatch: ${results.success} vs ${uniqueContactsToInsert.length} unique contacts. Adjusting...`);
+        // This shouldn't happen if we adjusted correctly above, but fix it if needed
+        const adjustment = uniqueContactsToInsert.length - results.success;
+        if (adjustment !== 0) {
+          results.success = uniqueContactsToInsert.length;
+          if (adjustment < 0) {
+            results.skipped = (results.skipped || 0) - adjustment;
+            results.skippedDuplicate = (results.skippedDuplicate || 0) - adjustment;
+          }
+        }
+      }
       
       console.log('[Import] Inserting', uniqueContactsToInsert.length, 'unique contacts (filtered from', contactsToInsert.length, 'total)');
       console.log('[Import] GroupId being used:', groupId);
@@ -526,8 +540,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build final message
+    // Build final message - always show all counts
+    const totalProcessed = results.success + results.failed + (results.skipped || 0);
     let messageParts: string[] = [];
+    
     if (results.success > 0) {
       messageParts.push(`${results.success} başarılı`);
     }
@@ -542,12 +558,22 @@ export async function POST(request: NextRequest) {
       if (results.skippedDuplicate > 0) {
         skipDetails.push(`${results.skippedDuplicate} duplicate`);
       }
-      messageParts.push(`${results.skipped} atlandı (${skipDetails.join(', ')})`);
+      if (skipDetails.length > 0) {
+        messageParts.push(`${results.skipped} atlandı (${skipDetails.join(', ')})`);
+      } else {
+        messageParts.push(`${results.skipped} atlandı`);
+      }
     }
     
-    const finalMessage = messageParts.length > 0 
-      ? `Import tamamlandı: ${messageParts.join(', ')}`
-      : `Import tamamlandı: ${results.success} başarılı, ${results.failed} başarısız`;
+    // If no parts, show default message
+    if (messageParts.length === 0) {
+      messageParts.push(`${results.success} başarılı`);
+      if (results.failed > 0) {
+        messageParts.push(`${results.failed} başarısız`);
+      }
+    }
+    
+    const finalMessage = `Import tamamlandı: ${messageParts.join(', ')}${totalProcessed > 0 ? ` (Toplam ${totalProcessed} kişi işlendi)` : ''}`;
 
     return NextResponse.json({
       success: true,
