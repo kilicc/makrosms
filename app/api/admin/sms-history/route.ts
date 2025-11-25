@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const status = searchParams.get('status');
+    const phoneNumber = searchParams.get('phoneNumber');
+    const messageSearch = searchParams.get('messageSearch');
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -57,6 +59,16 @@ export async function GET(request: NextRequest) {
     // Status filtering
     if (status) {
       query = query.eq('status', status);
+    }
+    
+    // Phone number filtering
+    if (phoneNumber) {
+      query = query.ilike('phone_number', `%${phoneNumber}%`);
+    }
+    
+    // Message search filtering
+    if (messageSearch) {
+      query = query.ilike('message', `%${messageSearch}%`);
     }
 
     const { data: messagesData, count, error } = await query

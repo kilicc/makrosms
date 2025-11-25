@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Collapse } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, TextField, Button, Alert, CircularProgress, Select, MenuItem, FormControl, InputLabel, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Collapse, Pagination, Stack } from '@mui/material';
 import { Close, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
@@ -98,6 +98,22 @@ export default function SMSReportsPage() {
   const [bulkReportDetails, setBulkReportDetails] = useState<any[]>([]);
   const [loadingBulkDetails, setLoadingBulkDetails] = useState(false);
   const [bulkDetailDialogOpen, setBulkDetailDialogOpen] = useState(false);
+  
+  // Pagination states
+  const [smsPage, setSmsPage] = useState(1);
+  const [smsLimit] = useState(50);
+  const [smsTotal, setSmsTotal] = useState(0);
+  const [smsTotalPages, setSmsTotalPages] = useState(0);
+  
+  const [bulkPage, setBulkPage] = useState(1);
+  const [bulkLimit] = useState(50);
+  const [bulkTotal, setBulkTotal] = useState(0);
+  const [bulkTotalPages, setBulkTotalPages] = useState(0);
+  
+  const [paymentPage, setPaymentPage] = useState(1);
+  const [paymentLimit] = useState(50);
+  const [paymentTotal, setPaymentTotal] = useState(0);
+  const [paymentTotalPages, setPaymentTotalPages] = useState(0);
 
   const userRole = typeof user?.role === 'string' ? user.role.toLowerCase() : '';
   const isAdmin = !authLoading && (userRole === 'admin' || userRole === 'moderator' || userRole === 'administrator');
@@ -144,7 +160,10 @@ export default function SMSReportsPage() {
     setLoading(true);
     setError('');
     try {
-      const params: any = {};
+      const params: any = {
+        page: smsPage.toString(),
+        limit: smsLimit.toString(),
+      };
       if (filters.startDate) params.startDate = filters.startDate;
       if (filters.endDate) params.endDate = filters.endDate;
       if (filters.status) params.status = filters.status;
@@ -156,21 +175,14 @@ export default function SMSReportsPage() {
       const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
       const response = await api.get(endpoint, { params });
       if (response.data.success) {
-        let messages = response.data.data.messages || [];
+        const data = response.data.data;
+        setMessages(data.messages || []);
         
-        // Client-side filtering for phone and message if API doesn't support it
-        if (filters.phoneNumber && !params.phoneNumber) {
-          messages = messages.filter((msg: SmsMessage) => 
-            msg.phoneNumber.includes(filters.phoneNumber)
-          );
+        // Pagination bilgilerini güncelle
+        if (data.pagination) {
+          setSmsTotal(data.pagination.total || 0);
+          setSmsTotalPages(data.pagination.totalPages || 0);
         }
-        if (filters.messageSearch && !params.messageSearch) {
-          messages = messages.filter((msg: SmsMessage) => 
-            msg.message.toLowerCase().includes(filters.messageSearch.toLowerCase())
-          );
-        }
-        
-        setMessages(messages);
       } else {
         setError(response.data.message || 'Veri yüklenirken bir hata oluştu');
       }
@@ -186,7 +198,8 @@ export default function SMSReportsPage() {
   const loadBulkReports = async () => {
     try {
       setLoadingBulkReports(true);
-      const params: any = { limit: 10000 }; // 1000+ kişiye gönderimler için limit artırıldı
+      // Get all messages first (for grouping), then paginate the grouped results
+      const params: any = { limit: 10000 }; // Get all for grouping
       if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
       if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
       if (bulkFilters.status) params.status = bulkFilters.status;
@@ -198,30 +211,6 @@ export default function SMSReportsPage() {
       
       if (response.data.success) {
         let messages = response.data.data.messages || [];
-        
-        // Client-side filtering
-        if (bulkFilters.messageSearch && !params.messageSearch) {
-          messages = messages.filter((msg: any) => 
-            (msg.message || '').toLowerCase().includes(bulkFilters.messageSearch.toLowerCase())
-          );
-        }
-        if (bulkFilters.userId && !params.userId && isAdmin) {
-          messages = messages.filter((msg: any) => 
-            msg.user?.id === bulkFilters.userId
-          );
-        }
-        if (bulkFilters.startDate) {
-          messages = messages.filter((msg: any) => 
-            new Date(msg.sentAt) >= new Date(bulkFilters.startDate)
-          );
-        }
-        if (bulkFilters.endDate) {
-          const endDate = new Date(bulkFilters.endDate);
-          endDate.setHours(23, 59, 59, 999);
-          messages = messages.filter((msg: any) => 
-            new Date(msg.sentAt) <= endDate
-          );
-        }
         
         // Mesajları grupla (aynı mesaj içeriğine sahip olanları)
         const groupedMessages = new Map<string, {
@@ -236,7 +225,8 @@ export default function SMSReportsPage() {
 
         messages.forEach((msg: any) => {
           const messageText = msg.message || '';
-          const messageKey = messageText.substring(0, 50);
+          // Use full message as key for exact grouping
+          const messageKey = messageText;
           
           if (!groupedMessages.has(messageKey)) {
             groupedMessages.set(messageKey, {
@@ -244,7 +234,7 @@ export default function SMSReportsPage() {
               recipients: 0,
               successCount: 0,
               failedCount: 0,
-              sentAt: msg.sentAt,
+              sentAt: msg.sentAt || msg.sent_at,
               status: 'sent',
               messageIds: [] as string[],
             });
@@ -256,13 +246,15 @@ export default function SMSReportsPage() {
             group.messageIds = [];
           }
           group.messageIds.push(msg.id);
-          if (msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'iletildi' || msg.status === 'gönderildi') {
+          const status = (msg.status || '').toLowerCase();
+          if (status === 'sent' || status === 'delivered' || status === 'iletildi' || status === 'gönderildi') {
             group.successCount++;
-          } else if (msg.status === 'failed' || msg.status === 'iletilmedi' || msg.status === 'zaman_aşımı') {
+          } else if (status === 'failed' || status === 'iletilmedi' || status === 'zaman_aşımı') {
             group.failedCount++;
           }
-          if (new Date(msg.sentAt) > new Date(group.sentAt)) {
-            group.sentAt = msg.sentAt;
+          const msgDate = new Date(msg.sentAt || msg.sent_at);
+          if (msgDate > new Date(group.sentAt)) {
+            group.sentAt = msg.sentAt || msg.sent_at;
           }
           if (group.failedCount > 0 && group.successCount > 0) {
             group.status = 'partial';
@@ -291,7 +283,15 @@ export default function SMSReportsPage() {
           reports = reports.filter((report) => report.status === bulkFilters.status);
         }
 
-        setBulkSmsReports(reports);
+        // Pagination for grouped reports
+        const total = reports.length;
+        const from = (bulkPage - 1) * bulkLimit;
+        const to = from + bulkLimit;
+        const paginatedReports = reports.slice(from, to);
+        
+        setBulkTotal(total);
+        setBulkTotalPages(Math.ceil(total / bulkLimit));
+        setBulkSmsReports(paginatedReports);
       }
     } catch (error) {
       console.error('Bulk reports load error:', error);
@@ -389,7 +389,10 @@ export default function SMSReportsPage() {
     try {
       setLoadingPaymentRequests(true);
       setPaymentRequestsError('');
-      const params: any = {};
+      const params: any = {
+        page: paymentPage.toString(),
+        limit: paymentLimit.toString(),
+      };
       if (paymentFilters.startDate) params.startDate = paymentFilters.startDate;
       if (paymentFilters.endDate) params.endDate = paymentFilters.endDate;
       if (paymentFilters.status) params.status = paymentFilters.status;
@@ -401,53 +404,14 @@ export default function SMSReportsPage() {
       
       const response = await api.get('/admin/payment-requests', { params });
       if (response.data.success) {
-        let requests = response.data.data.requests || [];
+        const data = response.data.data;
+        setPaymentRequests(data.requests || []);
         
-        // Client-side filtering if API doesn't support all filters
-        if (paymentFilters.transactionId && !params.transactionId) {
-          requests = requests.filter((req: any) => 
-            req.transactionId?.toLowerCase().includes(paymentFilters.transactionId.toLowerCase())
-          );
+        // Pagination bilgilerini güncelle
+        if (data.pagination) {
+          setPaymentTotal(data.pagination.total || 0);
+          setPaymentTotalPages(data.pagination.totalPages || 0);
         }
-        if (paymentFilters.minAmount && !params.minAmount) {
-          requests = requests.filter((req: any) => 
-            Number(req.amount) >= Number(paymentFilters.minAmount)
-          );
-        }
-        if (paymentFilters.maxAmount && !params.maxAmount) {
-          requests = requests.filter((req: any) => 
-            Number(req.amount) <= Number(paymentFilters.maxAmount)
-          );
-        }
-        if (paymentFilters.paymentMethod && !params.paymentMethod) {
-          requests = requests.filter((req: any) => 
-            req.paymentMethod?.toLowerCase().includes(paymentFilters.paymentMethod.toLowerCase())
-          );
-        }
-        if (paymentFilters.userId && !params.userId) {
-          requests = requests.filter((req: any) => 
-            req.user?.id === paymentFilters.userId
-          );
-        }
-        if (paymentFilters.startDate) {
-          requests = requests.filter((req: any) => 
-            new Date(req.createdAt) >= new Date(paymentFilters.startDate)
-          );
-        }
-        if (paymentFilters.endDate) {
-          const endDate = new Date(paymentFilters.endDate);
-          endDate.setHours(23, 59, 59, 999);
-          requests = requests.filter((req: any) => 
-            new Date(req.createdAt) <= endDate
-          );
-        }
-        if (paymentFilters.status && !params.status) {
-          requests = requests.filter((req: any) => 
-            req.status === paymentFilters.status
-          );
-        }
-        
-        setPaymentRequests(requests);
       } else {
         setPaymentRequestsError(response.data.message || 'Ödeme raporları yüklenirken bir hata oluştu');
       }
@@ -489,18 +453,18 @@ export default function SMSReportsPage() {
     }
   }, [tabValue, isAdmin]);
 
-  // Filter change effects
+  // Filter change effects - reset page to 1 when filters change
   useEffect(() => {
     if (tabValue === 'sms') {
-      loadHistory();
+      setSmsPage(1);
     }
-  }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch, tabValue]);
+  }, [filters.userId, filters.startDate, filters.endDate, filters.status, filters.phoneNumber, filters.messageSearch]);
 
   useEffect(() => {
     if (tabValue === 'bulk') {
-      loadBulkReports();
+      setBulkPage(1);
     }
-  }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch, tabValue]);
+  }, [bulkFilters.startDate, bulkFilters.endDate, bulkFilters.status, bulkFilters.userId, bulkFilters.messageSearch]);
 
   useEffect(() => {
     if (tabValue === 'stats' && isAdmin) {
@@ -510,9 +474,9 @@ export default function SMSReportsPage() {
 
   useEffect(() => {
     if (tabValue === 'payments' && isAdmin) {
-      loadPaymentRequests();
+      setPaymentPage(1);
     }
-  }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId, tabValue, isAdmin]);
+  }, [paymentFilters.startDate, paymentFilters.endDate, paymentFilters.status, paymentFilters.userId, paymentFilters.paymentMethod, paymentFilters.minAmount, paymentFilters.maxAmount, paymentFilters.transactionId]);
 
   return (
     <ProtectedRoute>
@@ -827,61 +791,81 @@ export default function SMSReportsPage() {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        {isAdmin && (
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
-                        )}
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kişi</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Maliyet</TableCell>
-                        <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {messages.map((message) => (
-                        <TableRow key={message.id}>
+                <>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
                           {isAdmin && (
-                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                              {message.user?.username || '-'}
-                              <br />
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
-                                {message.user?.email || '-'}
-                              </Typography>
-                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kullanıcı</TableCell>
                           )}
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.contact?.name || '-'}</TableCell>
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.phoneNumber}</TableCell>
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.message.substring(0, 50)}...</TableCell>
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                            <Chip
-                              label={message.status}
-                              color={getStatusColor(message.status)}
-                              size="small"
-                              sx={{
-                                fontSize: '0.65rem',
-                                fontWeight: 500,
-                                height: 20,
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(message.cost)} kredi</TableCell>
-                          <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
-                            <ClientDate date={message.sentAt} />
-                          </TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Kişi</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Telefon</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Maliyet</TableCell>
+                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {messages.map((message) => (
+                          <TableRow key={message.id}>
+                            {isAdmin && (
+                              <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                                {message.user?.username || '-'}
+                                <br />
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                  {message.user?.email || '-'}
+                                </Typography>
+                              </TableCell>
+                            )}
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.contact?.name || '-'}</TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.phoneNumber}</TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{message.message.substring(0, 50)}...</TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <Chip
+                                label={message.status}
+                                color={getStatusColor(message.status)}
+                                size="small"
+                                sx={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 500,
+                                  height: 20,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>{Number(message.cost)} kredi</TableCell>
+                            <TableCell sx={{ fontSize: '12px', py: 0.75 }}>
+                              <ClientDate date={message.sentAt} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  {smsTotalPages > 1 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                      <Stack spacing={2}>
+                        <Pagination
+                          count={smsTotalPages}
+                          page={smsPage}
+                          onChange={(e, value) => setSmsPage(value)}
+                          color="primary"
+                          size="small"
+                          showFirstButton
+                          showLastButton
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                          Toplam {smsTotal} kayıt, Sayfa {smsPage} / {smsTotalPages}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  )}
+                </>
               )}
             </Paper>
-              </Box>
-            )}
+          </Box>
+        )}
 
             {/* Bulk SMS Tab */}
             {tabValue === 'bulk' && (
@@ -1104,6 +1088,24 @@ export default function SMSReportsPage() {
                     </Table>
                   </TableContainer>
                 )}
+                {bulkTotalPages > 1 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <Stack spacing={2}>
+                      <Pagination
+                        count={bulkTotalPages}
+                        page={bulkPage}
+                        onChange={(e, value) => setBulkPage(value)}
+                        color="primary"
+                        size="small"
+                        showFirstButton
+                        showLastButton
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                        Toplam {bulkTotal} rapor, Sayfa {bulkPage} / {bulkTotalPages}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                )}
               </Box>
             )}
 
@@ -1157,7 +1159,7 @@ export default function SMSReportsPage() {
                           Başarılı
                         </Typography>
                         <Typography variant="body2" sx={{ fontSize: '14px', fontWeight: 600, color: '#4caf50' }}>
-                          {selectedBulkReport.successCount}
+                          {selectedBulkReport.successCount} ({selectedBulkReport.recipients > 0 ? Math.round((selectedBulkReport.successCount / selectedBulkReport.recipients) * 100) : 0}%)
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 6, sm: 3 }}>
@@ -1165,7 +1167,7 @@ export default function SMSReportsPage() {
                           Başarısız
                         </Typography>
                         <Typography variant="body2" sx={{ fontSize: '14px', fontWeight: 600, color: '#f44336' }}>
-                          {selectedBulkReport.failedCount}
+                          {selectedBulkReport.failedCount} ({selectedBulkReport.recipients > 0 ? Math.round((selectedBulkReport.failedCount / selectedBulkReport.recipients) * 100) : 0}%)
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 6, sm: 3 }}>
@@ -1177,6 +1179,16 @@ export default function SMSReportsPage() {
                         </Typography>
                       </Grid>
                     </Grid>
+                    {bulkReportDetails.length > 0 && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                          Toplam Maliyet
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '14px', fontWeight: 600 }}>
+                          {bulkReportDetails.reduce((sum: number, detail: any) => sum + (Number(detail.cost) || 0), 0).toFixed(2)} kredi
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
                 
@@ -2492,6 +2504,24 @@ export default function SMSReportsPage() {
                         </TableBody>
                       </Table>
                     </TableContainer>
+                    {paymentTotalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                        <Stack spacing={2}>
+                          <Pagination
+                            count={paymentTotalPages}
+                            page={paymentPage}
+                            onChange={(e, value) => setPaymentPage(value)}
+                            color="primary"
+                            size="small"
+                            showFirstButton
+                            showLastButton
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                            Toplam {paymentTotal} kayıt, Sayfa {paymentPage} / {paymentTotalPages}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    )}
 
                     {/* Ödeme Detayları Dialog */}
                     <Dialog

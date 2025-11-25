@@ -23,6 +23,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const userId = searchParams.get('userId');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const paymentMethod = searchParams.get('paymentMethod');
+    const minAmount = searchParams.get('minAmount');
+    const maxAmount = searchParams.get('maxAmount');
+    const transactionId = searchParams.get('transactionId');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const from = (page - 1) * limit;
@@ -35,6 +42,40 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq('status', status);
+    }
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    // Date filtering
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', start.toISOString());
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query = query.lte('created_at', end.toISOString());
+    }
+    
+    // Payment method filtering
+    if (paymentMethod) {
+      query = query.ilike('payment_method', `%${paymentMethod}%`);
+    }
+    
+    // Amount filtering
+    if (minAmount) {
+      query = query.gte('amount', parseFloat(minAmount));
+    }
+    if (maxAmount) {
+      query = query.lte('amount', parseFloat(maxAmount));
+    }
+    
+    // Transaction ID filtering
+    if (transactionId) {
+      query = query.ilike('transaction_id', `%${transactionId}%`);
     }
 
     const { data: requestsData, count, error } = await query
