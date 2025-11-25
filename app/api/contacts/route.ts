@@ -32,7 +32,11 @@ export async function GET(request: NextRequest) {
       .eq('user_id', auth.user.userId);
 
     if (group) {
-      query = query.eq('group_id', group);
+      if (group === 'none') {
+        query = query.is('group_id', null);
+      } else {
+        query = query.eq('group_id', group);
+      }
     }
 
     if (search) {

@@ -6,7 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, 
   Alert, Chip, FormControl, InputLabel, Select, MenuItem, 
   CircularProgress, IconButton, InputAdornment, Tooltip,
-  Stack, Tabs, Tab, Card, CardContent
+  Stack, Tabs, Tab, Card, CardContent, Checkbox, Pagination
 } from '@mui/material';
 import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
@@ -16,7 +16,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Add, Edit, Delete, Phone, Email, 
   Search, CheckCircle, ImportExport, FileUpload,
-  Group, People
+  Group, People, Sms
 } from '@mui/icons-material';
 
 interface Contact {
@@ -26,6 +26,7 @@ interface Contact {
   email?: string;
   notes?: string;
   tags: string[];
+  contactCount?: number;
   group?: {
     id: string;
     name: string;
@@ -56,6 +57,16 @@ export default function ContactsPage() {
   // Search and filter
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
+  const [totalContacts, setTotalContacts] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  
+  // Selection
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
   
   // Dialogs
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -90,15 +101,37 @@ export default function ContactsPage() {
   useEffect(() => {
     loadContacts();
     loadGroups();
-  }, []);
+  }, [page, searchQuery, groupFilter]);
 
   const loadContacts = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await api.get('/contacts');
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      
+      if (groupFilter !== 'all') {
+        if (groupFilter === 'none') {
+          // For "none" we need to filter client-side or use a different approach
+        } else {
+          params.append('group', groupFilter);
+        }
+      }
+      
+      const response = await api.get(`/contacts?${params.toString()}`);
       if (response.data.success) {
-        setContacts(response.data.data.contacts || []);
+        const data = response.data.data;
+        setContacts(data.contacts || []);
+        if (data.pagination) {
+          setTotalContacts(data.pagination.total || 0);
+          setTotalPages(data.pagination.totalPages || 0);
+        }
       } else {
         setError(response.data.message || 'Kişiler yüklenirken bir hata oluştu');
       }
@@ -123,19 +156,54 @@ export default function ContactsPage() {
     }
   };
 
-  // Filter contacts
+  // Filter contacts (client-side filtering for "none" group)
   const filteredContacts = contacts.filter((contact) => {
-    const matchesSearch = 
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.includes(searchQuery) ||
-      (contact.email && contact.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesGroup = groupFilter === 'all' || 
-      (groupFilter === 'none' && !contact.group) ||
-      contact.group?.id === groupFilter;
-    
-    return matchesSearch && matchesGroup;
+    if (groupFilter === 'none') {
+      return !contact.group;
+    }
+    return true; // Server-side filtering handles the rest
   });
+  
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setSelectedContacts(filteredContacts.map(c => c.id));
+      setSelectAll(true);
+    } else {
+      setSelectedContacts([]);
+      setSelectAll(false);
+    }
+  };
+  
+  const handleSelectContact = (contactId: string) => {
+    setSelectedContacts(prev => 
+      prev.includes(contactId)
+        ? prev.filter(id => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
+  
+  const handleDeleteSelected = async () => {
+    if (selectedContacts.length === 0) return;
+    
+    if (!confirm(`${selectedContacts.length} kişiyi silmek istediğinizden emin misiniz?`)) return;
+    
+    try {
+      setLoading(true);
+      // Delete contacts one by one (or implement bulk delete endpoint)
+      for (const id of selectedContacts) {
+        await api.delete(`/contacts/${id}`);
+      }
+      setSuccess(`${selectedContacts.length} kişi silindi`);
+      setSelectedContacts([]);
+      setSelectAll(false);
+      await Promise.all([loadContacts(), loadGroups()]);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Silme hatası');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleContactSubmit = async () => {
     try {
@@ -385,11 +453,29 @@ export default function ContactsPage() {
               <>
                 {/* Contacts Header */}
                 <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {filteredContacts.length} kişi
-                  </Typography>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {totalContacts} kişi (Sayfa {page}/{totalPages || 1})
+                    </Typography>
+                    {selectedContacts.length > 0 && (
+                      <Typography variant="body2" color="primary" sx={{ mt: 0.5 }}>
+                        {selectedContacts.length} kişi seçildi
+                      </Typography>
+                    )}
+                  </Box>
                   
                   <Stack direction="row" spacing={2}>
+                    {selectedContacts.length > 0 && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<Delete />}
+                        onClick={handleDeleteSelected}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Seçilenleri Sil ({selectedContacts.length})
+                      </Button>
+                    )}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -481,16 +567,30 @@ export default function ContactsPage() {
                   <Table>
                     <TableHead>
                       <TableRow>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectAll}
+                            indeterminate={selectedContacts.length > 0 && selectedContacts.length < filteredContacts.length}
+                            onChange={handleSelectAll}
+                          />
+                        </TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>İsim</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Telefon</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Grup</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }} align="center">Mesaj</TableCell>
                         <TableCell sx={{ fontWeight: 600 }} align="right">İşlemler</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {filteredContacts.map((contact) => (
-                        <TableRow key={contact.id} hover>
+                        <TableRow key={contact.id} hover selected={selectedContacts.includes(contact.id)}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedContacts.includes(contact.id)}
+                              onChange={() => handleSelectContact(contact.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {contact.name}
@@ -527,6 +627,14 @@ export default function ContactsPage() {
                               <Typography variant="body2" color="text.secondary">Grup yok</Typography>
                             )}
                           </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                              <Sms fontSize="small" color="action" />
+                              <Typography variant="body2">
+                                {contact.contactCount || 0}
+                              </Typography>
+                            </Box>
+                          </TableCell>
                           <TableCell align="right">
                             <Stack direction="row" spacing={1} justifyContent="flex-end">
                               <Tooltip title="Düzenle">
@@ -546,6 +654,24 @@ export default function ContactsPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+              )}
+              
+              {/* Pagination */}
+              {!loading && filteredContacts.length > 0 && totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(e, newPage) => {
+                      setPage(newPage);
+                      setSelectedContacts([]);
+                      setSelectAll(false);
+                    }}
+                    color="primary"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
               )}
             </Paper>
               </>
