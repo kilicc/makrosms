@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Assessment, FilterList, BarChart, People, Payment, MoneyOff, Send, AccountBalanceWallet, Link, Visibility, Language, Public, LocationOn } from '@mui/icons-material';
+import { Assessment, FilterList, BarChart, People, Payment, MoneyOff, Send, AccountBalanceWallet, Link, Visibility, Language, Public, LocationOn, Download, PictureAsPdf } from '@mui/icons-material';
 import { gradients } from '@/lib/theme';
 import ClientDate from '@/components/ClientDate';
 
@@ -169,6 +169,190 @@ export default function SMSReportsPage() {
       console.error('Users load error:', error);
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  // Export functions
+  const exportToExcel = async (data: any[], filename: string) => {
+    try {
+      const XLSX = require('xlsx');
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Rapor');
+      
+      // Generate Excel file buffer
+      const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Excel export error:', error);
+      setError('Excel dosyası oluşturulurken bir hata oluştu');
+    }
+  };
+
+  const exportToPDF = async (data: any[], filename: string, columns: string[]) => {
+    try {
+      // Simple PDF generation using window.print or a library
+      // For now, we'll create a simple HTML table and print it
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        setError('Popup engellendi. Lütfen popup engelleyiciyi kapatın.');
+        return;
+      }
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${filename}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #4CAF50; color: white; }
+              tr:nth-child(even) { background-color: #f2f2f2; }
+              @media print {
+                body { margin: 0; }
+                @page { margin: 1cm; }
+              }
+            </style>
+          </head>
+          <body>
+            <h2>${filename}</h2>
+            <p>Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}</p>
+            <table>
+              <thead>
+                <tr>
+                  ${columns.map(col => `<th>${col}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `
+                  <tr>
+                    ${columns.map(col => `<td>${row[col] || ''}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.print();
+    } catch (error) {
+      console.error('PDF export error:', error);
+      setError('PDF dosyası oluşturulurken bir hata oluştu');
+    }
+  };
+
+  const handleExportSMSReports = async (format: 'excel' | 'pdf') => {
+    try {
+      // Get all messages (not just current page)
+      const params: any = { limit: 10000 };
+      if (filters.startDate) params.startDate = filters.startDate;
+      if (filters.endDate) params.endDate = filters.endDate;
+      if (filters.status) params.status = filters.status;
+      if (isAdmin && filters.userId) params.userId = filters.userId;
+      if (filters.phoneNumber) params.phoneNumber = filters.phoneNumber;
+      if (filters.messageSearch) params.messageSearch = filters.messageSearch;
+
+      const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
+      const response = await api.get(endpoint, { params });
+      
+      if (response.data.success) {
+        const allMessages = response.data.data.messages || [];
+        const exportData = allMessages.map((msg: any) => ({
+          'Kullanıcı': isAdmin ? (msg.user?.username || '-') : '-',
+          'Kişi': msg.contact?.name || '-',
+          'Telefon': msg.phoneNumber,
+          'Mesaj': msg.message,
+          'Durum': msg.status,
+          'Maliyet': Number(msg.cost) || 0,
+          'Tarih': new Date(msg.sentAt).toLocaleString('tr-TR'),
+        }));
+
+        if (format === 'excel') {
+          await exportToExcel(exportData, 'SMS_Raporları');
+        } else {
+          const columns = isAdmin 
+            ? ['Kullanıcı', 'Kişi', 'Telefon', 'Mesaj', 'Durum', 'Maliyet', 'Tarih']
+            : ['Kişi', 'Telefon', 'Mesaj', 'Durum', 'Maliyet', 'Tarih'];
+          await exportToPDF(exportData, 'SMS Raporları', columns);
+        }
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      setError('Raporlar indirilirken bir hata oluştu');
+    }
+  };
+
+  const handleExportBulkReports = async (format: 'excel' | 'pdf') => {
+    try {
+      // Get all bulk reports
+      const params: any = { limit: 10000 };
+      if (bulkFilters.startDate) params.startDate = bulkFilters.startDate;
+      if (bulkFilters.endDate) params.endDate = bulkFilters.endDate;
+      if (bulkFilters.status) params.status = bulkFilters.status;
+      if (isAdmin && bulkFilters.userId) params.userId = bulkFilters.userId;
+      if (bulkFilters.messageSearch) params.messageSearch = bulkFilters.messageSearch;
+
+      const endpoint = isAdmin ? '/admin/sms-history' : '/bulk-sms/history';
+      const response = await api.get(endpoint, { params });
+      
+      if (response.data.success) {
+        let messages = response.data.data.messages || [];
+        
+        // Group messages (same logic as loadBulkReports)
+        const groupedMessages = new Map<string, any>();
+        messages.forEach((msg: any) => {
+          const messageText = msg.message || '';
+          const messageKey = messageText;
+          
+          if (!groupedMessages.has(messageKey)) {
+            groupedMessages.set(messageKey, {
+              message: messageText,
+              recipients: 0,
+              successCount: 0,
+              failedCount: 0,
+              sentAt: msg.sentAt || msg.sent_at,
+            });
+          }
+
+          const group = groupedMessages.get(messageKey)!;
+          group.recipients++;
+          const status = (msg.status || '').toLowerCase();
+          if (status === 'sent' || status === 'delivered' || status === 'iletildi' || status === 'gönderildi') {
+            group.successCount++;
+          } else if (status === 'failed' || status === 'iletilmedi' || status === 'zaman_aşımı') {
+            group.failedCount++;
+          }
+        });
+
+        const exportData = Array.from(groupedMessages.values()).map((group) => ({
+          'Mesaj': group.message.length > 100 ? group.message.substring(0, 100) + '...' : group.message,
+          'Alıcılar': group.recipients,
+          'Başarılı': group.successCount,
+          'Başarısız': group.failedCount,
+          'Durum': group.failedCount > 0 && group.successCount > 0 ? 'Kısmen Başarılı' : (group.failedCount > 0 ? 'Başarısız' : 'Başarılı'),
+          'Tarih': new Date(group.sentAt).toLocaleString('tr-TR'),
+        }));
+
+        if (format === 'excel') {
+          await exportToExcel(exportData, 'Toplu_SMS_Raporları');
+        } else {
+          await exportToPDF(exportData, 'Toplu SMS Raporları', ['Mesaj', 'Alıcılar', 'Başarılı', 'Başarısız', 'Durum', 'Tarih']);
+        }
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      setError('Raporlar indirilirken bir hata oluştu');
     }
   };
 
@@ -857,6 +1041,45 @@ export default function SMSReportsPage() {
                 </Box>
               ) : (
                 <>
+                  {/* Export Buttons */}
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<Download />}
+                      onClick={() => handleExportSMSReports('excel')}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '12px',
+                        borderColor: 'success.main',
+                        color: 'success.main',
+                        '&:hover': {
+                          borderColor: 'success.dark',
+                          backgroundColor: 'success.light',
+                        },
+                      }}
+                    >
+                      Excel İndir
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<PictureAsPdf />}
+                      onClick={() => handleExportSMSReports('pdf')}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '12px',
+                        borderColor: 'error.main',
+                        color: 'error.main',
+                        '&:hover': {
+                          borderColor: 'error.dark',
+                          backgroundColor: 'error.light',
+                        },
+                      }}
+                    >
+                      PDF İndir
+                    </Button>
+                  </Box>
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
@@ -1066,14 +1289,54 @@ export default function SMSReportsPage() {
                     </Typography>
                   </Paper>
                 ) : (
-                  <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj Şablonu</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarılı</TableCell>
-                          <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarısız</TableCell>
+                  <Paper sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                    {/* Export Buttons */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Download />}
+                        onClick={() => handleExportBulkReports('excel')}
+                        sx={{
+                          textTransform: 'none',
+                          fontSize: '12px',
+                          borderColor: 'success.main',
+                          color: 'success.main',
+                          '&:hover': {
+                            borderColor: 'success.dark',
+                            backgroundColor: 'success.light',
+                          },
+                        }}
+                      >
+                        Excel İndir
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<PictureAsPdf />}
+                        onClick={() => handleExportBulkReports('pdf')}
+                        sx={{
+                          textTransform: 'none',
+                          fontSize: '12px',
+                          borderColor: 'error.main',
+                          color: 'error.main',
+                          '&:hover': {
+                            borderColor: 'error.dark',
+                            backgroundColor: 'error.light',
+                          },
+                        }}
+                      >
+                        PDF İndir
+                      </Button>
+                    </Box>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Mesaj Şablonu</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Alıcılar</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarılı</TableCell>
+                            <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Başarısız</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Durum</TableCell>
                           <TableCell sx={{ fontSize: '12px', fontWeight: 600, py: 1 }}>Tarih</TableCell>
                         </TableRow>
@@ -1151,25 +1414,26 @@ export default function SMSReportsPage() {
                         })}
                       </TableBody>
                     </Table>
-                  </TableContainer>
-                )}
-                {bulkTotalPages > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-                    <Stack spacing={2}>
-                      <Pagination
-                        count={bulkTotalPages}
-                        page={bulkPage}
-                        onChange={(e, value) => setBulkPage(value)}
-                        color="primary"
-                        size="small"
-                        showFirstButton
-                        showLastButton
-                      />
-                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        Toplam {bulkTotal} rapor, Sayfa {bulkPage} / {bulkTotalPages}
-                      </Typography>
-                    </Stack>
-                  </Box>
+                    </TableContainer>
+                    {bulkTotalPages > 1 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                        <Stack spacing={2}>
+                          <Pagination
+                            count={bulkTotalPages}
+                            page={bulkPage}
+                            onChange={(e, value) => setBulkPage(value)}
+                            color="primary"
+                            size="small"
+                            showFirstButton
+                            showLastButton
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                            Toplam {bulkTotal} rapor, Sayfa {bulkPage} / {bulkTotalPages}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    )}
+                  </Paper>
                 )}
               </Box>
             )}
