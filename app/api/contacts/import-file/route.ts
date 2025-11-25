@@ -200,6 +200,9 @@ export async function POST(request: NextRequest) {
     const results = {
       success: 0,
       failed: 0,
+      skipped: 0, // Skipped due to duplicates or already exists
+      skippedExisting: 0, // Already exists in database
+      skippedDuplicate: 0, // Duplicate in this file
       errors: [] as string[],
     };
 
@@ -300,15 +303,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        // Check if phone already exists in database - skip silently (don't add as error)
+        // Check if phone already exists in database
         if (existingPhones.has(phone)) {
-          // Silently skip - already exists in database
+          results.skipped++;
+          results.skippedExisting++;
           continue;
         }
         
-        // Check if phone is duplicate within this import batch - skip silently (only first occurrence will be saved)
+        // Check if phone is duplicate within this import batch
         if (processedPhonesInBatch.has(phone)) {
-          // Silently skip - duplicate in this file, first occurrence will be saved
+          results.skipped++;
+          results.skippedDuplicate++;
           continue;
         }
         
@@ -379,9 +384,18 @@ export async function POST(request: NextRequest) {
       }
       
       if (uniqueContactsToInsert.length === 0) {
+        let skipMessage = '';
+        if (results.skippedExisting > 0) {
+          skipMessage += `${results.skippedExisting} numara veritabanında zaten kayıtlı`;
+        }
+        if (results.skippedDuplicate > 0) {
+          if (skipMessage) skipMessage += ', ';
+          skipMessage += `${results.skippedDuplicate} numara dosyada duplicate`;
+        }
+        
         return NextResponse.json({
           success: true,
-          message: `Import tamamlandı: Tüm numaralar zaten kayıtlı veya duplicate. ${results.success} başarılı, ${results.failed} atlandı`,
+          message: `Import tamamlandı: Tüm ${contacts.length} numara atlandı. ${skipMessage}. ${results.success} başarılı, ${results.failed} başarısız`,
           data: results,
         });
       }
@@ -448,14 +462,26 @@ export async function POST(request: NextRequest) {
           // Update results
           results.success = individualSuccess;
           results.failed = individualFailed;
+          results.skipped = results.skipped + duplicatePhonesFound.length;
+          results.skippedExisting = results.skippedExisting + duplicatePhonesFound.length;
+          
           if (duplicatePhonesFound.length > 0) {
             results.errors.push(`${duplicatePhonesFound.length} numara zaten kayıtlı: ${duplicatePhonesFound.slice(0, 5).join(', ')}${duplicatePhonesFound.length > 5 ? '...' : ''}`);
           }
           results.errors = [...results.errors, ...individualErrors];
           
+          // Build message
+          let messageParts: string[] = [];
+          if (individualSuccess > 0) {
+            messageParts.push(`${individualSuccess} başarılı`);
+          }
+          if (individualFailed > 0) {
+            messageParts.push(`${individualFailed} atlandı`);
+          }
+          
           return NextResponse.json({
             success: true,
-            message: `Import tamamlandı: ${individualSuccess} başarılı, ${individualFailed} atlandı (zaten kayıtlı veya hata)`,
+            message: `Import tamamlandı: ${messageParts.join(', ')} (${duplicatePhonesFound.length} zaten kayıtlı)`,
             data: results,
           });
         }
@@ -500,9 +526,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Build final message
+    let messageParts: string[] = [];
+    if (results.success > 0) {
+      messageParts.push(`${results.success} başarılı`);
+    }
+    if (results.failed > 0) {
+      messageParts.push(`${results.failed} başarısız`);
+    }
+    if (results.skipped > 0) {
+      let skipDetails: string[] = [];
+      if (results.skippedExisting > 0) {
+        skipDetails.push(`${results.skippedExisting} zaten kayıtlı`);
+      }
+      if (results.skippedDuplicate > 0) {
+        skipDetails.push(`${results.skippedDuplicate} duplicate`);
+      }
+      messageParts.push(`${results.skipped} atlandı (${skipDetails.join(', ')})`);
+    }
+    
+    const finalMessage = messageParts.length > 0 
+      ? `Import tamamlandı: ${messageParts.join(', ')}`
+      : `Import tamamlandı: ${results.success} başarılı, ${results.failed} başarısız`;
+
     return NextResponse.json({
       success: true,
-      message: `Import tamamlandı: ${results.success} başarılı, ${results.failed} başarısız`,
+      message: finalMessage,
       data: results,
     });
   } catch (error: any) {
