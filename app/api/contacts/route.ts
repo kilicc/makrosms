@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const isActive = searchParams.get('isActive');
     const isBlocked = searchParams.get('isBlocked');
+    const idsOnly = searchParams.get('idsOnly') === 'true';
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Build Supabase query
     let query = supabaseServer
       .from('contacts')
-      .select('*, contact_groups(id, name, color)', { count: 'exact' })
+      .select(idsOnly ? 'id' : '*, contact_groups(id, name, color)', { count: 'exact' })
       .eq('user_id', auth.user.userId);
 
     if (group) {
@@ -53,36 +54,66 @@ export async function GET(request: NextRequest) {
     }
 
     // Get contacts and total count
-    const { data: contactsData, count, error: contactsError } = await query
-      .order('created_at', { ascending: false })
-      .range(from, to);
+    let contactsData: any[];
+    let count: number | null;
+    let contactsError: any;
+    
+    if (idsOnly) {
+      // For IDs only, get all without pagination
+      const result = await query.select('id');
+      contactsData = result.data || [];
+      count = contactsData.length;
+      contactsError = result.error;
+    } else {
+      // Normal paginated query
+      const result = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      contactsData = result.data || [];
+      count = result.count;
+      contactsError = result.error;
+    }
 
     if (contactsError) {
       throw new Error(contactsError.message);
     }
 
     // Format contacts data (snake_case to camelCase)
-    const contacts = (contactsData || []).map((contact: any) => ({
-      id: contact.id,
-      userId: contact.user_id,
-      groupId: contact.group_id,
-      name: contact.name,
-      phone: contact.phone,
-      email: contact.email,
-      notes: contact.notes,
-      tags: contact.tags || [],
-      isActive: contact.is_active ?? true,
-      isBlocked: contact.is_blocked ?? false,
-      lastContacted: contact.last_contacted,
-      contactCount: contact.contact_count || 0,
-      createdAt: contact.created_at,
-      updatedAt: contact.updated_at,
-      group: contact.contact_groups ? {
-        id: contact.contact_groups.id,
-        name: contact.contact_groups.name,
-        color: contact.contact_groups.color,
-      } : null,
-    }));
+    let contacts: any[];
+    
+    if (idsOnly) {
+      // Return only IDs
+      contacts = (contactsData || []).map((contact: any) => contact.id);
+      return NextResponse.json({
+        success: true,
+        data: {
+          ids: contacts,
+          total: count || 0,
+        },
+      });
+    } else {
+      contacts = (contactsData || []).map((contact: any) => ({
+        id: contact.id,
+        userId: contact.user_id,
+        groupId: contact.group_id,
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        notes: contact.notes,
+        tags: contact.tags || [],
+        isActive: contact.is_active ?? true,
+        isBlocked: contact.is_blocked ?? false,
+        lastContacted: contact.last_contacted,
+        contactCount: contact.contact_count || 0,
+        createdAt: contact.created_at,
+        updatedAt: contact.updated_at,
+        group: contact.contact_groups ? {
+          id: contact.contact_groups.id,
+          name: contact.contact_groups.name,
+          color: contact.contact_groups.color,
+        } : null,
+      }));
+    }
 
     const total = count || 0;
 

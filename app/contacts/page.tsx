@@ -174,6 +174,41 @@ export default function ContactsPage() {
     }
   };
   
+  const handleSelectAllPages = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        idsOnly: 'true',
+      });
+      
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      
+      if (groupFilter !== 'all') {
+        if (groupFilter === 'none') {
+          params.append('group', 'none');
+        } else {
+          params.append('group', groupFilter);
+        }
+      }
+      
+      const response = await api.get(`/contacts?${params.toString()}`);
+      if (response.data.success) {
+        const allIds = response.data.data.ids || [];
+        setSelectedContacts(allIds);
+        setSelectAll(true);
+        setSuccess(`Tüm sayfalardaki ${allIds.length} kişi seçildi`);
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (error: any) {
+      console.error('Select all pages error:', error);
+      setError('Tüm kişiler seçilirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const handleSelectContact = (contactId: string) => {
     setSelectedContacts(prev => 
       prev.includes(contactId)
@@ -466,14 +501,36 @@ export default function ContactsPage() {
                   
                   <Stack direction="row" spacing={2}>
                     {selectedContacts.length > 0 && (
+                      <>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Delete />}
+                          onClick={handleDeleteSelected}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Seçilenleri Sil ({selectedContacts.length})
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setSelectedContacts([]);
+                            setSelectAll(false);
+                          }}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Seçimi Temizle
+                        </Button>
+                      </>
+                    )}
+                    {selectedContacts.length === 0 && totalContacts > limit && (
                       <Button
                         variant="outlined"
-                        color="error"
-                        startIcon={<Delete />}
-                        onClick={handleDeleteSelected}
+                        onClick={handleSelectAllPages}
+                        disabled={loading}
                         sx={{ textTransform: 'none' }}
                       >
-                        Seçilenleri Sil ({selectedContacts.length})
+                        Tümünü Seç ({totalContacts} kişi)
                       </Button>
                     )}
                     <input
@@ -568,11 +625,29 @@ export default function ContactsPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectAll}
-                            indeterminate={selectedContacts.length > 0 && selectedContacts.length < filteredContacts.length}
-                            onChange={handleSelectAll}
-                          />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Checkbox
+                              checked={selectAll && selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
+                              indeterminate={selectedContacts.length > 0 && selectedContacts.length < filteredContacts.length}
+                              onChange={handleSelectAll}
+                            />
+                            {totalContacts > limit && (
+                              <Tooltip title={`Tüm sayfalardaki ${totalContacts} kişiyi seç`}>
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    cursor: 'pointer', 
+                                    color: 'primary.main',
+                                    textDecoration: 'underline',
+                                    fontSize: '0.7rem'
+                                  }}
+                                  onClick={handleSelectAllPages}
+                                >
+                                  Tümü ({totalContacts})
+                                </Typography>
+                              </Tooltip>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>İsim</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Telefon</TableCell>
