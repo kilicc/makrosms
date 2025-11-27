@@ -31,7 +31,7 @@ export async function POST(
     // Ödeme talebini bul using Supabase
     const { data: paymentRequestData, error: findError } = await supabaseServer
       .from('payment_requests')
-      .select('*, users!payment_requests_user_id_fkey(id, username, email, credit)')
+      .select('*, user:users!payment_requests_user_id_fkey(id, username, email, credit)')
       .eq('id', id)
       .single();
 
@@ -51,7 +51,7 @@ export async function POST(
 
     // Supabase'de transaction yok, manuel olarak yapılmalı
     // Önce kullanıcı kredisini artır
-    const userData = Array.isArray(paymentRequestData.users) ? paymentRequestData.users[0] : paymentRequestData.users;
+    const userData = paymentRequestData.user;
     const currentCredit = userData?.credit || 0;
     const creditToAdd = paymentRequestData.credits + (paymentRequestData.bonus || 0);
 
@@ -79,7 +79,7 @@ export async function POST(
         admin_notes: adminNotes || null,
       })
       .eq('id', id)
-      .select('*, users!payment_requests_user_id_fkey(id, username, email), users!payment_requests_approved_by_fkey(id, username, email)')
+      .select('*, user:users!payment_requests_user_id_fkey(id, username, email), approver:users!payment_requests_approved_by_fkey(id, username, email)')
       .single();
 
     if (approveError || !approvedRequestData) {
@@ -121,8 +121,8 @@ export async function POST(
       rejectionReason: approvedRequestData.rejection_reason,
       createdAt: approvedRequestData.created_at,
       updatedAt: approvedRequestData.updated_at,
-      user: Array.isArray(approvedRequestData.users) ? approvedRequestData.users.find((u: any) => u.id === approvedRequestData.user_id) : approvedRequestData.users,
-      approver: Array.isArray(approvedRequestData.users) ? approvedRequestData.users.find((u: any) => u.id === approvedRequestData.approved_by) : null,
+      user: approvedRequestData.user || null,
+      approver: approvedRequestData.approver || null,
     };
 
     const result = { user, request: approvedRequest };

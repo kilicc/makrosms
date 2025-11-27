@@ -66,7 +66,7 @@ export async function POST(
         admin_notes: adminNotes || null,
       })
       .eq('id', id)
-      .select('*, users!payment_requests_user_id_fkey(id, username, email), users!payment_requests_approved_by_fkey(id, username, email)')
+      .select('*, user:users!payment_requests_user_id_fkey(id, username, email), approver:users!payment_requests_approved_by_fkey(id, username, email)')
       .single();
 
     if (rejectError || !rejectedRequestData) {
@@ -95,8 +95,8 @@ export async function POST(
       rejectionReason: rejectedRequestData.rejection_reason,
       createdAt: rejectedRequestData.created_at,
       updatedAt: rejectedRequestData.updated_at,
-      user: Array.isArray(rejectedRequestData.users) ? rejectedRequestData.users.find((u: any) => u.id === rejectedRequestData.user_id) : rejectedRequestData.users,
-      approver: Array.isArray(rejectedRequestData.users) ? rejectedRequestData.users.find((u: any) => u.id === rejectedRequestData.approved_by) : null,
+      user: rejectedRequestData.user || null,
+      approver: rejectedRequestData.approver || null,
     };
 
     return NextResponse.json({
