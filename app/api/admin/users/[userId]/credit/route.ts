@@ -44,13 +44,21 @@ export async function POST(
     // Hedef kullanıcının rolünü kontrol et
     const { data: targetUser, error: targetUserError } = await supabaseServer
       .from('users')
-      .select('role')
+      .select('role, visible_to_admin_id')
       .eq('id', userId)
       .single();
 
     if (targetUserError || !targetUser) {
       return NextResponse.json(
         { success: false, message: 'Hedef kullanıcı bulunamadı' },
+        { status: 404 }
+      );
+    }
+
+    // Gizli kullanıcı kontrolü: Eğer kullanıcının visible_to_admin_id'si varsa ve mevcut admin'in ID'si ile eşleşmiyorsa, erişim reddedilir
+    if (targetUser.visible_to_admin_id && targetUser.visible_to_admin_id !== auth.user.userId) {
+      return NextResponse.json(
+        { success: false, message: 'Kullanıcı bulunamadı' },
         { status: 404 }
       );
     }

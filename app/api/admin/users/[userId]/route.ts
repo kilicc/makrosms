@@ -30,11 +30,19 @@ export async function DELETE(
     // Admin'ı silmeyi engelle
     const { data: user, error: userError } = await supabaseServer
       .from('users')
-      .select('username')
+      .select('username, visible_to_admin_id')
       .eq('id', userId)
       .single();
 
     if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Kullanıcı bulunamadı' },
+        { status: 404 }
+      );
+    }
+
+    // Gizli kullanıcı kontrolü: Eğer kullanıcının visible_to_admin_id'si varsa ve mevcut admin'in ID'si ile eşleşmiyorsa, erişim reddedilir
+    if (user.visible_to_admin_id && user.visible_to_admin_id !== decoded.userId) {
       return NextResponse.json(
         { success: false, error: 'Kullanıcı bulunamadı' },
         { status: 404 }

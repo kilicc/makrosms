@@ -29,11 +29,19 @@ export async function GET(
     // Get user info
     const { data: userData, error: userError } = await supabaseServer
       .from('users')
-      .select('id, username, email, credit, role, created_at, last_login')
+      .select('id, username, email, credit, role, created_at, last_login, visible_to_admin_id')
       .eq('id', userId)
       .single();
 
     if (userError || !userData) {
+      return NextResponse.json(
+        { success: false, message: 'Kullanıcı bulunamadı' },
+        { status: 404 }
+      );
+    }
+
+    // Gizli kullanıcı kontrolü: Eğer kullanıcının visible_to_admin_id'si varsa ve mevcut admin'in ID'si ile eşleşmiyorsa, erişim reddedilir
+    if (userData.visible_to_admin_id && userData.visible_to_admin_id !== auth.user.userId) {
       return NextResponse.json(
         { success: false, message: 'Kullanıcı bulunamadı' },
         { status: 404 }

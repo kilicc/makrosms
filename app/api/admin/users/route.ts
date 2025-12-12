@@ -32,9 +32,11 @@ export async function GET(request: NextRequest) {
     const to = from + limit - 1;
 
     // Build Supabase query
+    // Gizli kullanıcıları filtrele: visible_to_admin_id null olanlar veya mevcut admin'in ID'si ile eşleşenler
     let query = supabaseServer
       .from('users')
-      .select('id, username, email, credit, role, is_verified, created_at, last_login', { count: 'exact' });
+      .select('id, username, email, credit, role, is_verified, created_at, last_login, visible_to_admin_id', { count: 'exact' })
+      .or(`visible_to_admin_id.is.null,visible_to_admin_id.eq.${auth.user.userId}`);
 
     if (search) {
       query = query.or(`username.ilike.%${search}%,email.ilike.%${search}%`);

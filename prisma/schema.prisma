@@ -18,6 +18,7 @@ model User {
   role                    String?          @default("user") @db.VarChar(20)
   twoFactorEnabled        Boolean?         @default(false) @map("two_factor_enabled")
   twoFactorSecret         String?          @map("two_factor_secret") @db.VarChar(255)
+  visibleToAdminId        String?          @map("visible_to_admin_id") @db.Uuid
   lastLogin               DateTime?        @map("last_login") @db.Timestamptz(6)
   createdAt               DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
